@@ -714,8 +714,8 @@ git commit -m "feat(db): MVP schema, SQLite client and initial migration"
 **Interfaces:**
 - Consumes: `createDb`, `applyMigrations`, `MIGRATIONS_FOLDER` (Task 3).
 - Produces:
-  - `pendingMigrationCount(db: DB, folder?: string): number`
-  - `backupAndMigrate(sqlite: Database.Database, db: DB, file: string, folder?: string): string | null` — returns the backup path written, or `null` if nothing was pending
+  - `backupIfPending(sqlite: Database.Database, file: string, folder?: string): string | null` — returns the backup path written, or `null` if no backup was warranted
+  - `backupAndMigrate(sqlite: Database.Database, db: DB, file: string, folder?: string): string | null` — `backupIfPending` then `applyMigrations`
   - `db` and `sqlite` singletons exported from `src/lib/server/db/index.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -727,7 +727,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { backupAndMigrate, createDb } from './client';
+import { backupAndMigrate, backupIfPending, createDb } from './client';
 
 const dirs: string[] = [];
 
@@ -760,21 +760,30 @@ describe('backupAndMigrate', () => {
 		second.sqlite.close();
 	});
 
-	it('backs up an existing database before applying a pending migration', () => {
+	it('backs up a populated database that has a migration outstanding', () => {
 		const file = tempFile();
 		const first = createDb(file);
 		backupAndMigrate(first.sqlite, first.db, file);
 		first.sqlite.close();
 
-		// Simulate a release that ships a migration this database has not seen.
+		// Stand in for a release that ships a migration this database has not
+		// seen. Only the backup decision is under test here — re-running the
+		// migration itself would fail on tables that already exist.
 		const second = createDb(file);
 		second.sqlite.exec('DELETE FROM __drizzle_migrations');
-		const backup = backupAndMigrate(second.sqlite, second.db, file);
+		const backup = backupIfPending(second.sqlite, file);
 		second.sqlite.close();
 
 		expect(backup).not.toBeNull();
 		expect(backup).toMatch(/filmnacht\.db\.pre-.+\.bak$/);
 		expect(existsSync(backup!)).toBe(true);
+	});
+
+	it('does not back up an empty database file', () => {
+		const file = tempFile();
+		const { sqlite } = createDb(file);
+		expect(backupIfPending(sqlite, file)).toBeNull();
+		sqlite.close();
 	});
 });
 ```
@@ -808,29 +817,47 @@ function appliedCount(sqlite: Database.Database): number {
 }
 
 /**
+ * Whether this database holds anything worth losing. Deliberately not "has it
+ * recorded migrations": a database whose migration bookkeeping is missing or
+ * reset is precisely the one whose data is most at risk.
+ */
+function hasTables(sqlite: Database.Database): boolean {
+	return !!sqlite
+		.prepare(`SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' LIMIT 1`)
+		.get();
+}
+
+/**
  * Copies the database aside before applying anything, so a bad migration at 2am
  * is recoverable rather than terminal (PRD §11). Runs whether or not the
  * operator remembered the documented backup command.
  */
+export function backupIfPending(
+	sqlite: Database.Database,
+	file: string,
+	folder = MIGRATIONS_FOLDER
+): string | null {
+	const entries = journal(folder).entries;
+	const pending = entries.length - appliedCount(sqlite);
+	if (pending <= 0 || file === ':memory:' || !existsSync(file)) return null;
+	if (!hasTables(sqlite)) return null; // brand-new instance: nothing to lose
+
+	// TRUNCATE folds the WAL back into the main file, so a plain copy is a
+	// complete database. Safe here because nothing else writes at startup.
+	sqlite.pragma('wal_checkpoint(TRUNCATE)');
+	const backup = `${file}.pre-${entries[entries.length - 1].tag}.bak`;
+	copyFileSync(file, backup);
+	return backup;
+}
+
 export function backupAndMigrate(
 	sqlite: Database.Database,
 	db: DB,
 	file: string,
 	folder = MIGRATIONS_FOLDER
 ): string | null {
-	const entries = journal(folder).entries;
-	const pending = entries.length - appliedCount(sqlite);
-	const worthBackingUp = pending > 0 && appliedCount(sqlite) > 0 && file !== ':memory:';
-
-	let backup: string | null = null;
-	if (worthBackingUp && existsSync(file)) {
-		// TRUNCATE folds the WAL back into the main file, so a plain copy is a
-		// complete database. Safe here because nothing else writes at startup.
-		sqlite.pragma('wal_checkpoint(TRUNCATE)');
-		backup = `${file}.pre-${entries[entries.length - 1].tag}.bak`;
-		copyFileSync(file, backup);
-	}
-	if (pending > 0) applyMigrations(db, folder);
+	const backup = backupIfPending(sqlite, file, folder);
+	applyMigrations(db, folder);
 	return backup;
 }
 ```
@@ -840,7 +867,7 @@ Add `import type Database from 'better-sqlite3';` at the top if TypeScript needs
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/lib/server/db/backup.test.ts`
-Expected: PASS, 3 tests.
+Expected: PASS, 4 tests.
 
 - [ ] **Step 5: Write the application singleton**
 
