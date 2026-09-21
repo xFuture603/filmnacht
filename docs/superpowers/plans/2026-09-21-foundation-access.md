@@ -1072,6 +1072,9 @@ describe('cascade', () => {
 		const { token } = createSession(db, 'u1');
 		db.delete(users).where(eq(users.id, 'u1')).run();
 		expect(validateSession(db, token)).toBeNull();
+		// Without this the test passes whether or not the cascade fires, because
+		// the innerJoin filters orphaned rows out anyway.
+		expect(db.select().from(sessions).all()).toHaveLength(0);
 	});
 });
 ```
@@ -1098,6 +1101,17 @@ describe('rateLimit', () => {
 	it('counts each key separately', () => {
 		for (let i = 0; i < 5; i++) rateLimit('ip:1.1.1.1', 5, 60_000, 0);
 		expect(rateLimit('ip:2.2.2.2', 5, 60_000, 0)).toBe(true);
+	});
+
+	it('bounds its memory under key churn instead of growing without limit', () => {
+		expect(rateLimit('victim', 1, 60_000, 0)).toBe(true);
+		expect(rateLimit('victim', 1, 60_000, 0)).toBe(false);
+
+		for (let i = 0; i < 10_001; i++) rateLimit(`flood:${i}`, 1, 60_000, 0);
+
+		// 'victim' was evicted to keep the map bounded, so it starts fresh —
+		// which is the observable consequence of the cap actually applying.
+		expect(rateLimit('victim', 1, 60_000, 0)).toBe(true);
 	});
 });
 ```
@@ -1223,22 +1237,39 @@ type Window = { count: number; resetAt: number };
 
 const windows = new Map<string, Window>();
 
+const MAX_WINDOWS = 10_000;
+
 /**
  * ponytail: in-process fixed window. Resets on restart and does not span
  * replicas — correct for the single-container deployment in PRD §11. Swap for a
  * shared store only if filmnacht ever runs more than one instance.
+ *
+ * ponytail: keyed by client IP, so it is only as strong as that address. Behind
+ * a reverse proxy the instance must be configured so clients cannot forge the
+ * forwarded-for header, or a single machine can mint unlimited distinct keys.
  */
 export function rateLimit(key: string, limit = 10, windowMs = 60_000, now = Date.now()): boolean {
-	if (windows.size > 10_000) {
-		for (const [k, w] of windows) if (w.resetAt <= now) windows.delete(k);
-	}
 	const window = windows.get(key);
-	if (!window || window.resetAt <= now) {
-		windows.set(key, { count: 1, resetAt: now + windowMs });
+	if (window && window.resetAt > now) {
+		if (window.count >= limit) return false;
+		window.count++;
 		return true;
 	}
-	if (window.count >= limit) return false;
-	window.count++;
+
+	if (windows.size >= MAX_WINDOWS) {
+		for (const [k, w] of windows) if (w.resetAt <= now) windows.delete(k);
+		// Still full means every window is live, so expiry-based pruning cannot
+		// help. Map iterates in insertion order, so dropping from the front
+		// evicts the oldest. Evicting a live window only ever hands that key a
+		// fresh budget, so it cannot be used to win extra allowance.
+		while (windows.size >= MAX_WINDOWS) {
+			const oldest = windows.keys().next();
+			if (oldest.done) break;
+			windows.delete(oldest.value);
+		}
+	}
+
+	windows.set(key, { count: 1, resetAt: now + windowMs });
 	return true;
 }
 
@@ -1250,7 +1281,7 @@ export function resetRateLimits(): void {
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npx vitest run src/lib/server/auth src/lib/server/rate-limit.test.ts`
-Expected: PASS, 13 tests.
+Expected: PASS, 14 tests.
 
 - [ ] **Step 7: Commit**
 
