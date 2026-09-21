@@ -37,11 +37,11 @@ export default defineConfig(
 		// Override or add rule settings here, such as:
 		// 'svelte/button-has-type': 'error'
 		rules: {
-			// This app is built incrementally task by task, so a link (e.g. to
-			// /groups or /profile) routinely lands before the route it points to
-			// exists. Typed resolve() would force every internal href to be a
-			// known RouteId, which fights that order rather than the plain
-			// server-rendered navigation this MVP actually uses.
+			// filmnacht is deployed as a single self-hosted app at the server root
+			// (svelte.config.js configures no `paths.base`), so plain absolute
+			// hrefs are correct and resolve() would be ceremony on every internal
+			// link. Re-enable this rule if a base path is ever configured — the
+			// hrefs would then all be wrong without it.
 			'svelte/no-navigation-without-resolve': 'off'
 		}
 	}

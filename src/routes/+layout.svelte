@@ -7,7 +7,7 @@
 
 <div class="min-h-screen bg-base-200">
 	<nav class="navbar bg-base-100 shadow-sm">
-		<a class="btn btn-ghost text-xl" href="/">{t(data.locale, 'app.name')}</a>
+		<a class="btn btn-ghost min-h-11 text-xl" href="/">{t(data.locale, 'app.name')}</a>
 		<div class="flex-1"></div>
 		{#if data.user}
 			<a class="btn btn-ghost min-h-11" href="/groups">{t(data.locale, 'nav.groups')}</a>
@@ -17,7 +17,7 @@
 			<input type="hidden" name="redirectTo" value={data.pathname} />
 			<select
 				name="locale"
-				class="select select-sm"
+				class="select min-h-11"
 				aria-label={t(data.locale, 'nav.language')}
 				onchange={(e) => e.currentTarget.form?.requestSubmit()}
 			>
@@ -25,7 +25,7 @@
 					<option value={locale} selected={locale === data.locale}>{locale.toUpperCase()}</option>
 				{/each}
 			</select>
-			<noscript><button class="btn btn-sm">{t(data.locale, 'common.save')}</button></noscript>
+			<noscript><button class="btn min-h-11">{t(data.locale, 'common.save')}</button></noscript>
 		</form>
 	</nav>
 
