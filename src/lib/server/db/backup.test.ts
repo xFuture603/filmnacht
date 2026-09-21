@@ -62,7 +62,7 @@ describe('backupAndMigrate', () => {
 		sqlite.close();
 	});
 
-	it('refuses to back up when the checkpoint cannot complete', { timeout: 8000 }, () => {
+	it('refuses to back up when the checkpoint cannot complete', () => {
 		const file = tempFile();
 		const first = createDb(file);
 		backupAndMigrate(first.sqlite, first.db, file);
@@ -74,9 +74,10 @@ describe('backupAndMigrate', () => {
 		reader.exec('BEGIN');
 		reader.prepare('SELECT count(*) FROM users').get();
 
-		// createDb sets busy_timeout=5000, so the checkpoint blocks internally
-		// retrying for the full 5s before SQLite gives up and reports busy — the
-		// test's own timeout must clear that floor.
+		// The reader's open transaction is what makes the checkpoint busy; the
+		// retry floor only adds latency to a result that cannot change.
+		first.sqlite.pragma('busy_timeout = 0');
+
 		expect(() => backupIfPending(first.sqlite, file)).toThrow(/checkpoint could not complete/);
 
 		reader.exec('ROLLBACK');
