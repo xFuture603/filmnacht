@@ -36,6 +36,13 @@ export default defineConfig(
 	{
 		// Override or add rule settings here, such as:
 		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// This app is built incrementally task by task, so a link (e.g. to
+			// /groups or /profile) routinely lands before the route it points to
+			// exists. Typed resolve() would force every internal href to be a
+			// known RouteId, which fights that order rather than the plain
+			// server-rendered navigation this MVP actually uses.
+			'svelte/no-navigation-without-resolve': 'off'
+		}
 	}
 );
