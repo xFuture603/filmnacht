@@ -85,5 +85,6 @@ describe('cascade', () => {
 		const { token } = createSession(db, 'u1');
 		db.delete(users).where(eq(users.id, 'u1')).run();
 		expect(validateSession(db, token)).toBeNull();
+		expect(db.select().from(sessions).all()).toHaveLength(0);
 	});
 });
