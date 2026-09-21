@@ -804,6 +804,29 @@ describe('backupAndMigrate', () => {
 		expect(backupIfPending(sqlite, file)).toBeNull();
 		sqlite.close();
 	});
+
+	it('refuses to back up when the checkpoint cannot complete', () => {
+		const file = tempFile();
+		const first = createDb(file);
+		backupAndMigrate(first.sqlite, first.db, file);
+		first.sqlite.exec('DELETE FROM __drizzle_migrations');
+
+		// A second connection parked in a read transaction keeps TRUNCATE from
+		// folding the WAL away, which is exactly the torn-backup scenario.
+		const reader = new Database(file);
+		reader.exec('BEGIN');
+		reader.prepare('SELECT count(*) FROM users').get();
+
+		// The reader's open transaction is what makes the checkpoint busy; the
+		// retry floor only adds latency to a result that cannot change.
+		first.sqlite.pragma('busy_timeout = 0');
+
+		expect(() => backupIfPending(first.sqlite, file)).toThrow(/checkpoint could not complete/);
+
+		reader.exec('ROLLBACK');
+		reader.close();
+		first.sqlite.close();
+	});
 });
 ```
 
@@ -823,7 +846,18 @@ import { join } from 'node:path';
 type Journal = { entries: { idx: number; tag: string }[] };
 
 function journal(folder: string): Journal {
-	return JSON.parse(readFileSync(join(folder, 'meta', '_journal.json'), 'utf8'));
+	const path = join(folder, 'meta', '_journal.json');
+	try {
+		return JSON.parse(readFileSync(path, 'utf8'));
+	} catch (cause) {
+		// The drizzle/ folder is read at RUNTIME, so a Docker image that forgot to
+		// copy it fails here — name that cause instead of a bare ENOENT stack.
+		throw new Error(
+			`Cannot read the migration journal at ${path}. Is the drizzle/ folder present ` +
+				`in this deployment? It is read at runtime, not only at build time.`,
+			{ cause }
+		);
+	}
 }
 
 function appliedCount(sqlite: Database.Database): number {
@@ -862,8 +896,20 @@ export function backupIfPending(
 	if (!hasTables(sqlite)) return null; // brand-new instance: nothing to lose
 
 	// TRUNCATE folds the WAL back into the main file, so a plain copy is a
-	// complete database. Safe here because nothing else writes at startup.
-	sqlite.pragma('wal_checkpoint(TRUNCATE)');
+	// complete database. This is sound ONLY single-connection at startup: with a
+	// concurrent reader or writer the checkpoint can come back busy and leave the
+	// WAL partially folded, and the copy would then silently miss the most recent
+	// commits. Do not reuse this as an on-demand backup endpoint without
+	// revisiting that.
+	const [checkpoint] = sqlite.pragma('wal_checkpoint(TRUNCATE)') as [
+		{ busy: number; log: number; checkpointed: number }
+	];
+	if (checkpoint.busy !== 0) {
+		throw new Error(
+			'Refusing to migrate: the pre-migration WAL checkpoint could not complete ' +
+				'(another connection holds the database), so the backup would be incomplete.'
+		);
+	}
 	const backup = `${file}.pre-${entries[entries.length - 1].tag}.bak`;
 	copyFileSync(file, backup);
 	return backup;
@@ -886,7 +932,7 @@ Add `import type Database from 'better-sqlite3';` at the top if TypeScript needs
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/lib/server/db/backup.test.ts`
-Expected: PASS, 4 tests.
+Expected: PASS, 5 tests.
 
 - [ ] **Step 5: Write the application singleton**
 
