@@ -1434,13 +1434,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const session = token ? validateSession(db, token) : null;
 	event.locals.user = session?.user ?? null;
 	if (session?.refreshed) setSessionCookie(event.cookies, token!, session.expiresAt, !dev);
-	if (token && !session) event.cookies.delete(SESSION_COOKIE, { path: '/' });
+	if (token && !session) clearSessionCookie(event.cookies);
 
 	// Until an instance admin exists there is nothing to show and nobody to show
-	// it to, so every path funnels into /setup (PRD §11).
-	const setupRoute = event.url.pathname.startsWith('/setup');
-	if (!isSetupComplete(db) && !setupRoute) redirect(303, '/setup');
-	if (isSetupComplete(db) && setupRoute) redirect(303, '/');
+	// it to, so every path funnels into /setup (PRD §11). /locale is exempt from
+	// that funnel but NOT from the second guard — merging the two conditions into
+	// one variable would bounce every post-setup /locale submit away unprocessed,
+	// killing the switcher after setup instead of before.
+	const setupPath = event.url.pathname.startsWith('/setup');
+	const localeRoute = event.url.pathname === '/locale';
+	const setupComplete = isSetupComplete(db);
+	if (!setupComplete && !setupPath && !localeRoute) redirect(303, '/setup');
+	if (setupComplete && setupPath) redirect(303, '/');
 
 	return resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('%lang%', event.locals.locale)
@@ -1462,17 +1467,44 @@ export const load: LayoutServerLoad = ({ locals, url }) => ({
 });
 ```
 
+`src/lib/server/redirect.ts` — the redirect guard gets its own module because it
+is a security boundary and tasks 9 and 10 redirect too. A leading slash is **not**
+sufficient: `//host` is protocol-relative, some browsers normalise `/\` to `//`,
+and browsers strip ASCII tab/LF/CR *before* resolving a URL — so `/<tab>/host`
+would pass a naive prefix check and still navigate off-site:
+
+```ts
+function hasControlCharacter(value: string): boolean {
+	for (const character of value) {
+		const code = character.codePointAt(0) ?? 0;
+		// C0 controls (includes tab, line feed and carriage return) and DEL.
+		if (code < 0x20 || code === 0x7f) return true;
+	}
+	return false;
+}
+
+export function safeRedirectPath(raw: unknown, fallback = '/'): string {
+	const value = typeof raw === 'string' ? raw : '';
+	// Reject control characters rather than stripping them: stripping would mean
+	// validating one string and returning another, which is the bug being closed.
+	if (hasControlCharacter(value)) return fallback;
+	if (!value.startsWith('/')) return fallback;
+	if (value.startsWith('//') || value.startsWith('/\\')) return fallback;
+	return value;
+}
+```
+
 `src/routes/locale/+server.ts` — a form POST, so no client JS is needed:
 
 ```ts
 import { locales, type Locale } from '$lib/i18n';
+import { safeRedirectPath } from '$lib/server/redirect';
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const data = await request.formData();
 	const locale = String(data.get('locale') ?? '');
-	const redirectTo = String(data.get('redirectTo') ?? '/');
 	if ((locales as readonly string[]).includes(locale)) {
 		cookies.set('locale', locale as Locale, {
 			path: '/',
@@ -1481,8 +1513,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			maxAge: 60 * 60 * 24 * 365
 		});
 	}
-	// Only ever bounce back to a path on this instance, never to an absolute URL.
-	redirect(303, redirectTo.startsWith('/') ? redirectTo : '/');
+	redirect(303, safeRedirectPath(data.get('redirectTo')));
 };
 ```
 
