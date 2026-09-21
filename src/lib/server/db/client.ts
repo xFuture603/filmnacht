@@ -25,7 +25,16 @@ export function applyMigrations(db: DB, folder = MIGRATIONS_FOLDER): void {
 type Journal = { entries: { idx: number; tag: string }[] };
 
 function journal(folder: string): Journal {
-	return JSON.parse(readFileSync(join(folder, 'meta', '_journal.json'), 'utf8'));
+	const path = join(folder, 'meta', '_journal.json');
+	try {
+		return JSON.parse(readFileSync(path, 'utf8'));
+	} catch (cause) {
+		throw new Error(
+			`Cannot read the migration journal at ${path}. Is the drizzle/ folder present ` +
+				`in this deployment? It is read at runtime, not only at build time.`,
+			{ cause }
+		);
+	}
 }
 
 function appliedCount(sqlite: Database.Database): number {
@@ -66,8 +75,20 @@ export function backupIfPending(
 	if (!hasTables(sqlite)) return null; // brand-new instance: nothing to lose
 
 	// TRUNCATE folds the WAL back into the main file, so a plain copy is a
-	// complete database. Safe here because nothing else writes at startup.
-	sqlite.pragma('wal_checkpoint(TRUNCATE)');
+	// complete database. This is sound ONLY single-connection at startup: with a
+	// concurrent reader or writer the checkpoint can come back busy and leave the
+	// WAL partially folded, and the copy would then silently miss the most recent
+	// commits. Do not reuse this as an on-demand backup endpoint without
+	// revisiting that.
+	const [checkpoint] = sqlite.pragma('wal_checkpoint(TRUNCATE)') as [
+		{ busy: number; log: number; checkpointed: number }
+	];
+	if (checkpoint.busy !== 0) {
+		throw new Error(
+			'Refusing to migrate: the pre-migration WAL checkpoint could not complete ' +
+				'(another connection holds the database), so the backup would be incomplete.'
+		);
+	}
 	const backup = `${file}.pre-${entries[entries.length - 1].tag}.bak`;
 	copyFileSync(file, backup);
 	return backup;

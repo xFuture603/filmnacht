@@ -1,3 +1,4 @@
+import Database from 'better-sqlite3';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -59,5 +60,27 @@ describe('backupAndMigrate', () => {
 		const { sqlite } = createDb(file);
 		expect(backupIfPending(sqlite, file)).toBeNull();
 		sqlite.close();
+	});
+
+	it('refuses to back up when the checkpoint cannot complete', { timeout: 8000 }, () => {
+		const file = tempFile();
+		const first = createDb(file);
+		backupAndMigrate(first.sqlite, first.db, file);
+		first.sqlite.exec('DELETE FROM __drizzle_migrations');
+
+		// A second connection parked in a read transaction keeps TRUNCATE from
+		// folding the WAL away, which is exactly the torn-backup scenario.
+		const reader = new Database(file);
+		reader.exec('BEGIN');
+		reader.prepare('SELECT count(*) FROM users').get();
+
+		// createDb sets busy_timeout=5000, so the checkpoint blocks internally
+		// retrying for the full 5s before SQLite gives up and reports busy — the
+		// test's own timeout must clear that floor.
+		expect(() => backupIfPending(first.sqlite, file)).toThrow(/checkpoint could not complete/);
+
+		reader.exec('ROLLBACK');
+		reader.close();
+		first.sqlite.close();
 	});
 });
