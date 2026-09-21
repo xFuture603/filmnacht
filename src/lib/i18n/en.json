@@ -8,5 +8,15 @@
 	"common.copy": "Copy",
 	"common.copied": "Copied",
 	"test.greeting": "Hello {name}",
-	"test.only_in_english": "Only in English"
+	"test.only_in_english": "Only in English",
+	"setup.title": "Set up your instance",
+	"setup.intro": "This account becomes the instance admin. Pick the timezone your movie nights happen in.",
+	"setup.display_name": "Your display name",
+	"setup.timezone": "Timezone",
+	"setup.submit": "Create instance",
+	"setup.error.name": "Please enter a display name of up to 60 characters.",
+	"setup.error.timezone": "Please pick a timezone from the list.",
+	"setup.error.done": "This instance is already set up.",
+	"home.welcome": "Welcome, {name}",
+	"home.no_groups": "You are not in a group yet."
 }
