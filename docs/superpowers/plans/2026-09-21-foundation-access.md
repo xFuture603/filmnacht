@@ -236,6 +236,10 @@ describe('t', () => {
 	it('leaves unknown placeholders intact rather than printing undefined', () => {
 		expect(t('en', 'test.greeting')).toBe('Hello {name}');
 	});
+
+	it('leaves a placeholder intact when params omits its key', () => {
+		expect(t('en', 'test.greeting', { })).toBe('Hello {name}');
+	});
 });
 
 describe('resolveLocale', () => {
@@ -254,6 +258,14 @@ describe('resolveLocale', () => {
 	it('defaults to English', () => {
 		expect(resolveLocale(null)).toBe('en');
 		expect(resolveLocale('fr-FR,fr;q=0.9')).toBe('en');
+	});
+
+	it('ranks by quality value, not by position in the header', () => {
+		expect(resolveLocale('en;q=0.5,de;q=0.9')).toBe('de');
+	});
+
+	it('treats q=0 as "not acceptable" rather than as a weak preference', () => {
+		expect(resolveLocale('de;q=0,en')).toBe('en');
 	});
 });
 ```
@@ -324,11 +336,19 @@ export function t(locale: Locale, key: string, params?: Record<string, string | 
 
 export function resolveLocale(acceptLanguage: string | null, cookie?: string | null): Locale {
 	if (isLocale(cookie)) return cookie;
-	for (const part of (acceptLanguage ?? '').split(',')) {
-		const tag = part.split(';')[0].trim().slice(0, 2).toLowerCase();
-		if (isLocale(tag)) return tag;
-	}
-	return 'en';
+	const ranked = (acceptLanguage ?? '')
+		.split(',')
+		.map((part) => {
+			const [tag, ...params] = part.split(';');
+			const q = params.find((p) => p.trim().startsWith('q='))?.split('=')[1];
+			const weight = q === undefined || !Number.isFinite(Number(q)) ? 1 : Number(q);
+			return { tag: tag.trim().slice(0, 2).toLowerCase(), weight };
+		})
+		// q=0 means "not acceptable", so it is a filter, not just a low rank.
+		.filter((entry) => isLocale(entry.tag) && entry.weight > 0)
+		.sort((a, b) => b.weight - a.weight);
+	// Array sort is stable, so equal weights keep the header's own order.
+	return ranked.length ? (ranked[0].tag as Locale) : 'en';
 }
 ```
 
@@ -337,7 +357,7 @@ export function resolveLocale(acceptLanguage: string | null, cookie?: string | n
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `npx vitest run src/lib/i18n/i18n.test.ts`
-Expected: PASS, 9 tests.
+Expected: PASS, 12 tests.
 
 - [ ] **Step 6: Commit**
 
