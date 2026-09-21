@@ -449,7 +449,6 @@ Expected: FAIL — cannot resolve `./client`.
 `src/lib/server/db/schema.ts` — the complete MVP schema from PRD §10. Later plans add rows to these tables, not columns:
 
 ```ts
-import { sql } from 'drizzle-orm';
 import { integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 const uuid = () =>
