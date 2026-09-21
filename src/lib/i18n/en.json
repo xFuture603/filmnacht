@@ -1,0 +1,12 @@
+{
+	"app.name": "filmnacht",
+	"nav.groups": "Groups",
+	"nav.profile": "Profile",
+	"nav.language": "Language",
+	"common.save": "Save",
+	"common.cancel": "Cancel",
+	"common.copy": "Copy",
+	"common.copied": "Copied",
+	"test.greeting": "Hello {name}",
+	"test.only_in_english": "Only in English"
+}
