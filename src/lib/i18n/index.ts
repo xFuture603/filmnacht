@@ -20,9 +20,16 @@ export function t(locale: Locale, key: string, params?: Record<string, string | 
 
 export function resolveLocale(acceptLanguage: string | null, cookie?: string | null): Locale {
 	if (isLocale(cookie)) return cookie;
-	for (const part of (acceptLanguage ?? '').split(',')) {
-		const tag = part.split(';')[0].trim().slice(0, 2).toLowerCase();
-		if (isLocale(tag)) return tag;
-	}
-	return 'en';
+	const ranked = (acceptLanguage ?? '')
+		.split(',')
+		.map((part) => {
+			const [tag, ...params] = part.split(';');
+			const q = params.find((p) => p.trim().startsWith('q='))?.split('=')[1];
+			const weight = q === undefined || !Number.isFinite(Number(q)) ? 1 : Number(q);
+			return { tag: tag.trim().slice(0, 2).toLowerCase(), weight };
+		})
+		// q=0 means "not acceptable", so it is a filter, not just a low rank.
+		.filter((entry) => isLocale(entry.tag) && entry.weight > 0)
+		.sort((a, b) => b.weight - a.weight);
+	return ranked.length ? (ranked[0].tag as Locale) : 'en';
 }

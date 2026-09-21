@@ -22,6 +22,10 @@ describe('t', () => {
 	it('leaves unknown placeholders intact rather than printing undefined', () => {
 		expect(t('en', 'test.greeting')).toBe('Hello {name}');
 	});
+
+	it('leaves a placeholder intact when params omits its key', () => {
+		expect(t('en', 'test.greeting', {})).toBe('Hello {name}');
+	});
 });
 
 describe('resolveLocale', () => {
@@ -40,5 +44,13 @@ describe('resolveLocale', () => {
 	it('defaults to English', () => {
 		expect(resolveLocale(null)).toBe('en');
 		expect(resolveLocale('fr-FR,fr;q=0.9')).toBe('en');
+	});
+
+	it('ranks by quality value, not by position in the header', () => {
+		expect(resolveLocale('en;q=0.5,de;q=0.9')).toBe('de');
+	});
+
+	it('treats q=0 as "not acceptable" rather than as a weak preference', () => {
+		expect(resolveLocale('de;q=0,en')).toBe('en');
 	});
 });
