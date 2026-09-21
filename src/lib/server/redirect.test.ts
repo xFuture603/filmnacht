@@ -21,4 +21,11 @@ describe('safeRedirectPath', () => {
 		expect(safeRedirectPath(undefined)).toBe('/');
 		expect(safeRedirectPath(null)).toBe('/');
 	});
+
+	it('rejects control characters that browsers strip before resolving', () => {
+		expect(safeRedirectPath('/\t/evil.example')).toBe('/');
+		expect(safeRedirectPath('/\n/evil.example')).toBe('/');
+		expect(safeRedirectPath('/\r/evil.example')).toBe('/');
+		expect(safeRedirectPath('\t//evil.example')).toBe('/');
+	});
 });
