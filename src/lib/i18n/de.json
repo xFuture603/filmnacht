@@ -28,5 +28,13 @@
 	"error.401": "Dafür musst du angemeldet sein.",
 	"error.404": "Nicht gefunden.",
 	"error.generic": "Da ist etwas schiefgelaufen.",
-	"error.home": "Zurück zum Start"
+	"error.home": "Zurück zum Start",
+	"invite.create": "Einladungslink erstellen",
+	"invite.created": "Schick diesen Link an deine Freunde. Er gilt 7 Tage.",
+	"invite.join_title": "{group} beitreten",
+	"invite.join_name": "Wie soll die Gruppe dich nennen?",
+	"invite.join_submit": "Gruppe beitreten",
+	"invite.invalid": "Dieser Einladungslink ist nicht mehr gültig. Bitte um einen neuen.",
+	"invite.error.name": "Bitte gib einen Anzeigenamen mit höchstens 60 Zeichen ein.",
+	"invite.rate_limited": "Zu viele Versuche. Versuch es in einer Minute erneut."
 }

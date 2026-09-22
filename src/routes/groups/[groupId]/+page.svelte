@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
-	let { data } = $props();
+	let { data, form } = $props();
 </script>
 
 <h1 class="mb-4 text-2xl font-bold">
@@ -19,3 +19,13 @@
 		</li>
 	{/each}
 </ul>
+
+{#if data.group.role === 'owner'}
+	<form method="POST" action="?/invite" class="mt-6">
+		<button class="btn btn-secondary min-h-11">{t(data.locale, 'invite.create')}</button>
+	</form>
+	{#if form?.inviteUrl}
+		<p class="mt-2">{t(data.locale, 'invite.created')}</p>
+		<input class="input input-bordered mt-1 w-full" readonly value={form.inviteUrl} />
+	{/if}
+{/if}

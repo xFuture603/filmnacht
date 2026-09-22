@@ -30,5 +30,13 @@
 	"error.401": "You need to be signed in to see this.",
 	"error.404": "Not found.",
 	"error.generic": "Something went wrong.",
-	"error.home": "Back to start"
+	"error.home": "Back to start",
+	"invite.create": "Create invite link",
+	"invite.created": "Send this link to your friends. It works for 7 days.",
+	"invite.join_title": "Join {group}",
+	"invite.join_name": "What should the group call you?",
+	"invite.join_submit": "Join the group",
+	"invite.invalid": "This invite link is no longer valid. Ask for a new one.",
+	"invite.error.name": "Please enter a display name of up to 60 characters.",
+	"invite.rate_limited": "Too many attempts. Try again in a minute."
 }
