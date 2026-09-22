@@ -49,4 +49,34 @@ describe('dedupeKey', () => {
 	it('survives a title with no alphanumeric characters at all', () => {
 		expect(dedupeKey({ title: '!!!', year: 2009 })).toBe('manual::2009');
 	});
+
+	it('keeps two different titles from the same year apart', () => {
+		// The original version of this test used different years, so it passed
+		// even when the slug was ignored entirely.
+		expect(dedupeKey({ title: 'Dune', year: 2021 })).not.toBe(
+			dedupeKey({ title: 'Dune Part Two', year: 2021 })
+		);
+	});
+
+	it('collides the two German spellings of the same film', () => {
+		expect(dedupeKey({ title: 'Straße', year: 1990 })).toBe(
+			dedupeKey({ title: 'Strasse', year: 1990 })
+		);
+		expect(dedupeKey({ title: 'Müller', year: 1990 })).toBe(
+			dedupeKey({ title: 'Mueller', year: 1990 })
+		);
+	});
+
+	it('keeps non-Latin titles legible instead of collapsing them to nothing', () => {
+		expect(dedupeKey({ title: 'Дюна', year: 2021 })).toBe('manual:дюна:2021');
+	});
+
+	it('keeps two different non-Latin titles in the same year apart', () => {
+		expect(dedupeKey({ title: 'Дюна', year: 1972 })).not.toBe(
+			dedupeKey({ title: 'Солярис', year: 1972 })
+		);
+		expect(dedupeKey({ title: '千と千尋の神隠し', year: 2001 })).not.toBe(
+			dedupeKey({ title: 'ロード・オブ・ザ・リング', year: 2001 })
+		);
+	});
 });

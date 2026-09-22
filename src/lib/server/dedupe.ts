@@ -7,6 +7,19 @@
  * and "Amelie" mean the same film, and the pool must say so rather than
  * quietly holding both (PRD §5).
  */
+
+/**
+ * German transliterates these to digraphs, not to bare vowels: "Müller" and
+ * "Mueller" are one name, and NFD alone would split them. Applied before NFD
+ * so the umlaut is consumed here rather than stripped to a bare vowel.
+ */
+const GERMAN_DIGRAPHS: Record<string, string> = {
+	ä: 'ae',
+	ö: 'oe',
+	ü: 'ue',
+	ß: 'ss'
+};
+
 export function dedupeKey(input: {
 	tmdbId?: number | null;
 	title: string;
@@ -14,13 +27,18 @@ export function dedupeKey(input: {
 }): string {
 	if (input.tmdbId != null) return `tmdb:${input.tmdbId}`;
 	const slug = input.title
-		.normalize('NFD')
-		// Strip combining marks (U+0300-U+036F), so "e-acute" becomes "e".
-		// Written as escapes on purpose: the literal characters are invisible
-		// in source and get eaten by tooling that is not escape-safe.
-		.replace(/[̀-ͯ]/g, '')
 		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/[äöüß]/g, (character) => GERMAN_DIGRAPHS[character])
+		.normalize('NFD')
+		// Strip remaining combining marks (U+0300-U+036F), so "é" becomes "e".
+		// Written as escapes on purpose: the literal characters are invisible in
+		// source and get eaten by tooling that is not escape-safe.
+		.replace(/[\u0300-\u036f]/g, '')
+		// Keep letters and digits in ANY script. An ASCII-only class collapses
+		// every Cyrillic, Japanese or Greek title to the empty slug, so two
+		// different foreign films released in the same year would be judged
+		// duplicates of each other.
+		.replace(/[^\p{Letter}\p{Number}]+/gu, '-')
 		.replace(/^-+|-+$/g, '');
 	return `manual:${slug}:${input.year ?? ''}`;
 }
