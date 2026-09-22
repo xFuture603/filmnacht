@@ -46,5 +46,18 @@
 	"profile.reveal_warning": "Revealing generates a new link and signs you out everywhere else. Only this device stays signed in.",
 	"profile.logout": "Sign out",
 	"login.invalid": "This login link is not valid any more. Reveal a new one on a device where you are still signed in.",
-	"login.rate_limited": "Too many attempts. Try again in a minute."
+	"login.rate_limited": "Too many attempts. Try again in a minute.",
+	"pool.title": "The pool",
+	"pool.empty": "No films yet. Add the first one.",
+	"pool.yours": "Yours",
+	"pool.add": "Add a film",
+	"pool.withdraw": "Withdraw",
+	"pool.count": "{used} of {max} suggestions used",
+	"pool.no_poster": "No poster",
+	"pool.drawn": "Already watched",
+	"pool.error.duplicate": "That film is already in the pool.",
+	"pool.error.cap_reached": "You have used all your suggestions. Withdraw one first.",
+	"pool.error.bad_title": "Please enter a film title.",
+	"pool.error.not_found": "That suggestion is not yours, or no longer exists.",
+	"pool.error.already_drawn": "That film has already been drawn and cannot be withdrawn."
 }

@@ -44,5 +44,18 @@
 	"profile.reveal_warning": "Beim Anzeigen wirst du überall sonst abgemeldet. Nur dieses Gerät bleibt angemeldet.",
 	"profile.logout": "Abmelden",
 	"login.invalid": "Dieser Login-Link ist nicht mehr gültig. Zeige auf einem noch angemeldeten Gerät einen neuen an.",
-	"login.rate_limited": "Zu viele Versuche. Versuch es in einer Minute erneut."
+	"login.rate_limited": "Zu viele Versuche. Versuch es in einer Minute erneut.",
+	"pool.title": "Der Pool",
+	"pool.empty": "Noch keine Filme. Füg den ersten hinzu.",
+	"pool.yours": "Von dir",
+	"pool.add": "Film hinzufügen",
+	"pool.withdraw": "Zurückziehen",
+	"pool.count": "{used} von {max} Vorschlägen genutzt",
+	"pool.no_poster": "Kein Poster",
+	"pool.drawn": "Schon gesehen",
+	"pool.error.duplicate": "Dieser Film ist schon im Pool.",
+	"pool.error.cap_reached": "Du hast alle deine Vorschläge genutzt. Zieh zuerst einen zurück.",
+	"pool.error.bad_title": "Bitte gib einen Filmtitel ein.",
+	"pool.error.not_found": "Dieser Vorschlag ist nicht von dir oder existiert nicht mehr.",
+	"pool.error.already_drawn": "Dieser Film wurde schon gezogen und kann nicht zurückgezogen werden."
 }

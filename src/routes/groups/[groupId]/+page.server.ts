@@ -2,13 +2,20 @@ import { db } from '$lib/server/db';
 import { listMembers, requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import { createInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
+import { countOpenSuggestions, listPool, withdrawSuggestion } from '$lib/server/suggestions';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, params }) => {
 	const user = requireUser(locals);
 	const group = requireMember(db, user.id, params.groupId);
-	return { group, members: listMembers(db, params.groupId) };
+	return {
+		group,
+		members: listMembers(db, params.groupId),
+		pool: listPool(db, params.groupId, user.id, group.settings),
+		used: countOpenSuggestions(db, params.groupId, user.id),
+		max: group.settings.maxOpenSuggestions
+	};
 };
 
 export const actions: Actions = {
@@ -21,5 +28,17 @@ export const actions: Actions = {
 		const token = createInvite(db, { groupId: params.groupId, createdBy: user.id });
 		// Returned once and never stored in the clear — the row holds only the hash.
 		return { inviteUrl: `${url.origin}/join/${token}` };
+	},
+
+	withdraw: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
+		// Membership is checked before anything is read or written, even though
+		// withdrawSuggestion is itself owner-scoped — a non-member must not learn
+		// the group exists.
+		requireMember(db, user.id, params.groupId);
+		const form = await request.formData();
+		const outcome = withdrawSuggestion(db, user.id, String(form.get('suggestionId') ?? ''));
+		if (outcome !== 'ok') return fail(400, { error: `pool.error.${outcome}` });
+		return { withdrawn: true };
 	}
 };
