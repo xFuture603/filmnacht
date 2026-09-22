@@ -82,16 +82,17 @@ describe('searchMovies', () => {
 		expect(message).not.toContain('SECRET-KEY');
 	});
 
-	it('does not leak the key when the body cannot be parsed', async () => {
+	it('wraps an unparseable body in a stable error instead of a raw parser message', async () => {
 		const fetchImpl = vi.fn().mockResolvedValue(new Response('not json', { status: 200 }));
 		let message = '';
 		try {
-			await searchMovies('SECRET-KEY', 'dune', fetchImpl);
+			await searchMovies('KEY', 'dune', fetchImpl);
 		} catch (error) {
 			message = String(error);
 		}
-		expect(message).not.toBe('');
-		expect(message).not.toContain('SECRET-KEY');
+		// Discriminating: without the parse wrapper this is a raw SyntaxError
+		// about the body's contents, which does not match.
+		expect(message).toContain('could not be parsed');
 	});
 
 	it('treats a results field that is not an array as no results', async () => {

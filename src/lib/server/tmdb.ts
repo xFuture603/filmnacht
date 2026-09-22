@@ -45,6 +45,7 @@ async function request(url: string, what: string, fetchImpl: typeof fetch): Prom
 	}
 }
 
+/** Keeps raw parser internals out of callers; every failure leaves this module in one shape. */
 async function parse(response: Response, what: string): Promise<Record<string, unknown>> {
 	try {
 		return (await response.json()) as Record<string, unknown>;
