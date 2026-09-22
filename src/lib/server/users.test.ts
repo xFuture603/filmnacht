@@ -31,7 +31,10 @@ describe('createUser', () => {
 
 	it('gives two users with the same name different tokens', () => {
 		createUser(db, 'Ada');
-		expect(() => createUser(db, 'Ada')).not.toThrow();
+		createUser(db, 'Ada');
+		const rows = db.select().from(users).where(eq(users.displayName, 'Ada')).all();
+		expect(rows).toHaveLength(2);
+		expect(rows[0].loginTokenHash).not.toBe(rows[1].loginTokenHash);
 	});
 });
 
