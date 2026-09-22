@@ -79,4 +79,31 @@ describe('dedupeKey', () => {
 			dedupeKey({ title: 'ロード・オブ・ザ・リング', year: 2001 })
 		);
 	});
+
+	it('treats a decomposed umlaut the same as a precomposed one', () => {
+		// U+0308 is the combining diaeresis. Built by code point rather than
+		// written literally: a decomposed umlaut is visually identical to a
+		// precomposed one in source, so a literal would be unreviewable.
+		const diaeresis = String.fromCharCode(0x0308);
+		const decomposedMueller = `Mu${diaeresis}ller`;
+		const decomposedBaer = `Ba${diaeresis}r`;
+		const acute = String.fromCharCode(0x0301);
+		const decomposedAmelie = `Ame${acute}lie`;
+
+		// Sanity-check the fixtures themselves: if these fail, the test strings
+		// are not actually decomposed and the test proves nothing.
+		expect(decomposedMueller).toHaveLength(7);
+		expect(decomposedMueller.normalize('NFC')).toHaveLength(6);
+
+		expect(dedupeKey({ title: decomposedMueller, year: 1990 })).toBe(
+			dedupeKey({ title: 'Müller', year: 1990 })
+		);
+		expect(dedupeKey({ title: decomposedBaer, year: 1990 })).toBe(
+			dedupeKey({ title: 'Bär', year: 1990 })
+		);
+		// French must still fold to a bare vowel from either representation.
+		expect(dedupeKey({ title: decomposedAmelie, year: 2001 })).toBe(
+			dedupeKey({ title: 'Amelie', year: 2001 })
+		);
+	});
 });

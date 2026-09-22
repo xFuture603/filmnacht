@@ -28,6 +28,11 @@ export function dedupeKey(input: {
 	if (input.tmdbId != null) return `tmdb:${input.tmdbId}`;
 	const slug = input.title
 		.toLowerCase()
+		// Recompose first: the digraph map below matches single precomposed code
+		// points, so decomposed input (base letter + combining diaeresis, routine
+		// from macOS and from already-normalized sources) would otherwise slip
+		// past it and get stripped to a bare vowel instead of a digraph.
+		.normalize('NFC')
 		.replace(/[äöüß]/g, (character) => GERMAN_DIGRAPHS[character])
 		.normalize('NFD')
 		// Strip remaining combining marks (U+0300-U+036F), so "é" becomes "e".
