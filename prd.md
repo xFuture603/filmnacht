@@ -48,7 +48,7 @@ A group is the container for everything else: movie pool, dates, ratings, leader
 
 **Creating.** Name, optionally an emoji or avatar. The creator becomes the owner. No description, no categories — one line is enough.
 
-**Inviting.** The owner generates an invite link with a random token. It is valid for 7 days by default and reusable, with an optional cap on redemptions. Whoever opens the link and signs in becomes a member. Deliberately no email delivery: that saves an SMTP configuration, which is the most common source of failure in self-hosting. The owner sends the link through whatever channel the group already uses.
+**Inviting.** The owner generates an invite link with a random token. It is valid for 7 days by default and reusable, capped at 12 redemptions — a group is 3–12 people, so the cap never realistically blocks a real invite, but it bounds what a link leaked into the wrong chat can do, since redeeming one creates an account. Whoever opens the link and signs in becomes a member. Deliberately no email delivery: that saves an SMTP configuration, which is the most common source of failure in self-hosting. The owner sends the link through whatever channel the group already uses.
 
 The invite link is not only an invitation, it is the primary way accounts come into existence — see section 9.
 
@@ -194,6 +194,8 @@ So the MVP has neither, and depends on nothing external.
 **How accounts come into existence.** The invite token from section 4 creates the account on first open; the user sets their display name and is logged in. That is the whole registration flow.
 
 **How a user gets back in.** This is the part an invite link alone does not solve, and it bites on day one rather than after the session expires: someone joins on their laptop and then opens the app on their phone, where there is no session and nothing identifies them. Every member therefore has a **personal login link** — a 128-bit token at `/login/<token>` — shown in their profile behind a copy button, together with "revoke and regenerate". They paste it once on the second device. It is the same primitive as the invite token, and it is the entire login system.
+
+**What "revoke" means, precisely.** Only the hash of the login token is stored, so the link cannot be displayed a second time: revealing it *generates a new one* and the previous link stops working. That is the same action as revoking, which is why there is one button and not two. Revoking also **ends every other session that member has** — the device doing the revoking stays signed in, every other one is signed out and must use the new link. This matters because the threat this feature has to answer is a link pasted into the wrong chat: rotating the token alone would kill the link while leaving the session it already granted alive and renewing itself indefinitely. Revoking the credential without revoking the access it bought is not revocation.
 
 The honest trade-off: this is a bearer token that will end up in browser history and in a chat message. For eight friends and a list of films that is the right exchange rate. Anyone who wants real authentication configures OIDC from v2. Nothing in this app should ever hold something that makes the trade-off wrong.
 

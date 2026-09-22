@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from './db/client';
 import { invites, memberships } from './db/schema';
 import { createGroup, listMembers } from './groups';
-import { createInvite, INVITE_TTL_DAYS, lookupInvite, redeemInvite } from './invites';
+import {
+	createInvite,
+	INVITE_MAX_USES,
+	INVITE_TTL_DAYS,
+	lookupInvite,
+	redeemInvite
+} from './invites';
 import { createUser } from './users';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -29,7 +35,7 @@ describe('createInvite', () => {
 		const row = db.select().from(invites).get();
 		expect(row?.tokenHash).not.toBe(token);
 		expect(row?.uses).toBe(0);
-		expect(row?.maxUses).toBeNull();
+		expect(row?.maxUses).toBe(INVITE_MAX_USES);
 	});
 
 	it('expires after seven days by default', () => {
@@ -63,6 +69,28 @@ describe('lookupInvite', () => {
 		const token = createInvite(db, { groupId, createdBy: ada, maxUses: 1, now: NOW });
 		redeemInvite(db, token, grace, NOW);
 		expect(lookupInvite(db, token, NOW)).toBeNull();
+	});
+});
+
+describe('the default redemption cap', () => {
+	it('refuses the redemption after the cap is reached', () => {
+		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
+		for (let i = 0; i < INVITE_MAX_USES; i++) {
+			const joiner = createUser(db, `Member ${i}`).id;
+			expect(redeemInvite(db, token, joiner, NOW)).toBe(groupId);
+		}
+		const oneTooMany = createUser(db, 'Latecomer').id;
+		expect(lookupInvite(db, token, NOW)).toBeNull();
+		expect(redeemInvite(db, token, oneTooMany, NOW)).toBeNull();
+	});
+
+	it('still allows an explicitly uncapped invite', () => {
+		const token = createInvite(db, { groupId, createdBy: ada, maxUses: null, now: NOW });
+		for (let i = 0; i < INVITE_MAX_USES + 1; i++) {
+			const joiner = createUser(db, `Member ${i}`).id;
+			expect(redeemInvite(db, token, joiner, NOW)).toBe(groupId);
+		}
+		expect(lookupInvite(db, token, NOW)).not.toBeNull();
 	});
 });
 

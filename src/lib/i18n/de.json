@@ -30,7 +30,7 @@
 	"error.generic": "Da ist etwas schiefgelaufen.",
 	"error.home": "Zurück zum Start",
 	"invite.create": "Einladungslink erstellen",
-	"invite.created": "Schick diesen Link an deine Freunde. Er gilt 7 Tage.",
+	"invite.created": "Schick diesen Link an deine Freunde. Er gilt 7 Tage und für bis zu 12 Personen.",
 	"invite.join_title": "{group} beitreten",
 	"invite.join_name": "Wie soll die Gruppe dich nennen?",
 	"invite.join_submit": "Gruppe beitreten",

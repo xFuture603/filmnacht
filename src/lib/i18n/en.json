@@ -32,7 +32,7 @@
 	"error.generic": "Something went wrong.",
 	"error.home": "Back to start",
 	"invite.create": "Create invite link",
-	"invite.created": "Send this link to your friends. It works for 7 days.",
+	"invite.created": "Send this link to your friends. It works for 7 days and for up to 12 people.",
 	"invite.join_title": "Join {group}",
 	"invite.join_name": "What should the group call you?",
 	"invite.join_submit": "Join the group",

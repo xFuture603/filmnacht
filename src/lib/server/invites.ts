@@ -6,6 +6,14 @@ import { addMember } from './groups';
 
 export const INVITE_TTL_DAYS = 7;
 
+/**
+ * Default cap on redemptions per invite link. PRD §1 sizes a group at 3-12
+ * people, so this never realistically blocks a legitimate invite — but it
+ * bounds the damage of a leaked link, which would otherwise create accounts
+ * without limit for its full 7 days. Pass `maxUses: null` for an uncapped one.
+ */
+export const INVITE_MAX_USES = 12;
+
 export function createInvite(
 	db: DB,
 	input: { groupId: string; createdBy: string; maxUses?: number | null; now?: number }
@@ -17,7 +25,7 @@ export function createInvite(
 			tokenHash: hashToken(token),
 			groupId: input.groupId,
 			createdBy: input.createdBy,
-			maxUses: input.maxUses ?? null,
+			maxUses: input.maxUses === undefined ? INVITE_MAX_USES : input.maxUses,
 			expiresAt: new Date(now + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000)
 		})
 		.run();
