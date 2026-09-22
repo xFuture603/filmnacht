@@ -24,8 +24,11 @@
 	<form method="POST" action="?/invite" class="mt-6">
 		<button class="btn btn-secondary min-h-11">{t(data.locale, 'invite.create')}</button>
 	</form>
+	{#if form?.error}
+		<div class="alert alert-error mt-2" role="alert">{t(data.locale, form.error)}</div>
+	{/if}
 	{#if form?.inviteUrl}
 		<p class="mt-2">{t(data.locale, 'invite.created')}</p>
-		<input class="input input-bordered mt-1 w-full" readonly value={form.inviteUrl} />
+		<input class="input input-bordered mt-1 w-full min-h-11" readonly value={form.inviteUrl} />
 	{/if}
 {/if}

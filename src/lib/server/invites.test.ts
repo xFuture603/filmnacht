@@ -55,6 +55,7 @@ describe('lookupInvite', () => {
 	});
 
 	it('returns null for an unknown token', () => {
+		createInvite(db, { groupId, createdBy: ada, now: NOW });
 		expect(lookupInvite(db, 'not-a-real-token', NOW)).toBeNull();
 	});
 

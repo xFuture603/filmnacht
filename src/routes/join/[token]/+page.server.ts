@@ -24,16 +24,24 @@ export const actions: Actions = {
 		if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
 			return fail(429, { error: 'invite.rate_limited' });
 		}
+
+		const form = await request.formData();
+		const displayName = validateDisplayName(form.get('displayName'));
+		if (!displayName) return fail(400, { error: 'invite.error.name' });
+
+		// Past the last await, nothing yields: better-sqlite3 is synchronous and
+		// Node is single-threaded, so the invite cannot change under us between
+		// this lookup and the redeem below. Checking before the await could not
+		// make that promise.
 		const invite = lookupInvite(db, params.token);
 		if (!invite) return fail(410, { error: 'invite.invalid' });
 
-		const displayName = validateDisplayName((await request.formData()).get('displayName'));
-		if (!displayName) return fail(400, { error: 'invite.error.name' });
-
 		const user = createUser(db, displayName);
-		redeemInvite(db, params.token, user.id);
+		const joinedGroupId = redeemInvite(db, params.token, user.id);
+		if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
+
 		const { token, expiresAt } = createSession(db, user.id);
 		setSessionCookie(cookies, token, expiresAt, !dev);
-		redirect(303, `/groups/${invite.groupId}`);
+		redirect(303, `/groups/${joinedGroupId}`);
 	}
 };
