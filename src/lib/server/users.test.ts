@@ -83,3 +83,22 @@ describe('validateDisplayName', () => {
 		expect(validateDisplayName('x'.repeat(60))).toHaveLength(60);
 	});
 });
+
+describe('login link round trip', () => {
+	it('signs in the right user and only that user', () => {
+		const ada = createUser(db, 'Ada');
+		const grace = createUser(db, 'Grace');
+		const adaToken = regenerateLoginToken(db, ada.id);
+		const graceToken = regenerateLoginToken(db, grace.id);
+		expect(userByLoginToken(db, adaToken)?.id).toBe(ada.id);
+		expect(userByLoginToken(db, graceToken)?.id).toBe(grace.id);
+	});
+
+	it('revoking by revealing again makes the old link dead on arrival', () => {
+		const ada = createUser(db, 'Ada');
+		const old = regenerateLoginToken(db, ada.id);
+		const fresh = regenerateLoginToken(db, ada.id);
+		expect(userByLoginToken(db, old)).toBeNull();
+		expect(userByLoginToken(db, fresh)?.id).toBe(ada.id);
+	});
+});

@@ -36,5 +36,14 @@
 	"invite.join_submit": "Gruppe beitreten",
 	"invite.invalid": "Dieser Einladungslink ist nicht mehr gültig. Bitte um einen neuen.",
 	"invite.error.name": "Bitte gib einen Anzeigenamen mit höchstens 60 Zeichen ein.",
-	"invite.rate_limited": "Zu viele Versuche. Versuch es in einer Minute erneut."
+	"invite.rate_limited": "Zu viele Versuche. Versuch es in einer Minute erneut.",
+	"profile.title": "Profil",
+	"profile.login_link": "Dein persönlicher Login-Link",
+	"profile.login_link_hint": "Öffne diesen Link auf einem anderen Gerät, um dich dort anzumelden. Wer ihn hat, kann sich als du anmelden — teile ihn nur mit dir selbst.",
+	"profile.reveal": "Login-Link anzeigen",
+	"profile.reveal_warning": "Beim Anzeigen wird ein neuer Link erzeugt, der alte wird ungültig. Bereits angemeldete Geräte bleiben angemeldet.",
+	"profile.logout": "Abmelden",
+	"login.signed_in": "Angemeldet. Willkommen zurück, {name}.",
+	"login.invalid": "Dieser Login-Link ist nicht mehr gültig. Zeige auf einem noch angemeldeten Gerät einen neuen an.",
+	"login.rate_limited": "Zu viele Versuche. Versuch es in einer Minute erneut."
 }

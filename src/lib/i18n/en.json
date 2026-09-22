@@ -38,5 +38,14 @@
 	"invite.join_submit": "Join the group",
 	"invite.invalid": "This invite link is no longer valid. Ask for a new one.",
 	"invite.error.name": "Please enter a display name of up to 60 characters.",
-	"invite.rate_limited": "Too many attempts. Try again in a minute."
+	"invite.rate_limited": "Too many attempts. Try again in a minute.",
+	"profile.title": "Profile",
+	"profile.login_link": "Your personal login link",
+	"profile.login_link_hint": "Open this link on another device to sign in there. Anyone who has it can sign in as you, so share it only with yourself.",
+	"profile.reveal": "Reveal login link",
+	"profile.reveal_warning": "Revealing generates a new link and invalidates the previous one. Devices already signed in stay signed in.",
+	"profile.logout": "Sign out",
+	"login.signed_in": "Signed in. Welcome back, {name}.",
+	"login.invalid": "This login link is not valid any more. Reveal a new one on a device where you are still signed in.",
+	"login.rate_limited": "Too many attempts. Try again in a minute."
 }
