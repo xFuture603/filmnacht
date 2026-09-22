@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { and, eq, isNull } from 'drizzle-orm';
+import type { SessionUser } from './auth/session';
 import type { DB } from './db/client';
 import { groups, memberships, users, type GroupSettings } from './db/schema';
 
@@ -98,4 +99,25 @@ export function listMembers(db: DB, groupId: string) {
 		.innerJoin(users, eq(users.id, memberships.userId))
 		.where(and(eq(memberships.groupId, groupId), isNull(memberships.leftAt)))
 		.all();
+}
+
+/**
+ * The only place a route should turn "signed in?" into a user. The message is a
+ * developer-facing log label; +error.svelte renders the translated text.
+ */
+export function requireUser(locals: App.Locals): SessionUser {
+	if (!locals.user) error(401, 'Sign in first');
+	return locals.user;
+}
+
+/**
+ * 404 for a non-member and 403 for a member who is not the owner. The asymmetry
+ * is deliberate: 404 hides whether the group exists from someone who has no
+ * business knowing, while a confirmed member already knows it exists, so 403
+ * leaks nothing new and says something useful.
+ */
+export function requireOwner(db: DB, userId: string, groupId: string): GroupMembership {
+	const membership = requireMember(db, userId, groupId);
+	if (membership.role !== 'owner') error(403, 'Only the owner can do that');
+	return membership;
 }

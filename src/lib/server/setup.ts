@@ -23,3 +23,17 @@ export function claimInstance(db: DB, displayName: string, timezone: string): Se
 		return admin;
 	});
 }
+
+/**
+ * Where a request must be sent before it reaches a page, or null to let it
+ * through. Extracted from the hook so the interaction between the two rules is
+ * testable: merging them into one condition silently kills the language
+ * switcher after setup, which is a bug this project has already shipped once.
+ */
+export function guardRedirect(pathname: string, setupComplete: boolean): string | null {
+	const setupPath = pathname.startsWith('/setup');
+	const localeRoute = pathname === '/locale';
+	if (!setupComplete && !setupPath && !localeRoute) return '/setup';
+	if (setupComplete && setupPath) return '/';
+	return null;
+}

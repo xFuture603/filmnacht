@@ -7,6 +7,7 @@ import {
 } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { isSetupComplete } from '$lib/server/settings';
+import { guardRedirect } from '$lib/server/setup';
 import { redirect, type Handle } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -28,11 +29,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// that funnel (but NOT from the "leave /setup alone once it's done" rule
 	// below) so the language switcher works both on the setup screen and after,
 	// rather than having every post-setup submit bounce to / unprocessed.
-	const setupPath = event.url.pathname.startsWith('/setup');
-	const localeRoute = event.url.pathname === '/locale';
-	const setupComplete = isSetupComplete(db);
-	if (!setupComplete && !setupPath && !localeRoute) redirect(303, '/setup');
-	if (setupComplete && setupPath) redirect(303, '/');
+	const target = guardRedirect(event.url.pathname, isSetupComplete(db));
+	if (target) redirect(303, target);
 
 	return resolve(event, {
 		transformPageChunk: ({ html }) => html.replace('%lang%', event.locals.locale)

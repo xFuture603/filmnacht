@@ -7,7 +7,9 @@ import {
 	leaveGroup,
 	listGroupsFor,
 	listMembers,
-	requireMember
+	requireMember,
+	requireOwner,
+	requireUser
 } from './groups';
 import { createUser } from './users';
 
@@ -100,5 +102,38 @@ describe('listMembers', () => {
 		addMember(db, grace, id);
 		leaveGroup(db, grace, id);
 		expect(listMembers(db, id)).toEqual([{ id: ada, displayName: 'Ada', role: 'owner' }]);
+	});
+});
+
+describe('requireUser', () => {
+	it('returns the user when signed in', () => {
+		const user = { id: 'u1', displayName: 'Ada', isAdmin: false };
+		expect(requireUser({ user, locale: 'en' })).toBe(user);
+	});
+
+	it('throws 401 when signed out', () => {
+		expect(status(() => requireUser({ user: null, locale: 'en' }))).toBe(401);
+	});
+});
+
+describe('requireOwner', () => {
+	it('returns the membership for the owner', () => {
+		const id = createGroup(db, { name: 'Movie Club', ownerId: ada });
+		expect(requireOwner(db, ada, id).role).toBe('owner');
+	});
+
+	it('throws 403 for a member who is not the owner', () => {
+		const id = createGroup(db, { name: 'Movie Club', ownerId: ada });
+		addMember(db, grace, id);
+		expect(status(() => requireOwner(db, grace, id))).toBe(403);
+	});
+
+	it('throws 404 — not 403 — for a non-member, so the id is not confirmed', () => {
+		const id = createGroup(db, { name: 'Movie Club', ownerId: ada });
+		expect(status(() => requireOwner(db, grace, id))).toBe(404);
+	});
+
+	it('throws 404 for a group that does not exist', () => {
+		expect(status(() => requireOwner(db, ada, 'made-up-id'))).toBe(404);
 	});
 });

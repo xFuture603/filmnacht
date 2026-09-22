@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from './db/client';
 import { users } from './db/schema';
 import { getSetting, getTimezone, isSetupComplete } from './settings';
-import { claimInstance } from './setup';
+import { claimInstance, guardRedirect } from './setup';
 
 let db: DB;
 
@@ -36,5 +36,34 @@ describe('claimInstance', () => {
 		claimInstance(db, 'Mallory', 'Europe/Vienna');
 		expect(db.select().from(users).all()).toHaveLength(1);
 		expect(getSetting(db, 'timezone')).toBe('Europe/Berlin');
+	});
+});
+
+describe('guardRedirect', () => {
+	it('funnels every path to /setup before the instance exists', () => {
+		expect(guardRedirect('/', false)).toBe('/setup');
+		expect(guardRedirect('/groups', false)).toBe('/setup');
+	});
+
+	it('lets /setup itself through before the instance exists', () => {
+		expect(guardRedirect('/setup', false)).toBeNull();
+	});
+
+	it('exempts /locale, so the language switcher works on the setup screen', () => {
+		expect(guardRedirect('/locale', false)).toBeNull();
+	});
+
+	it('sends /setup away once the instance exists', () => {
+		expect(guardRedirect('/setup', true)).toBe('/');
+	});
+
+	it('leaves /locale alone once the instance exists', () => {
+		// Merging /locale into the setup-path check would bounce every
+		// post-setup language switch away unprocessed.
+		expect(guardRedirect('/locale', true)).toBeNull();
+	});
+
+	it('leaves ordinary paths alone once the instance exists', () => {
+		expect(guardRedirect('/groups', true)).toBeNull();
 	});
 });
