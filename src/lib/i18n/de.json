@@ -16,5 +16,13 @@
 	"setup.error.timezone": "Bitte wähle eine Zeitzone aus der Liste.",
 	"setup.error.done": "Diese Instanz ist bereits eingerichtet.",
 	"home.welcome": "Willkommen, {name}",
-	"home.no_groups": "Du bist noch in keiner Gruppe."
+	"home.no_groups": "Du bist noch in keiner Gruppe.",
+	"groups.title": "Deine Gruppen",
+	"groups.create": "Gruppe erstellen",
+	"groups.name": "Gruppenname",
+	"groups.emoji": "Emoji (optional)",
+	"groups.empty": "Noch keine Gruppen. Erstelle eine oder öffne einen Einladungslink.",
+	"groups.members": "Mitglieder",
+	"groups.owner": "Besitzer",
+	"groups.error.name": "Bitte gib einen Gruppennamen mit höchstens 60 Zeichen ein."
 }

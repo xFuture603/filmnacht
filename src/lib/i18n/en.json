@@ -18,5 +18,13 @@
 	"setup.error.timezone": "Please pick a timezone from the list.",
 	"setup.error.done": "This instance is already set up.",
 	"home.welcome": "Welcome, {name}",
-	"home.no_groups": "You are not in a group yet."
+	"home.no_groups": "You are not in a group yet.",
+	"groups.title": "Your groups",
+	"groups.create": "Create a group",
+	"groups.name": "Group name",
+	"groups.emoji": "Emoji (optional)",
+	"groups.empty": "No groups yet. Create one, or open an invite link a friend sent you.",
+	"groups.members": "Members",
+	"groups.owner": "Owner",
+	"groups.error.name": "Please enter a group name of up to 60 characters."
 }
