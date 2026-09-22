@@ -48,6 +48,13 @@ export function requireMember(db: DB, userId: string, groupId: string): GroupMem
 			)
 		)
 		.get();
+	// 'Not found' here is a developer-facing label (logs, error object), never
+	// shown to a user — the app's +error.svelte renders the translated message.
+	// Do not thread `locale` through this function to translate it here: it
+	// would pollute the core authorization primitive's signature for the sake
+	// of a string, and the 404 body must stay identical for "not a member" and
+	// "no such group" in every language anyway — that indistinguishability is
+	// the whole point of 404-not-403.
 	if (!row) error(404, 'Not found');
 	return row;
 }

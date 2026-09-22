@@ -24,5 +24,9 @@
 	"groups.empty": "Noch keine Gruppen. Erstelle eine oder öffne einen Einladungslink.",
 	"groups.members": "Mitglieder",
 	"groups.owner": "Besitzer",
-	"groups.error.name": "Bitte gib einen Gruppennamen mit höchstens 60 Zeichen ein."
+	"groups.error.name": "Bitte gib einen Gruppennamen mit höchstens 60 Zeichen ein.",
+	"error.401": "Dafür musst du angemeldet sein.",
+	"error.404": "Nicht gefunden.",
+	"error.generic": "Da ist etwas schiefgelaufen.",
+	"error.home": "Zurück zum Start"
 }
