@@ -65,6 +65,58 @@ describe('searchMovies', () => {
 		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({}, 500));
 		await expect(searchMovies('SECRET-KEY', 'dune', fetchImpl)).rejects.not.toThrow(/SECRET-KEY/);
 	});
+
+	it('does not leak the key when the transport itself fails', async () => {
+		// Simulates a fetch implementation that puts the request URL — which
+		// contains the key — into its own error message.
+		const fetchImpl = vi
+			.fn()
+			.mockRejectedValue(new Error('connect ECONNREFUSED .../search/movie?api_key=SECRET-KEY'));
+		let message = '';
+		try {
+			await searchMovies('SECRET-KEY', 'dune', fetchImpl);
+		} catch (error) {
+			message = String(error);
+		}
+		expect(message).not.toBe('');
+		expect(message).not.toContain('SECRET-KEY');
+	});
+
+	it('does not leak the key when the body cannot be parsed', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(new Response('not json', { status: 200 }));
+		let message = '';
+		try {
+			await searchMovies('SECRET-KEY', 'dune', fetchImpl);
+		} catch (error) {
+			message = String(error);
+		}
+		expect(message).not.toBe('');
+		expect(message).not.toContain('SECRET-KEY');
+	});
+
+	it('treats a results field that is not an array as no results', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ results: 'oops' }));
+		expect(await searchMovies('KEY', 'dune', fetchImpl)).toEqual([]);
+	});
+
+	it('treats a missing results field as no results', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({}));
+		expect(await searchMovies('KEY', 'dune', fetchImpl)).toEqual([]);
+	});
+
+	it('drops a result whose id is unusable rather than keying it as NaN', async () => {
+		const fetchImpl = vi
+			.fn()
+			.mockResolvedValue(
+				jsonResponse({ results: [{ title: 'No Id', release_date: '2020-01-01' }] })
+			);
+		expect(await searchMovies('KEY', 'dune', fetchImpl)).toEqual([]);
+	});
+
+	it('treats an unvoted film as having no rating rather than a rating of zero', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(SEARCH_FIXTURE));
+		expect((await searchMovies('KEY', 'dune', fetchImpl))[2].tmdbRating).toBeNull();
+	});
 });
 
 describe('fetchMovie', () => {

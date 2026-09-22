@@ -32,25 +32,49 @@ function refuse(what: string, status: number): never {
 	throw new Error(`TMDB ${what} failed with status ${status}`);
 }
 
+/**
+ * The request URL carries the API key, and some fetch implementations put the
+ * URL into their own error message — so nothing from the transport layer is
+ * allowed to propagate unmodified.
+ */
+async function request(url: string, what: string, fetchImpl: typeof fetch): Promise<Response> {
+	try {
+		return await fetchImpl(url);
+	} catch {
+		throw new Error(`TMDB ${what} failed: the service could not be reached`);
+	}
+}
+
+async function parse(response: Response, what: string): Promise<Record<string, unknown>> {
+	try {
+		return (await response.json()) as Record<string, unknown>;
+	} catch {
+		throw new Error(`TMDB ${what} returned a response that could not be parsed`);
+	}
+}
+
 export async function searchMovies(
 	apiKey: string,
 	query: string,
 	fetchImpl: typeof fetch = fetch
 ): Promise<TmdbSearchResult[]> {
 	const url = `${API}/search/movie?api_key=${encodeURIComponent(apiKey)}&include_adult=false&query=${encodeURIComponent(query)}`;
-	const response = await fetchImpl(url);
+	const response = await request(url, 'search', fetchImpl);
 	if (!response.ok) refuse('search', response.status);
-	const body = (await response.json()) as { results?: unknown[] };
-	return (body.results ?? []).map((raw) => {
-		const item = raw as Record<string, unknown>;
-		return {
-			tmdbId: Number(item.id),
-			title: String(item.title ?? ''),
-			year: yearOf(item.release_date),
-			posterUrl: posterFrom(item.poster_path),
-			tmdbRating: ratingFrom(item.vote_average)
-		};
-	});
+	const body = await parse(response, 'search');
+	const results = Array.isArray(body.results) ? body.results : [];
+	return results
+		.map((raw) => {
+			const item = raw as Record<string, unknown>;
+			return {
+				tmdbId: Number(item.id),
+				title: String(item.title ?? ''),
+				year: yearOf(item.release_date),
+				posterUrl: posterFrom(item.poster_path),
+				tmdbRating: ratingFrom(item.vote_average)
+			};
+		})
+		.filter((result) => Number.isInteger(result.tmdbId));
 }
 
 export async function fetchMovie(
@@ -59,10 +83,10 @@ export async function fetchMovie(
 	fetchImpl: typeof fetch = fetch
 ): Promise<TmdbMovieDetail | null> {
 	const url = `${API}/movie/${tmdbId}?api_key=${encodeURIComponent(apiKey)}`;
-	const response = await fetchImpl(url);
+	const response = await request(url, 'detail lookup', fetchImpl);
 	if (response.status === 404) return null;
 	if (!response.ok) refuse('detail lookup', response.status);
-	const item = (await response.json()) as Record<string, unknown>;
+	const item = await parse(response, 'detail lookup');
 	const genres = Array.isArray(item.genres)
 		? (item.genres as { name?: unknown }[]).map((g) => String(g.name ?? '')).filter(Boolean)
 		: [];
