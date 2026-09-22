@@ -1920,7 +1920,15 @@ git commit -m "feat(setup): first visit creates the instance admin and timezone"
 ## Task 8: Groups and membership authorization
 
 **Files:**
-- Create: `src/lib/server/groups.ts`, `src/lib/server/groups.test.ts`, `src/routes/groups/+page.server.ts`, `src/routes/groups/+page.svelte`, `src/routes/groups/[groupId]/+page.server.ts`, `src/routes/groups/[groupId]/+page.svelte`
+- Create: `src/lib/server/groups.ts`, `src/lib/server/groups.test.ts`, `src/routes/groups/+page.server.ts`, `src/routes/groups/+page.svelte`, `src/routes/groups/[groupId]/+page.server.ts`, `src/routes/groups/[groupId]/+page.svelte`, `src/routes/+error.svelte`
+
+> **On error strings.** `error(401, 'Sign in first')` and `error(404, 'Not found')` stay
+> English in the server code deliberately: they are developer-facing labels for logs.
+> Translation happens once, at the point of display, in `+error.svelte`, keyed off
+> `page.status`. Do not thread `locale` into `requireMember` — that would put a
+> presentation concern on the core authorization primitive and repeat at every call
+> site. The 404 body must stay identical in every language for both "not a member"
+> and "no such group": that sameness is the security property.
 - Modify: `src/lib/i18n/en.json`, `src/lib/i18n/de.json`
 
 **Interfaces:**
