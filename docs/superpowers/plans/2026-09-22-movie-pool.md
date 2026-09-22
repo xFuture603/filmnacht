@@ -19,7 +19,7 @@ Carried forward from Plan 1, all still binding:
 - Node 24, npm. Prettier (tabs, single quotes, no trailing commas, 100 cols) enforced by `npm run lint`.
 - **English is the source language in code.** Every user-facing string goes through `t(locale, key)`; every new key lands in **both** `en.json` and `de.json`, which are at full parity and must stay there.
 - All timestamps stored UTC as integer unix seconds via Drizzle `{ mode: 'timestamp' }`.
-- Server modules under test must not import `$env/*`. Env access lives **only** in `src/lib/server/db/index.ts`. A module that needs a secret takes it as a parameter; the route reads it from env and passes it in.
+- **No module under `src/lib/server/**` may import `$env/*`**, with the single exception of `src/lib/server/db/index.ts`. A module that needs a secret takes it as a parameter. **Routes may read env** — a route is the boundary where a secret enters the system, and Task 7 does exactly that with `TMDB_API_KEY`. The rule exists so every server module stays unit-testable without SvelteKit's runtime, not to ban env everywhere.
 - Every group query is checked server-side against membership. A non-member gets **404, never 403** — `requireMember` already guarantees this and must not be bypassed.
 - Accessibility is binding, not polish: every *interactive* control at least 44px (`min-h-11`) — a non-interactive badge is exempt, a `readonly` input is not; `role="alert"` on error banners; alt text on every poster.
 - Server-side `error(...)` message strings stay English as developer-facing log labels. Translation happens in `src/routes/+error.svelte`, keyed off `page.status`.
@@ -311,6 +311,18 @@ Expected: FAIL — cannot resolve `./dedupe`.
  * and "Amelie" mean the same film, and the pool must say so rather than
  * quietly holding both (PRD §5).
  */
+/**
+ * German transliterates these to digraphs, not to bare vowels: "Mueller" and
+ * the umlaut spelling are one name, and NFD alone would split them. Applied
+ * after NFC so a decomposed umlaut recomposes first and cannot slip past.
+ */
+const GERMAN_DIGRAPHS: Record<string, string> = {
+	'ä': 'ae',
+	'ö': 'oe',
+	'ü': 'ue',
+	'ß': 'ss'
+};
+
 export function dedupeKey(input: {
 	tmdbId?: number | null;
 	title: string;
@@ -318,13 +330,22 @@ export function dedupeKey(input: {
 }): string {
 	if (input.tmdbId != null) return `tmdb:${input.tmdbId}`;
 	const slug = input.title
-		.normalize('NFD')
-		// Strip combining marks (U+0300-U+036F), so "e-acute" becomes "e".
-		// Written as escapes on purpose: the literal characters are invisible
-		// in source and get eaten by tooling that is not escape-safe.
-		.replace(/[\u0300-\u036f]/g, '')
 		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
+		// Recompose first: the digraph map matches single precomposed code points,
+		// so decomposed input (base letter + combining mark, routine from macOS
+		// and from already-normalised sources) would otherwise slip past it and be
+		// stripped to a bare vowel instead of a digraph.
+		.normalize('NFC')
+		.replace(/[äöüß]/g, (character) => GERMAN_DIGRAPHS[character])
+		.normalize('NFD')
+		// Strip remaining combining marks (U+0300-U+036F), so an acute accent
+		// folds away. Written as escapes on purpose: the literal characters are
+		// invisible in source and get eaten by tooling that is not escape-safe.
+		.replace(/[\u0300-\u036f]/g, '')
+		// Keep letters and digits in ANY script. An ASCII-only class collapses
+		// every Cyrillic, Japanese or Greek title to the empty slug, so two
+		// different foreign films from the same year would be judged duplicates.
+		.replace(/[^\p{Letter}\p{Number}]+/gu, '-')
 		.replace(/^-+|-+$/g, '');
 	return `manual:${slug}:${input.year ?? ''}`;
 }
@@ -333,7 +354,16 @@ export function dedupeKey(input: {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/lib/server/dedupe.test.ts`
-Expected: PASS, 9 tests.
+Report the count you observe.
+
+> **Five further tests were added during review**, and they are the ones that
+> matter most: two different titles in the **same year** must differ (the
+> original compared different years, so it passed even with the slug ignored);
+> German ss/umlaut spellings must collide; non-Latin titles must keep their
+> characters instead of collapsing to an empty slug; two different non-Latin
+> titles in the same year must differ; and a **decomposed** umlaut must key the
+> same as a precomposed one, with the fixture built by `String.fromCharCode`
+> and length-asserted so it cannot silently become precomposed.
 
 - [ ] **Step 5: Commit**
 
