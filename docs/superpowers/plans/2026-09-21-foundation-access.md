@@ -1622,7 +1622,10 @@ describe('createUser', () => {
 
 	it('gives two users with the same name different tokens', () => {
 		createUser(db, 'Ada');
-		expect(() => createUser(db, 'Ada')).not.toThrow();
+		createUser(db, 'Ada');
+		const rows = db.select().from(users).where(eq(users.displayName, 'Ada')).all();
+		expect(rows).toHaveLength(2);
+		expect(rows[0].loginTokenHash).not.toBe(rows[1].loginTokenHash);
 	});
 });
 
@@ -1783,10 +1786,6 @@ export const load: PageServerLoad = () => ({ timezones });
 
 export const actions: Actions = {
 	default: async ({ request, cookies }) => {
-		// The guard in hooks.server.ts already redirects a completed instance away
-		// from /setup; this re-check closes the race between two first visitors.
-		if (isSetupComplete(db)) return fail(403, { error: 'setup.error.done' });
-
 		const form = await request.formData();
 		const displayName = validateDisplayName(form.get('displayName'));
 		if (!displayName) return fail(400, { error: 'setup.error.name' });
@@ -1794,15 +1793,49 @@ export const actions: Actions = {
 		const timezone = String(form.get('timezone') ?? '');
 		if (!timezones.includes(timezone)) return fail(400, { error: 'setup.error.timezone' });
 
-		const user = createUser(db, displayName, true);
-		setSetting(db, 'timezone', timezone);
-		setSetting(db, 'setup_complete', '1');
+		// Claiming happens in one transaction inside claimInstance. Checking
+		// isSetupComplete here, before the `await` above, would NOT close the race:
+		// two concurrent tabs would both read "not complete" and both mint an admin.
+		const admin = claimInstance(db, displayName, timezone);
+		if (!admin) return fail(403, { error: 'setup.error.done' });
 
-		const { token, expiresAt } = createSession(db, user.id);
+		const { token, expiresAt } = createSession(db, admin.id);
 		setSessionCookie(cookies, token, expiresAt, !dev);
 		redirect(303, '/groups');
 	}
 };
+```
+
+`src/lib/server/setup.ts` — creating the instance admin is the only unauthenticated
+path in the app that grants privilege, so "exactly one" is a security property. The
+test and the set must be one atomic step:
+
+```ts
+import type { SessionUser } from './auth/session';
+import type { DB } from './db/client';
+import { isSetupComplete, setSetting } from './settings';
+import { createUser } from './users';
+
+/**
+ * Claims the instance for its first admin, or returns null if someone already
+ * has. The test and the set must happen together: checking before
+ * `await request.formData()` in a route lets two concurrent tabs both read
+ * "not complete" and both mint an admin.
+ *
+ * Passing `db` inside the transaction rather than the transaction handle is
+ * correct here, and deliberate: better-sqlite3 is a single connection, so BEGIN
+ * applies to every statement issued through `db` until COMMIT. Do not "fix"
+ * this by threading a `tx` handle through the helpers.
+ */
+export function claimInstance(db: DB, displayName: string, timezone: string): SessionUser | null {
+	return db.transaction(() => {
+		if (isSetupComplete(db)) return null;
+		const admin = createUser(db, displayName, true);
+		setSetting(db, 'timezone', timezone);
+		setSetting(db, 'setup_complete', '1');
+		return admin;
+	});
+}
 ```
 
 `src/routes/setup/+page.svelte`:
