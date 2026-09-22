@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import * as schema from './schema';
 
@@ -71,7 +71,7 @@ export function backupIfPending(
 ): string | null {
 	const entries = journal(folder).entries;
 	const pending = entries.length - appliedCount(sqlite);
-	if (pending <= 0 || file === ':memory:' || !existsSync(file)) return null;
+	if (pending <= 0 || file === ':memory:') return null;
 	if (!hasTables(sqlite)) return null; // brand-new instance: nothing to lose
 
 	// TRUNCATE folds the WAL back into the main file, so a plain copy is a

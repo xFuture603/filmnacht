@@ -37,7 +37,7 @@ describe('resolveLocale', () => {
 		expect(resolveLocale('de-DE,de;q=0.9', 'fr')).toBe('de');
 	});
 
-	it('reads the first supported tag from Accept-Language', () => {
+	it('picks the highest-weighted supported tag, skipping unsupported ones', () => {
 		expect(resolveLocale('fr-FR,fr;q=0.9,de;q=0.8,en;q=0.7')).toBe('de');
 	});
 

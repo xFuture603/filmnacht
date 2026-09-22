@@ -6,7 +6,13 @@
 	// rarer case of an error thrown before the layout load has run.
 	const locale = (page.data?.locale ?? 'en') as Locale;
 	const key =
-		page.status === 401 ? 'error.401' : page.status === 404 ? 'error.404' : 'error.generic';
+		page.status === 401
+			? 'error.401'
+			: page.status === 403
+				? 'error.403'
+				: page.status === 404
+					? 'error.404'
+					: 'error.generic';
 </script>
 
 <div class="mx-auto max-w-lg p-4">

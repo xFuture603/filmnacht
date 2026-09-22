@@ -85,4 +85,20 @@ describe('listGroupsFor', () => {
 			{ id: mine, name: 'Mine', emoji: null, role: 'owner' }
 		]);
 	});
+
+	it('drops a group once its member has left', () => {
+		const id = createGroup(db, { name: 'Movie Club', ownerId: ada });
+		addMember(db, grace, id);
+		leaveGroup(db, grace, id);
+		expect(listGroupsFor(db, grace)).toEqual([]);
+	});
+});
+
+describe('listMembers', () => {
+	it('drops a member once they have left', () => {
+		const id = createGroup(db, { name: 'Movie Club', ownerId: ada });
+		addMember(db, grace, id);
+		leaveGroup(db, grace, id);
+		expect(listMembers(db, id)).toEqual([{ id: ada, displayName: 'Ada', role: 'owner' }]);
+	});
 });

@@ -1,4 +1,3 @@
-import { dev } from '$app/environment';
 import { resolveLocale } from '$lib/i18n';
 import {
 	clearSessionCookie,
@@ -19,7 +18,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get(SESSION_COOKIE);
 	const session = token ? validateSession(db, token) : null;
 	event.locals.user = session?.user ?? null;
-	if (session?.refreshed) setSessionCookie(event.cookies, token!, session.expiresAt, !dev);
+	if (session?.refreshed) {
+		setSessionCookie(event.cookies, token!, session.expiresAt, event.url.protocol === 'https:');
+	}
 	if (token && !session) clearSessionCookie(event.cookies);
 
 	// Until an instance admin exists there is nothing to show and nobody to show

@@ -11,6 +11,7 @@ beforeEach(() => {
 
 describe('settings', () => {
 	it('returns null for a key that was never set', () => {
+		setSetting(db, 'other', 'x');
 		expect(getSetting(db, 'timezone')).toBeNull();
 	});
 

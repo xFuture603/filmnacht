@@ -31,13 +31,13 @@ CREATE UNIQUE INDEX `identities_provider_subject` ON `identities` (`provider`,`s
 CREATE TABLE `invites` (
 	`token_hash` text PRIMARY KEY NOT NULL,
 	`group_id` text NOT NULL,
-	`created_by` text NOT NULL,
+	`created_by` text,
 	`expires_at` integer NOT NULL,
 	`max_uses` integer,
 	`uses` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`group_id`) REFERENCES `groups`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`created_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 CREATE TABLE `memberships` (
@@ -116,7 +116,7 @@ CREATE TABLE `suggestions` (
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`group_id`) REFERENCES `groups`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`movie_id`) REFERENCES `movies`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`suggested_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`suggested_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `suggestions_group_dedupe` ON `suggestions` (`group_id`,`dedupe_key`);--> statement-breakpoint

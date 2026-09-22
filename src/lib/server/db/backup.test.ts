@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe('backupAndMigrate', () => {
-	it('does not back up a database file that did not exist yet', () => {
+	it('does not back up a brand-new, table-less database on its first migration', () => {
 		const file = tempFile();
 		const { sqlite, db } = createDb(file);
 		expect(backupAndMigrate(sqlite, db, file)).toBeNull();

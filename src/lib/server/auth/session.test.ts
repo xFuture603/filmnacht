@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from '../db/client';
 import { sessions, users } from '../db/schema';
 import { generateToken, hashToken } from './tokens';
-import { createSession, deleteSession, SESSION_TTL_MS, validateSession } from './session';
+import {
+	createSession,
+	deleteOtherSessions,
+	deleteSession,
+	SESSION_TTL_MS,
+	validateSession
+} from './session';
 
 let db: DB;
 
@@ -46,6 +52,7 @@ describe('validateSession', () => {
 	});
 
 	it('returns null for an unknown token', () => {
+		createSession(db, 'u1');
 		expect(validateSession(db, generateToken())).toBeNull();
 	});
 
@@ -77,6 +84,32 @@ describe('deleteSession', () => {
 		const { token } = createSession(db, 'u1');
 		deleteSession(db, token);
 		expect(validateSession(db, token)).toBeNull();
+	});
+});
+
+describe('deleteOtherSessions', () => {
+	it('removes every other session for the user', () => {
+		const a = createSession(db, 'u1');
+		const b = createSession(db, 'u1');
+		expect(deleteOtherSessions(db, 'u1', hashToken(a.token))).toBe(1);
+		expect(validateSession(db, a.token)).not.toBeNull();
+		expect(validateSession(db, b.token)).toBeNull();
+	});
+
+	it('removes all of them when no session is kept', () => {
+		createSession(db, 'u1');
+		createSession(db, 'u1');
+		expect(deleteOtherSessions(db, 'u1', null)).toBe(2);
+		expect(db.select().from(sessions).all()).toHaveLength(0);
+	});
+
+	it('leaves other users signed in', () => {
+		db.insert(users).values({ id: 'u2', displayName: 'Grace', loginTokenHash: 'h2' }).run();
+		const mine = createSession(db, 'u1');
+		const theirs = createSession(db, 'u2');
+		deleteOtherSessions(db, 'u1', null);
+		expect(validateSession(db, theirs.token)).not.toBeNull();
+		expect(validateSession(db, mine.token)).toBeNull();
 	});
 });
 

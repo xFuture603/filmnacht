@@ -1,4 +1,3 @@
-import { dev } from '$app/environment';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { claimInstance } from '$lib/server/setup';
@@ -11,7 +10,7 @@ const timezones = Intl.supportedValuesOf('timeZone');
 export const load: PageServerLoad = () => ({ timezones });
 
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
+	default: async ({ request, cookies, url }) => {
 		const form = await request.formData();
 		const displayName = validateDisplayName(form.get('displayName'));
 		if (!displayName) return fail(400, { error: 'setup.error.name' });
@@ -23,7 +22,10 @@ export const actions: Actions = {
 		if (!admin) return fail(403, { error: 'setup.error.done' });
 
 		const { token, expiresAt } = createSession(db, admin.id);
-		setSessionCookie(cookies, token, expiresAt, !dev);
+		// A protocol check, not `dev`: `dev` is only true under `vite dev`, so in
+		// production over plain HTTP (the Pi/Synology target of PRD §11) `!dev`
+		// would mark this cookie secure and the browser would silently drop it.
+		setSessionCookie(cookies, token, expiresAt, url.protocol === 'https:');
 		redirect(303, '/groups');
 	}
 };

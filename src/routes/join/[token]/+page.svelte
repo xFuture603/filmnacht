@@ -17,16 +17,18 @@
 	{/if}
 
 	<form method="POST" class="flex flex-col gap-3">
-		<label class="form-control">
-			<span class="label-text">{t(data.locale, 'invite.join_name')}</span>
-			<input
-				name="displayName"
-				required
-				maxlength="60"
-				autocomplete="nickname"
-				class="input input-bordered min-h-11"
-			/>
-		</label>
+		{#if !data.signedIn}
+			<label class="form-control">
+				<span class="label-text">{t(data.locale, 'invite.join_name')}</span>
+				<input
+					name="displayName"
+					required
+					maxlength="60"
+					autocomplete="nickname"
+					class="input input-bordered min-h-11"
+				/>
+			</label>
+		{/if}
 		<button class="btn btn-primary min-h-11">{t(data.locale, 'invite.join_submit')}</button>
 	</form>
 {/if}

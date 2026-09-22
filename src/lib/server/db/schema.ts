@@ -70,6 +70,11 @@ export const groups = sqliteTable('groups', {
 	id: uuid(),
 	name: text('name').notNull(),
 	emoji: text('emoji'),
+	/**
+	 * Deliberately left `no action` (no `onDelete`): deleting a group's owner
+	 * needs an ownership-transfer decision — who becomes the new owner, or
+	 * whether the group is deleted too — that is not this branch's to make.
+	 */
 	ownerId: text('owner_id')
 		.notNull()
 		.references(() => users.id),
@@ -108,9 +113,7 @@ export const invites = sqliteTable('invites', {
 	groupId: text('group_id')
 		.notNull()
 		.references(() => groups.id, { onDelete: 'cascade' }),
-	createdBy: text('created_by')
-		.notNull()
-		.references(() => users.id),
+	createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
 	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
 	maxUses: integer('max_uses'),
 	uses: integer('uses').notNull().default(0),
@@ -141,7 +144,7 @@ export const suggestions = sqliteTable(
 			.notNull()
 			.references(() => movies.id),
 		/** Null for the v1.0 wildcard pick, which belongs to nobody (PRD §10). */
-		suggestedBy: text('suggested_by').references(() => users.id),
+		suggestedBy: text('suggested_by').references(() => users.id, { onDelete: 'set null' }),
 		dedupeKey: text('dedupe_key').notNull(),
 		note: text('note'),
 		status: text('status', { enum: ['open', 'drawn', 'withdrawn'] })

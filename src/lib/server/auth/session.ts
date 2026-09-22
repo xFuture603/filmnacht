@@ -62,6 +62,26 @@ export function deleteSession(db: DB, token: string): void {
 		.run();
 }
 
+/**
+ * Signs the user out everywhere except the session given. Regenerating a login
+ * link must do this: rotating the token alone leaves any session that link
+ * already granted alive and self-renewing, which is not what "revoke" means.
+ */
+export function deleteOtherSessions(db: DB, userId: string, keepSessionId: string | null): number {
+	const rows = db
+		.select({ id: sessions.id })
+		.from(sessions)
+		.where(eq(sessions.userId, userId))
+		.all();
+	let removed = 0;
+	for (const row of rows) {
+		if (row.id === keepSessionId) continue;
+		db.delete(sessions).where(eq(sessions.id, row.id)).run();
+		removed++;
+	}
+	return removed;
+}
+
 export function setSessionCookie(
 	cookies: Cookies,
 	token: string,

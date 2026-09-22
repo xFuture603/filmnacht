@@ -3,7 +3,7 @@ import { safeRedirectPath } from '$lib/server/redirect';
 import { redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	const data = await request.formData();
 	const locale = String(data.get('locale') ?? '');
 	if ((locales as readonly string[]).includes(locale)) {
@@ -11,6 +11,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			path: '/',
 			httpOnly: false,
 			sameSite: 'lax',
+			secure: url.protocol === 'https:',
 			maxAge: 60 * 60 * 24 * 365
 		});
 	}
