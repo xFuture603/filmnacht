@@ -2376,6 +2376,9 @@ describe('lookupInvite', () => {
 	});
 
 	it('returns null for an unknown token', () => {
+		// The table must hold a live row, or this passes even with the hash
+		// comparison removed entirely.
+		createInvite(db, { groupId, createdBy: ada, now: NOW });
 		expect(lookupInvite(db, 'not-a-real-token', NOW)).toBeNull();
 	});
 
@@ -2620,17 +2623,26 @@ export const actions: Actions = {
 		if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
 			return fail(429, { error: 'invite.rate_limited' });
 		}
+
+		const form = await request.formData();
+		const displayName = validateDisplayName(form.get('displayName'));
+		if (!displayName) return fail(400, { error: 'invite.error.name' });
+
+		// Past the last await nothing yields: better-sqlite3 is synchronous and
+		// Node is single-threaded, so the invite cannot change under us between
+		// this lookup and the redeem. Checking BEFORE the await could not make
+		// that promise — an invite expiring in the window would still have
+		// produced a session for an account with no membership.
 		const invite = lookupInvite(db, params.token);
 		if (!invite) return fail(410, { error: 'invite.invalid' });
 
-		const displayName = validateDisplayName((await request.formData()).get('displayName'));
-		if (!displayName) return fail(400, { error: 'invite.error.name' });
-
 		const user = createUser(db, displayName);
-		redeemInvite(db, params.token, user.id);
+		const joinedGroupId = redeemInvite(db, params.token, user.id);
+		if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
+
 		const { token, expiresAt } = createSession(db, user.id);
 		setSessionCookie(cookies, token, expiresAt, !dev);
-		redirect(303, `/groups/${invite.groupId}`);
+		redirect(303, `/groups/${joinedGroupId}`);
 	}
 };
 ```
