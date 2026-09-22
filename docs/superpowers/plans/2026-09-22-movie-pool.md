@@ -543,16 +543,46 @@ function refuse(what: string, status: number): never {
 	throw new Error(`TMDB ${what} failed with status ${status}`);
 }
 
+/**
+ * The request URL carries the API key, and some fetch implementations put the
+ * URL into their own error message — so nothing from the transport layer may
+ * propagate unmodified. The bare `catch` discards the original error entirely,
+ * which makes leaking impossible by construction rather than by luck of wording.
+ */
+async function request(url: string, what: string, fetchImpl: typeof fetch): Promise<Response> {
+	try {
+		return await fetchImpl(url);
+	} catch {
+		throw new Error(`TMDB ${what} failed: the service could not be reached`);
+	}
+}
+
+/**
+ * Keeps raw parser internals out of callers; every failure leaves this module in
+ * one shape. Note this one is about STABILITY, not secrecy — a parse error
+ * describes the response body, and the key lives in the URL.
+ */
+async function parse(response: Response, what: string): Promise<Record<string, unknown>> {
+	try {
+		return (await response.json()) as Record<string, unknown>;
+	} catch {
+		throw new Error(`TMDB ${what} returned a response that could not be parsed`);
+	}
+}
+
 export async function searchMovies(
 	apiKey: string,
 	query: string,
 	fetchImpl: typeof fetch = fetch
 ): Promise<TmdbSearchResult[]> {
 	const url = `${API}/search/movie?api_key=${encodeURIComponent(apiKey)}&include_adult=false&query=${encodeURIComponent(query)}`;
-	const response = await fetchImpl(url);
+	const response = await request(url, 'search', fetchImpl);
 	if (!response.ok) refuse('search', response.status);
-	const body = (await response.json()) as { results?: unknown[] };
-	return (body.results ?? []).map((raw) => {
+	const body = await parse(response, 'search');
+	// `??` would let a non-array through to .map and throw a raw TypeError.
+	const results = Array.isArray(body.results) ? body.results : [];
+	return results
+		.map((raw) => {
 		const item = raw as Record<string, unknown>;
 		return {
 			tmdbId: Number(item.id),
@@ -560,8 +590,12 @@ export async function searchMovies(
 			year: yearOf(item.release_date),
 			posterUrl: posterFrom(item.poster_path),
 			tmdbRating: ratingFrom(item.vote_average)
-		};
-	});
+			};
+		})
+		// A result we cannot identify would key as `tmdb:NaN` in dedupeKey, because
+		// NaN != null is true — so two different malformed films would collide and
+		// the pool would refuse the second as a duplicate.
+		.filter((result) => Number.isInteger(result.tmdbId));
 }
 
 export async function fetchMovie(
@@ -570,10 +604,10 @@ export async function fetchMovie(
 	fetchImpl: typeof fetch = fetch
 ): Promise<TmdbMovieDetail | null> {
 	const url = `${API}/movie/${tmdbId}?api_key=${encodeURIComponent(apiKey)}`;
-	const response = await fetchImpl(url);
+	const response = await request(url, 'detail lookup', fetchImpl);
 	if (response.status === 404) return null;
 	if (!response.ok) refuse('detail lookup', response.status);
-	const item = (await response.json()) as Record<string, unknown>;
+	const item = await parse(response, 'detail lookup');
 	const genres = Array.isArray(item.genres)
 		? (item.genres as { name?: unknown }[]).map((g) => String(g.name ?? '')).filter(Boolean)
 		: [];
@@ -592,7 +626,16 @@ export async function fetchMovie(
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/lib/server/tmdb.test.ts`
-Expected: PASS, 9 tests.
+Report the count you observe.
+
+> **Six further tests were added during review**, all guarding failure modes:
+> a rejecting transport and an unparseable body must both throw a sanitised
+> error; a `results` field that is not an array must yield no results; a result
+> with an unusable id must be dropped rather than keyed as `tmdb:NaN`; and an
+> unvoted film (`vote_average: 0`) must report no rating rather than a rating of
+> zero. **Mutation-check any test that guards the key**: break the sanitiser,
+> confirm the test goes red, restore. A negated or not-contains assertion that
+> passes either way is worse than no test.
 
 - [ ] **Step 5: Add the key to `.env.example`**
 
