@@ -15,6 +15,7 @@ const scryptAsync = promisify(scrypt) as (
  * as a natural brake on online guessing.
  */
 const PARAMS = { N: 16384, r: 8, p: 1 };
+const SALT_LEN = 16;
 const KEYLEN = 64;
 const SCHEME = 'scrypt';
 
@@ -23,7 +24,7 @@ export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 200;
 
 export async function hashPassword(password: string): Promise<string> {
-	const salt = randomBytes(16);
+	const salt = randomBytes(SALT_LEN);
 	const key = await scryptAsync(password, salt, KEYLEN, PARAMS);
 	return `${SCHEME}$${salt.toString('base64url')}$${key.toString('base64url')}`;
 }
@@ -36,13 +37,21 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function verifyPassword(password: string, stored: string | null): Promise<boolean> {
 	const parts = (stored ?? '').split('$');
-	const usable =
-		parts.length === 3 && parts[0] === SCHEME && Boolean(parts[1]) && Boolean(parts[2]);
-	const salt = usable ? Buffer.from(parts[1], 'base64url') : randomBytes(16);
-	const expected = usable ? Buffer.from(parts[2], 'base64url') : randomBytes(KEYLEN);
-	const actual = await scryptAsync(password, salt, expected.length, PARAMS);
-	const matches = actual.length === expected.length && timingSafeEqual(actual, expected);
-	return usable && matches;
+	const tagged = parts.length === 3 && parts[0] === SCHEME;
+	const salt = tagged ? Buffer.from(parts[1], 'base64url') : Buffer.alloc(0);
+	const expected = tagged ? Buffer.from(parts[2], 'base64url') : Buffer.alloc(0);
+
+	// Validate the DECODED lengths, never the string's. A segment can be a
+	// non-empty string and still decode to zero bytes ('!!!' has no valid
+	// base64url characters), and deriving keylen from it would make the
+	// comparison below tautological — every password would then match.
+	const usable = salt.length === SALT_LEN && expected.length === KEYLEN;
+
+	// KEYLEN is our own constant on both branches, so the work and the timing are
+	// identical whether or not the stored value was usable.
+	const actual = await scryptAsync(password, usable ? salt : randomBytes(SALT_LEN), KEYLEN, PARAMS);
+	if (!usable) return false;
+	return timingSafeEqual(actual, expected);
 }
 
 export function validatePassword(raw: FormDataEntryValue | null): string | null {

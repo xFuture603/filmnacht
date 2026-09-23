@@ -46,6 +46,35 @@ describe('verifyPassword', () => {
 		expect(await verifyPassword('anything', 'scrypt$only-two$')).toBe(false);
 	});
 
+	it('refuses a stored value whose key segment decodes to nothing', async () => {
+		// The exact bypass: '!!!' is a non-empty string that decodes to zero
+		// bytes, so a keylen derived from it made every password match.
+		expect(await verifyPassword('any password at all', 'scrypt$AAAA$!!!')).toBe(false);
+		expect(await verifyPassword('a different one', 'scrypt$AAAA$!!!')).toBe(false);
+	});
+
+	it('refuses a stored value whose key segment is the wrong length', async () => {
+		const shortKey = Buffer.alloc(32).toString('base64url');
+		const salt = Buffer.alloc(16).toString('base64url');
+		expect(await verifyPassword('any password at all', `scrypt$${salt}$${shortKey}`)).toBe(false);
+	});
+
+	it('refuses a stored value whose salt is the wrong length', async () => {
+		const key = Buffer.alloc(64).toString('base64url');
+		expect(await verifyPassword('any password at all', `scrypt$AAAA$${key}`)).toBe(false);
+	});
+
+	it('does not let an oversized stored value dictate how much work it does', async () => {
+		// A huge key segment used to become a huge keylen. Now it is simply the
+		// wrong length and is refused, so this must be fast, not a 10MB allocation.
+		const huge = Buffer.alloc(1_000_000).toString('base64url');
+		const started = Date.now();
+		expect(await verifyPassword('any password at all', `scrypt$AAAA$${huge}`)).toBe(false);
+		// Still does one real scrypt for timing, so allow for that, but nothing
+		// proportional to the input.
+		expect(Date.now() - started).toBeLessThan(1000);
+	});
+
 	it('takes comparable time for a wrong password and an unparseable one', async () => {
 		// Not a strict timing assertion — just proof that the unparseable path
 		// still does the work, rather than returning early and leaking that the
