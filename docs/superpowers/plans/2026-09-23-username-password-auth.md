@@ -942,9 +942,26 @@ describe('POST /login', () => {
 		// Without this, every other test in this file passes against an action
 		// whose whole body is `return fail(400, { error: 'login.failed' })`. A
 		// suite in which nobody can ever sign in was 100% green.
-		const result = await post({ username: 'ada', password: 'correct horse battery' });
-		expect(result?.status).toBe(303);
-		expect(result?.location).toBe('/groups');
+		//
+		// Note `redirect()` THROWS rather than returning, so a success cannot be
+		// asserted off `post()`'s return value the way a `fail()` can. Catch it
+		// and check `isRedirect`, or wrap it in a helper that does.
+		const { redirect, cookies } = await postExpectRedirect({
+			username: 'ada',
+			password: 'correct horse battery'
+		});
+		expect(redirect.status).toBe(303);
+		expect(redirect.location).toBe('/groups');
+		// Assert the cookie FLAGS here too, not just that a cookie was set —
+		// `secure` in particular. See the Global Constraints: shipping
+		// `secure: !dev` once made an instance permanently unreachable over
+		// plain HTTP, and with Step 6 routing every signed-out visitor through
+		// /login there is no longer another way in.
+		expect(cookies.set).toHaveBeenCalledWith(
+			SESSION_COOKIE,
+			expect.any(String),
+			expect.objectContaining({ httpOnly: true, secure: false })
+		);
 	});
 
 	it('rate-limits by address before it ever looks the account up', async () => {
