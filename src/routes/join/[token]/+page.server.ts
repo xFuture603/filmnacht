@@ -30,6 +30,12 @@ export const actions: Actions = {
 			return fail(429, { error: 'invite.rate_limited' });
 		}
 
+		// Authorization, deliberately above anything that reveals instance state:
+		// without a valid invite a visitor must not learn whether a username
+		// exists. The lookup below, past the last await, stays the authoritative
+		// freshness check. Check twice — see FIX 8, movie-pool decisions.
+		if (!lookupInvite(db, params.token)) return fail(410, { error: 'invite.invalid' });
+
 		// A signed-in visitor joins as themselves, not as a new account: a second
 		// account would split their suggestions, ratings and history across two
 		// identities, and Plan 5's fairness-weighted draw would count them as two
@@ -54,7 +60,11 @@ export const actions: Actions = {
 
 		// Cheap rejection before the expensive hash: a taken username is by far
 		// the most common failure here, and hashing first would burn ~100ms of
-		// CPU on every one of them.
+		// CPU on every one of them. Reaching this line already required a live
+		// invite (checked above), so a visitor who gets here CAN tell a taken
+		// username from a free one — that is fine and intended: they could just
+		// as easily join and read the member list. The early check only stops
+		// someone with no invite at all from learning anything.
 		if (usernameTaken(db, username)) return fail(400, { error: 'auth.error.username_taken' });
 
 		const passwordHash = await hashPassword(password);
