@@ -14,8 +14,25 @@ export const load: PageServerLoad = ({ locals, url }) => {
 
 export const actions: Actions = {
 	default: async ({ request, cookies, getClientAddress, url }) => {
-		// The address gate is primary and is checked first: it is the one an
-		// attacker cannot evict, because the key is not one they choose.
+		// The address gate is checked first and always. Its real property is NOT
+		// that it cannot be evicted — it can: rate-limit.ts shares one map across
+		// every limiter and, when that map is full, drops the oldest window by
+		// insertion order regardless of its key. This key is in there like any
+		// other, so a big enough flood does hand this address a fresh budget.
+		// What holds is that an attacker cannot EXPAND this key space — one key
+		// per source address — while they can mint login-user: keys at will.
+		// That is why this one goes first.
+		//
+		// ponytail: a hard cap only while the map is not being flooded. Filling
+		// it takes 10,000 live windows, and a login-user: window lives 300s, so
+		// that is >=33 req/s sustained — roughly 200 source addresses at the 10
+		// per minute this gate allows. Below that rate neither gate is evicted;
+		// above it both degrade continuously. Left alone because it does not pay:
+		// cycling the map to drop one specific key costs ~10,000 insertions, more
+		// requests than the guesses it buys, and the 300s TTL would have expired
+		// that window anyway. Upgrade, if a public instance ever makes the flood
+		// worthwhile: a separate map per limiter class in rate-limit.ts, so that
+		// flooding one cannot evict another.
 		if (!rateLimit(`login-ip:${getClientAddress()}`, 10, 60_000)) {
 			return fail(429, { error: 'login.rate_limited' });
 		}

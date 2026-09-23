@@ -39,22 +39,31 @@ function formRequest(fields: Record<string, string>) {
 	return new Request('http://localhost/login', { method: 'POST', body: form });
 }
 
-async function post(fields: Record<string, string>, address = '1.2.3.4', cookies = cookieSpy()) {
+async function post(
+	fields: Record<string, string>,
+	address = '1.2.3.4',
+	cookies = cookieSpy(),
+	origin = 'http://localhost'
+) {
 	return actions.default({
 		request: formRequest(fields),
 		cookies,
 		getClientAddress: () => address,
-		url: new URL('http://localhost/login'),
+		url: new URL('/login', origin),
 		locals: { user: null, locale: 'en' }
 	} as never);
 }
 
 // redirect() throws (see @sveltejs/kit's Redirect), so a successful sign-in
 // has to be awaited inside a try/catch rather than read off a return value.
-async function postExpectRedirect(fields: Record<string, string>, address = '1.2.3.4') {
+async function postExpectRedirect(
+	fields: Record<string, string>,
+	address = '1.2.3.4',
+	origin = 'http://localhost'
+) {
 	const cookies = cookieSpy();
 	try {
-		await post(fields, address, cookies);
+		await post(fields, address, cookies, origin);
 	} catch (err) {
 		if (isRedirect(err)) return { redirect: err, cookies };
 		throw err;
@@ -75,10 +84,30 @@ describe('POST /login', () => {
 
 		expect(redirect.status).toBe(303);
 		expect(redirect.location).toBe('/groups');
+		// secure MUST be false here. This project has already shipped this bug
+		// once, as `secure: !dev`: on a plain-HTTP instance — the Pi or Synology
+		// of PRD 11 — the browser silently discards a Secure cookie, so sign-in
+		// appears to succeed and then does nothing, forever. Step 6 made /login
+		// the only entry point for a returning user, so a regression here takes
+		// the whole instance down rather than just one route.
 		expect(cookies.set).toHaveBeenCalledWith(
 			SESSION_COOKIE,
 			expect.any(String),
-			expect.objectContaining({ httpOnly: true })
+			expect.objectContaining({ httpOnly: true, sameSite: 'lax', secure: false })
+		);
+	});
+
+	it('marks the session cookie secure over https, and only there', async () => {
+		const { cookies } = await postExpectRedirect(
+			{ username: 'ada', password: PASSWORD },
+			'4.3.2.1',
+			'https://filmnacht.example'
+		);
+
+		expect(cookies.set).toHaveBeenCalledWith(
+			SESSION_COOKIE,
+			expect.any(String),
+			expect.objectContaining({ secure: true })
 		);
 	});
 
@@ -160,6 +189,45 @@ describe('POST /login', () => {
 		const result = await post({ username: 'ada', password: 'wrong password' }, '10.0.0.99');
 		expect(result?.status).toBe(429);
 		expect(result?.data?.error).toBe('login.rate_limited');
+	});
+
+	it('charges the address budget even when the username gate is what refuses', async () => {
+		// Pins the ORDER, which is load-bearing and which swapping leaves green
+		// on every other test here. Address gate first means a request the
+		// username gate rejects has already cost the attacker an address slot.
+		// Username gate first would make probing a locked-out account free and
+		// leave the attacker's whole address budget intact for other names.
+		for (let i = 0; i < 10; i++) await post({ username: 'ada', password: 'wrong' }, '10.0.0.1');
+
+		// From a fresh address, nine attempts the username gate refuses. Under
+		// the required order each still spends one of this address's ten slots.
+		for (let i = 0; i < 9; i++) {
+			const refused = await post({ username: 'ada', password: 'wrong' }, '10.0.0.99');
+			expect(refused?.data?.error).toBe('login.rate_limited');
+		}
+
+		// Tenth slot: a username with a budget of its own, so only the address
+		// gate can stop it. It does not, because it is exactly at the cap.
+		const tenth = await post({ username: 'bob', password: 'wrong' }, '10.0.0.99');
+		expect(tenth?.data?.error).toBe('login.failed');
+
+		// Eleventh. 429 only if those nine refusals were charged.
+		const eleventh = await post({ username: 'bob', password: 'wrong' }, '10.0.0.99');
+		expect(eleventh?.status).toBe(429);
+		expect(eleventh?.data?.error).toBe('login.rate_limited');
+	});
+
+	it('plants no username window for a username too long to be an account', async () => {
+		// validateUsername, not a bare trim/lowercase: an unusable username
+		// normalises to '' and no login-user: key is ever created, which is what
+		// bounds that key space to something an attacker cannot expand. With a
+		// raw form value the 40 characters below become a 40-character key — and
+		// a 400KB submission becomes a 400KB key in the process-wide map.
+		const tooLong = 'a'.repeat(40);
+		for (let i = 0; i < 11; i++) {
+			const result = await post({ username: tooLong, password: 'wrong' }, `172.16.0.${i}`);
+			expect(result?.data?.error).toBe('login.failed');
+		}
 	});
 
 	it('honours a same-site redirectTo and refuses one that leaves the site', async () => {
