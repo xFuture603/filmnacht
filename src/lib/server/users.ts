@@ -10,8 +10,17 @@ export function createUser(db: DB, displayName: string, isAdmin = false): Sessio
 	const id = crypto.randomUUID();
 	// A token is minted so the column is never null; it is not shown anywhere.
 	// The profile's "reveal" action regenerates it (see Task 10).
+	// username/passwordHash are placeholders: this function predates login by
+	// username+password and Task 3 replaces both with real values.
 	db.insert(users)
-		.values({ id, displayName, isAdmin, loginTokenHash: hashToken(generateToken()) })
+		.values({
+			id,
+			displayName,
+			isAdmin,
+			username: `user-${id}`,
+			passwordHash: 'scrypt$placeholder$placeholder',
+			loginTokenHash: hashToken(generateToken())
+		})
 		.run();
 	return { id, displayName, isAdmin };
 }
