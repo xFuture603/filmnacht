@@ -33,19 +33,33 @@ New for this plan, and the first two are the ones that matter:
 - **`login never depends on SMTP`** (PRD §9). Nothing in this plan may make signing in require mail. SMTP arrives in Plan 4 for reset only.
 - **No new runtime dependency.** `scrypt` is in `node:crypto`. If you find yourself reaching for bcrypt or argon2, stop and report.
 
-## The migration is real this time
+## The schema is rebuilt, not migrated
 
-Plan 1's migration was free — nothing had shipped, so `0000` could be regenerated at will. This plan adds columns to a table that may hold rows, and **SQLite cannot add a `NOT NULL` column without a default, nor tighten a column to `NOT NULL` afterwards, without rebuilding the table.**
+filmnacht has never been deployed. It exists on one developer machine, and the
+only database is a test one that gets deleted between runs. So this plan does
+**not** carry the cost of a migration over live rows: migration `0000` is
+regenerated from scratch with the new columns in place, exactly as Plan 1 did.
 
-So the schema is deliberately permissive and the application enforces the rest:
+That buys a better schema than a real migration would have allowed — SQLite
+cannot add a `NOT NULL` column to a populated table, so a live instance would
+have forced `username` and `password_hash` to be nullable with the application
+enforcing what the database should. Here they can simply be required:
 
-| Column | DB constraint | Enforced by |
-| --- | --- | --- |
-| `username` | `TEXT`, nullable, **unique index** | Required for every new account, in `createUser` |
-| `password_hash` | `TEXT`, nullable | Required for every new account; a null means "this account predates passwords" |
-| `email` | `TEXT`, nullable (already exists) | Genuinely optional, forever |
+| Column | Constraint |
+| --- | --- |
+| `username` | `TEXT NOT NULL`, unique |
+| `password_hash` | `TEXT NOT NULL` |
+| `email` | `TEXT`, nullable — genuinely optional, forever |
 
-A row with `password_hash IS NULL` is not a defect — it is an account created before this plan, and it can still sign in with its personal login link and set a password afterwards. **Do not** write code that assumes a password exists.
+**Consequence accepted deliberately:** when v2 adds OIDC, a provider-backed
+account has no password and `password_hash` will need relaxing — one `ALTER`
+inside a migration already doing far more. That is the right trade: a nullable
+column today would mean every read of it reasoning about a state that cannot
+occur.
+
+**Consequence for anyone running this:** `rm -rf data` before the first run
+after this plan lands. An instance created before it is not upgraded, it is
+replaced. Stated here so it is a decision rather than a surprise.
 
 ---
 
@@ -241,123 +255,125 @@ git commit -m "feat(auth): scrypt password hashing with no new dependency"
 
 ---
 
-## Task 2: The schema migration
+## Task 2: The schema
 
 **Files:**
-- Modify: `src/lib/server/db/schema.ts`
-- Generated: `drizzle/0001_*.sql`, updated `drizzle/meta/`
-- Create: `src/lib/server/db/migration.test.ts`
+- Modify: `src/lib/server/db/schema.ts`, `src/lib/server/db/client.test.ts`
+- Regenerated: `drizzle/0000_*.sql`, `drizzle/meta/`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `users.username` (nullable, unique index), `users.passwordHash` (nullable).
+- Produces: `users.username` (`NOT NULL`, unique), `users.passwordHash` (`NOT NULL`).
 
-This is the first migration in this project that runs over a database that may hold rows. Read the plan header's migration section before starting.
+Migration `0000` is regenerated rather than added to — see the header. Nothing
+has shipped, so there is no upgrade path to preserve.
 
 - [ ] **Step 1: Write the failing test**
 
-`src/lib/server/db/migration.test.ts` — this test exists to prove the migration is safe on a **populated** database, which is the property that cannot be checked by looking at the generated SQL:
+Append to `src/lib/server/db/client.test.ts`:
 
 ```ts
-import { eq } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
-import { applyMigrations, createDb } from './client';
-import { users } from './schema';
-
-describe('the username migration', () => {
-	it('adds the columns to a database that already holds users', () => {
-		const { db } = createDb(':memory:');
-		applyMigrations(db);
-		db.insert(users)
-			.values({ id: 'u1', displayName: 'Ada', loginTokenHash: 'hash-a' })
-			.run();
-		const row = db.select().from(users).where(eq(users.id, 'u1')).get();
-		expect(row?.username).toBeNull();
-		expect(row?.passwordHash).toBeNull();
-	});
-
-	it('refuses two accounts with the same username', () => {
-		const { db } = createDb(':memory:');
-		applyMigrations(db);
-		db.insert(users)
-			.values({ id: 'u1', displayName: 'Ada', username: 'ada', loginTokenHash: 'h1' })
-			.run();
+describe('user credentials', () => {
+	it('refuses a user with no username', () => {
+		const db = testDb();
 		expect(() =>
 			db
 				.insert(users)
-				.values({ id: 'u2', displayName: 'Other Ada', username: 'ada', loginTokenHash: 'h2' })
+				.values({ displayName: 'Ada', passwordHash: 'x', loginTokenHash: 'h' } as never)
 				.run()
 		).toThrow();
 	});
 
-	it('allows many accounts with no username, since the column is nullable', () => {
-		const { db } = createDb(':memory:');
-		applyMigrations(db);
-		db.insert(users).values({ id: 'u1', displayName: 'Ada', loginTokenHash: 'h1' }).run();
-		db.insert(users).values({ id: 'u2', displayName: 'Grace', loginTokenHash: 'h2' }).run();
+	it('refuses a user with no password hash', () => {
+		const db = testDb();
+		expect(() =>
+			db
+				.insert(users)
+				.values({ displayName: 'Ada', username: 'ada', loginTokenHash: 'h' } as never)
+				.run()
+		).toThrow();
+	});
+
+	it('refuses two users with the same username', () => {
+		const db = testDb();
+		db.insert(users)
+			.values({ displayName: 'Ada', username: 'ada', passwordHash: 'x', loginTokenHash: 'h1' })
+			.run();
+		expect(() =>
+			db
+				.insert(users)
+				.values({ displayName: 'Other', username: 'ada', passwordHash: 'y', loginTokenHash: 'h2' })
+				.run()
+		).toThrow();
+	});
+
+	it('allows two users to share a display name', () => {
+		const db = testDb();
+		db.insert(users)
+			.values({ displayName: 'Alex', username: 'alex1', passwordHash: 'x', loginTokenHash: 'h1' })
+			.run();
+		db.insert(users)
+			.values({ displayName: 'Alex', username: 'alex2', passwordHash: 'y', loginTokenHash: 'h2' })
+			.run();
 		expect(db.select().from(users).all()).toHaveLength(2);
 	});
 });
 ```
 
-The third test matters more than it looks: SQLite treats `NULL`s as distinct in a unique index, so multiple password-less legacy rows must not collide. If that assumption were wrong, the migration would break every existing instance.
+The last one is the whole point of having two fields, so it is worth pinning
+even though nothing enforces it — a future "helpful" unique index on
+`display_name` would break the product decision, and this test would catch it.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npx vitest run src/lib/server/db/migration.test.ts`
-Expected: FAIL — `username` and `passwordHash` do not exist on the schema.
+Run: `npx vitest run src/lib/server/db/client.test.ts`
+Expected: FAIL — `username` and `passwordHash` are not on the schema.
 
 - [ ] **Step 3: Extend the schema**
 
-In `src/lib/server/db/schema.ts`, add to the `users` table, keeping every existing column exactly as it is:
+In `src/lib/server/db/schema.ts`, add to `users`, keeping every existing column
+exactly as it is:
 
 ```ts
 	/**
-	 * What you log in with. Nullable at the database level only because SQLite
-	 * cannot add a NOT NULL column to a populated table — `createUser` requires
-	 * one for every new account. Deliberately separate from `displayName` (PRD
-	 * §9, decision 20): two friends may both be "Alex" to the group, and either
-	 * may change what the group calls them without changing how they sign in.
+	 * What you sign in with. Deliberately separate from `displayName` (PRD §9,
+	 * decision 20): two friends may both be "Alex" to the group, and either may
+	 * change what the group calls them without changing how they log in.
 	 */
-	username: text('username').unique(),
+	username: text('username').notNull().unique(),
 	/**
-	 * Null means the account predates passwords: it can still sign in with its
-	 * personal login link and set one afterwards. Never assume this is present.
+	 * scrypt, in the format `scrypt$<salt>$<key>`. NOT NULL because every account
+	 * in this design has a password — when v2 adds OIDC, provider-backed accounts
+	 * will need this relaxed, inside a migration already doing more.
 	 */
-	passwordHash: text('password_hash'),
+	passwordHash: text('password_hash').notNull(),
 ```
 
-Then `npm run db:generate`.
+- [ ] **Step 4: Regenerate the migration**
 
-- [ ] **Step 4: Read the generated SQL before trusting it**
+```bash
+rm -rf data drizzle/0000_*.sql drizzle/meta
+npm run db:generate
+```
 
-Open `drizzle/0001_*.sql` and confirm it is two `ALTER TABLE users ADD COLUMN` statements plus a unique index — and **not** a table rebuild (`CREATE TABLE __new_users` … `DROP TABLE users`). A rebuild would be a much riskier operation on live data and would mean the schema is tighter than this plan intends.
-
-If it *is* a rebuild, stop and report rather than proceeding: it means something in the schema edit asked for a constraint SQLite cannot add in place.
-
-Paste the generated SQL into your report.
+**Verify and report:** the regenerated SQL still creates all twelve tables and
+every unique constraint from before, plus `username` and `password_hash` as
+`NOT NULL` with a unique index on `username`. Paste the `users` `CREATE TABLE`
+and the index lines. If the table count is not twelve, stop and report —
+something was lost.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `npm test`. Report the count you observe.
+Run: `npm test`. Every existing test that inserts a `users` row directly now
+needs a `username` and a `passwordHash`. Fix those fixtures; do **not** weaken
+any assertion to accommodate them. Report the count you observe and name every
+test file you had to touch.
 
-- [ ] **Step 6: Verify the migration on a database that already has data**
-
-This is the point of the task. From the repo root:
-
-```bash
-rm -rf /tmp/filmnacht-migration-check && mkdir -p /tmp/filmnacht-migration-check
-```
-
-Write a throwaway script **outside the repo** that: creates a database at that path using the *previous* migration only, inserts a user and a group, then applies the new migration set and confirms the user survives with `username` and `password_hash` both null. Paste the output. Delete the directory afterwards.
-
-If you cannot construct that check, say so rather than claiming it.
-
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/lib/server/db/schema.ts src/lib/server/db/migration.test.ts drizzle
-git commit -m "feat(auth): add username and password_hash, nullable for existing rows"
+git add -A
+git commit -m "feat(auth): username and password_hash, required on every account"
 ```
 
 ---
@@ -373,8 +389,8 @@ git commit -m "feat(auth): add username and password_hash, nullable for existing
 - Produces:
   - `USERNAME_MIN = 3`, `USERNAME_MAX = 32`
   - `validateUsername(raw: FormDataEntryValue | null): string | null` — normalises to lowercase
-  - `createUser(db, input: { username: string; displayName: string; passwordHash?: string | null; isAdmin?: boolean }): SessionUser`
-  - `userByUsername(db: DB, username: string): { id: string; username: string; passwordHash: string | null } | null`
+  - `createUser(db, input: { username: string; displayName: string; passwordHash: string; isAdmin?: boolean }): SessionUser`
+  - `userByUsername(db: DB, username: string): { id: string; username: string; passwordHash: string } | null`
   - `setPassword(db: DB, userId: string, passwordHash: string): void`
   - `usernameTaken(db: DB, username: string): boolean`
 
@@ -431,14 +447,20 @@ describe('createUser with a username', () => {
 		expect(row?.passwordHash).toBe(hash);
 	});
 
-	it('still allows two members to share a display name', () => {
-		createUser(db, { username: 'alex1', displayName: 'Alex' });
-		expect(() => createUser(db, { username: 'alex2', displayName: 'Alex' })).not.toThrow();
+	it('still allows two members to share a display name', async () => {
+		const hash = await hashPassword('a password');
+		createUser(db, { username: 'alex1', displayName: 'Alex', passwordHash: hash });
+		expect(() =>
+			createUser(db, { username: 'alex2', displayName: 'Alex', passwordHash: hash })
+		).not.toThrow();
 	});
 
-	it('refuses two members with the same username', () => {
-		createUser(db, { username: 'ada', displayName: 'Ada' });
-		expect(() => createUser(db, { username: 'ada', displayName: 'Someone Else' })).toThrow();
+	it('refuses two members with the same username', async () => {
+		const hash = await hashPassword('a password');
+		createUser(db, { username: 'ada', displayName: 'Ada', passwordHash: hash });
+		expect(() =>
+			createUser(db, { username: 'ada', displayName: 'Someone Else', passwordHash: hash })
+		).toThrow();
 	});
 });
 
@@ -453,18 +475,30 @@ describe('userByUsername', () => {
 		});
 	});
 
-	it('is case-insensitive, because the username is stored lowercased', () => {
-		createUser(db, { username: 'ada', displayName: 'Ada' });
+	it('is case-insensitive, because the username is stored lowercased', async () => {
+		createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: await hashPassword('a password')
+		});
 		expect(userByUsername(db, 'ADA')?.username).toBe('ada');
 	});
 
-	it('returns null for an unknown username', () => {
-		createUser(db, { username: 'ada', displayName: 'Ada' });
+	it('returns null for an unknown username', async () => {
+		createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: await hashPassword('a password')
+		});
 		expect(userByUsername(db, 'grace')).toBeNull();
 	});
 
-	it('never returns the display name or anything else the login page does not need', () => {
-		createUser(db, { username: 'ada', displayName: 'Ada' });
+	it('never returns the display name or anything else the login page does not need', async () => {
+		createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: await hashPassword('a password')
+		});
 		expect(Object.keys(userByUsername(db, 'ada') ?? {}).sort()).toEqual([
 			'id',
 			'passwordHash',
@@ -485,23 +519,36 @@ describe('setPassword', () => {
 		expect(userByUsername(db, 'ada')?.passwordHash).toBe(fresh);
 	});
 
-	it('gives a password to an account that had none', async () => {
-		const user = createUser(db, { username: 'ada', displayName: 'Ada' });
-		expect(userByUsername(db, 'ada')?.passwordHash).toBeNull();
-		setPassword(db, user.id, await hashPassword('first password'));
-		expect(userByUsername(db, 'ada')?.passwordHash).not.toBeNull();
+	it('leaves every other account untouched', async () => {
+		const ada = createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: await hashPassword('ada password')
+		});
+		const graceHash = await hashPassword('grace password');
+		createUser(db, { username: 'grace', displayName: 'Grace', passwordHash: graceHash });
+		setPassword(db, ada.id, await hashPassword('ada new password'));
+		expect(userByUsername(db, 'grace')?.passwordHash).toBe(graceHash);
 	});
 });
 
 describe('usernameTaken', () => {
-	it('reports a username already in use', () => {
-		createUser(db, { username: 'ada', displayName: 'Ada' });
+	it('reports a username already in use', async () => {
+		createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: await hashPassword('a password')
+		});
 		expect(usernameTaken(db, 'ada')).toBe(true);
 		expect(usernameTaken(db, 'grace')).toBe(false);
 	});
 
-	it('matches case-insensitively', () => {
-		createUser(db, { username: 'ada', displayName: 'Ada' });
+	it('matches case-insensitively', async () => {
+		createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: await hashPassword('a password')
+		});
 		expect(usernameTaken(db, 'ADA')).toBe(true);
 	});
 });
@@ -540,7 +587,7 @@ export function validateUsername(raw: FormDataEntryValue | null): string | null 
 
 export function createUser(
 	db: DB,
-	input: { username: string; displayName: string; passwordHash?: string | null; isAdmin?: boolean }
+	input: { username: string; displayName: string; passwordHash: string; isAdmin?: boolean }
 ): SessionUser {
 	const id = crypto.randomUUID();
 	const isAdmin = input.isAdmin ?? false;
@@ -551,7 +598,7 @@ export function createUser(
 			id,
 			username: input.username,
 			displayName: input.displayName,
-			passwordHash: input.passwordHash ?? null,
+			passwordHash: input.passwordHash,
 			isAdmin,
 			loginTokenHash: hashToken(generateToken())
 		})
@@ -818,12 +865,6 @@ describe('POST /login', () => {
 		await post({ username: 'ada', password: 'wrong password' }, '5.6.7.8');
 		const wrongMs = Date.now() - b;
 		expect(unknownMs).toBeGreaterThan(wrongMs / 4);
-	});
-
-	it('refuses an account that has no password at all', async () => {
-		createUser(db, { username: 'legacy', displayName: 'Legacy' });
-		const result = await post({ username: 'legacy', password: 'anything at all' });
-		expect(result?.data?.error).toBe('login.failed');
 	});
 
 	it('rate-limits by address before it ever looks the account up', async () => {
