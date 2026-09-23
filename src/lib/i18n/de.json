@@ -57,5 +57,14 @@
 	"pool.error.cap_reached": "Du hast alle deine Vorschläge genutzt. Zieh zuerst einen zurück.",
 	"pool.error.bad_title": "Bitte gib einen Filmtitel ein.",
 	"pool.error.not_found": "Dieser Vorschlag ist nicht von dir oder existiert nicht mehr.",
-	"pool.error.already_drawn": "Dieser Film wurde schon gezogen und kann nicht zurückgezogen werden."
+	"pool.error.already_drawn": "Dieser Film wurde schon gezogen und kann nicht zurückgezogen werden.",
+	"add.title": "Film zu {group} hinzufügen",
+	"add.manual_heading": "Selbst eintragen",
+	"add.film_title": "Titel",
+	"add.year": "Jahr (optional)",
+	"add.poster": "Poster-URL (optional)",
+	"add.note": "Warum dieser Film? (optional)",
+	"add.note_hint": "Wird der Gruppe erst nach der Ziehung gezeigt, höchstens 200 Zeichen.",
+	"add.submit": "Zum Pool hinzufügen",
+	"add.back": "Zurück zur Gruppe"
 }

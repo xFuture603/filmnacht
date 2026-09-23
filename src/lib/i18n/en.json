@@ -59,5 +59,14 @@
 	"pool.error.cap_reached": "You have used all your suggestions. Withdraw one first.",
 	"pool.error.bad_title": "Please enter a film title.",
 	"pool.error.not_found": "That suggestion is not yours, or no longer exists.",
-	"pool.error.already_drawn": "That film has already been drawn and cannot be withdrawn."
+	"pool.error.already_drawn": "That film has already been drawn and cannot be withdrawn.",
+	"add.title": "Add a film to {group}",
+	"add.manual_heading": "Type it in",
+	"add.film_title": "Title",
+	"add.year": "Year (optional)",
+	"add.poster": "Poster URL (optional)",
+	"add.note": "Why this film? (optional)",
+	"add.note_hint": "Shown to the group only after the draw, max 200 characters.",
+	"add.submit": "Add to the pool",
+	"add.back": "Back to the group"
 }

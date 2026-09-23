@@ -8,6 +8,10 @@
 	{data.group.name}
 </h1>
 
+{#if form?.error}
+	<div class="alert alert-error mb-4" role="alert">{t(data.locale, form.error)}</div>
+{/if}
+
 <section class="mb-8">
 	<div class="mb-3 flex flex-wrap items-center gap-3">
 		<h2 class="text-lg font-semibold">{t(data.locale, 'pool.title')}</h2>
@@ -18,10 +22,6 @@
 			{t(data.locale, 'pool.add')}
 		</a>
 	</div>
-
-	{#if form?.error}
-		<div class="alert alert-error mb-3" role="alert">{t(data.locale, form.error)}</div>
-	{/if}
 
 	{#if data.pool.length === 0}
 		<p>{t(data.locale, 'pool.empty')}</p>
@@ -85,9 +85,6 @@
 	<form method="POST" action="?/invite" class="mt-6">
 		<button class="btn btn-secondary min-h-11">{t(data.locale, 'invite.create')}</button>
 	</form>
-	{#if form?.error}
-		<div class="alert alert-error mt-2" role="alert">{t(data.locale, form.error)}</div>
-	{/if}
 	{#if form?.inviteUrl}
 		<p class="mt-2">{t(data.locale, 'invite.created')}</p>
 		<input class="input input-bordered mt-1 w-full min-h-11" readonly value={form.inviteUrl} />
