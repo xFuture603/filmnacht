@@ -55,6 +55,11 @@ export const actions: Actions = {
 
 	adopt: async ({ request, locals, params }) => {
 		const user = requireUser(locals);
+		// Authorization, checked before any outbound work: a non-member must not
+		// be able to make this instance call TMDB on their behalf. This is a
+		// distinct concern from the re-check below and must not be merged with
+		// it — do not "optimise" this into a single call.
+		requireMember(db, user.id, params.groupId);
 		const key = env.TMDB_API_KEY;
 		if (!key) return fail(400, { error: 'add.search_disabled' });
 
@@ -72,8 +77,10 @@ export const actions: Actions = {
 		}
 		if (!detail) return fail(404, { error: 'add.search_none' });
 
-		// Past the last await: the membership/settings snapshot and the cap check
-		// inside addSuggestion are both now unraceable.
+		// Freshness, re-checked past the last await: membership may have been
+		// revoked and settings may have changed during the network call above, so
+		// the cap inside addSuggestion must be enforced against a snapshot taken
+		// now, not the one from before the await.
 		const group = requireMember(db, user.id, params.groupId);
 		const result = addSuggestion(db, {
 			groupId: params.groupId,
