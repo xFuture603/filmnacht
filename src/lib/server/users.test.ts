@@ -189,6 +189,23 @@ describe('validateUsername', () => {
 		expect(validateUsername('')).toBeNull();
 		expect(validateUsername(null)).toBeNull();
 	});
+
+	it('rejects a username with no letters or digits', () => {
+		// '...' and '-_-' are 3 characters, satisfy the length bound and use only
+		// characters the charset regex already allows — without the alnum check
+		// both would sail through and identify nobody.
+		expect(validateUsername('...')).toBeNull();
+		expect(validateUsername('-_-')).toBeNull();
+		// Also below the length bound on its own, but listed because the brief
+		// calls it out explicitly as a case that must be rejected.
+		expect(validateUsername('.')).toBeNull();
+	});
+
+	it('accepts a letter or digit combined with separators', () => {
+		expect(validateUsername('a.b')).toBe('a.b');
+		expect(validateUsername('a-b')).toBe('a-b');
+		expect(validateUsername('a_b')).toBe('a_b');
+	});
 });
 
 describe('createUser with a username', () => {
@@ -213,6 +230,21 @@ describe('createUser with a username', () => {
 		createUser(db, { username: 'ada', displayName: 'Ada', passwordHash: hash });
 		expect(() =>
 			createUser(db, { username: 'ada', displayName: 'Someone Else', passwordHash: hash })
+		).toThrow();
+	});
+
+	it('lowercases and trims its own input, independent of any caller pre-normalising', async () => {
+		const hash = await hashPassword('a password');
+		const user = createUser(db, { username: '  Ada  ', displayName: 'Ada', passwordHash: hash });
+		const row = db.select().from(users).where(eq(users.id, user.id)).get();
+		expect(row?.username).toBe('ada');
+	});
+
+	it('still refuses a collision that only differs by case or padding', async () => {
+		const hash = await hashPassword('a password');
+		createUser(db, { username: 'ada', displayName: 'Ada', passwordHash: hash });
+		expect(() =>
+			createUser(db, { username: '  ADA  ', displayName: 'Someone Else', passwordHash: hash })
 		).toThrow();
 	});
 });

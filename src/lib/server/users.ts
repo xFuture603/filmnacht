@@ -21,6 +21,9 @@ export function validateUsername(raw: FormDataEntryValue | null): string | null 
 		.toLowerCase();
 	if (username.length < USERNAME_MIN || username.length > USERNAME_MAX) return null;
 	if (!/^[a-z0-9._-]+$/.test(username)) return null;
+	// A username of only dots or separators identifies nobody and is the sort
+	// of thing that later turns into a path-handling surprise ('...', '.').
+	if (!/[a-z0-9]/.test(username)) return null;
 	return username;
 }
 
@@ -30,12 +33,16 @@ export function createUser(
 ): SessionUser {
 	const id = crypto.randomUUID();
 	const isAdmin = input.isAdmin ?? false;
+	// Normalised here too, not just by validateUsername: the case-insensitive
+	// lookup in userByUsername/usernameTaken must hold as a property of this
+	// function, not as an accident of every caller pre-normalising.
+	const username = input.username.trim().toLowerCase();
 	// A login token is minted so the column is never null; it is not shown
 	// anywhere. The profile's reveal action regenerates it.
 	db.insert(users)
 		.values({
 			id,
-			username: input.username,
+			username,
 			displayName: input.displayName,
 			passwordHash: input.passwordHash,
 			isAdmin,

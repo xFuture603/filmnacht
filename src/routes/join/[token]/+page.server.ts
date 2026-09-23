@@ -1,9 +1,14 @@
-import { hashPassword } from '$lib/server/auth/password';
+import { hashPassword, validatePassword } from '$lib/server/auth/password';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { lookupInvite, redeemInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
-import { createUser, validateDisplayName } from '$lib/server/users';
+import {
+	createUser,
+	usernameTaken,
+	validateDisplayName,
+	validateUsername
+} from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -20,39 +25,36 @@ export const load: PageServerLoad = ({ params, locals, getClientAddress }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request, params, cookies, getClientAddress, locals, url }) => {
+	default: async ({ request, params, cookies, getClientAddress, url }) => {
 		if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
 			return fail(429, { error: 'invite.rate_limited' });
 		}
 
-		if (locals.user) {
-			const joinedGroupId = redeemInvite(db, params.token, locals.user.id);
-			if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
-			redirect(303, `/groups/${joinedGroupId}`);
-		}
-
 		const form = await request.formData();
+		const username = validateUsername(form.get('username'));
+		if (!username) return fail(400, { error: 'auth.error.username' });
 		const displayName = validateDisplayName(form.get('displayName'));
 		if (!displayName) return fail(400, { error: 'invite.error.name' });
+		const password = validatePassword(form.get('password'));
+		if (!password) return fail(400, { error: 'auth.error.password' });
+		if (password !== form.get('passwordRepeat')) {
+			return fail(400, { error: 'auth.error.password_mismatch' });
+		}
 
-		// Task 4 collects a real username and password from this form; until then
-		// mint an unguessable placeholder so the account cannot be signed into
-		// directly, matching today's link-only behaviour. hashPassword is async,
-		// so it must run here, before the last-await line below — not after it.
-		const passwordHash = await hashPassword(crypto.randomUUID());
+		// Cheap rejection before the expensive hash: a taken username is by far
+		// the most common failure here, and hashing first would burn ~100ms of
+		// CPU on every one of them.
+		if (usernameTaken(db, username)) return fail(400, { error: 'auth.error.username_taken' });
 
-		// Past the last await, nothing yields: better-sqlite3 is synchronous and
-		// Node is single-threaded, so the invite cannot change under us between
-		// this lookup and the redeem below. Checking before the await could not
-		// make that promise.
+		const passwordHash = await hashPassword(password);
+
+		// Past the last await. The invite lookup, the account creation and the
+		// redemption are now one uninterruptible sequence, which is what stops a
+		// second tab from racing an invite that is expiring or filling up.
 		const invite = lookupInvite(db, params.token);
 		if (!invite) return fail(410, { error: 'invite.invalid' });
 
-		const user = createUser(db, {
-			username: `user-${crypto.randomUUID()}`,
-			displayName,
-			passwordHash
-		});
+		const user = createUser(db, { username, displayName, passwordHash });
 		const joinedGroupId = redeemInvite(db, params.token, user.id);
 		if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
 
