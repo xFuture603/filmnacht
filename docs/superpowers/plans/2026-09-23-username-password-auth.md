@@ -909,13 +909,42 @@ describe('POST /login', () => {
 	it('takes comparable time for an unknown username and a wrong password', async () => {
 		// The point of the dummy hash in verifyPassword. A fast path for "no such
 		// user" would tell an attacker which accounts exist.
-		const a = Date.now();
-		await post({ username: 'nobody-here', password: 'whatever it is' });
-		const unknownMs = Date.now() - a;
-		const b = Date.now();
-		await post({ username: 'ada', password: 'wrong password' }, '5.6.7.8');
-		const wrongMs = Date.now() - b;
-		expect(unknownMs).toBeGreaterThan(wrongMs / 4);
+		//
+		// Warmed up first, and medians rather than single samples. The very first
+		// request through this action costs ~45ms of one-off module and JIT work,
+		// which is by itself enough to make a microsecond-fast early return look
+		// like a real hash. THIS TEST WAS ORIGINALLY WRITTEN COLD AND PASSED
+		// AGAINST AN IMPLEMENTATION THAT RETURNED EARLY ON AN UNKNOWN USERNAME
+		// (unknown 45ms vs wrong 91ms, clearing wrongMs/4 on one-off cost alone).
+		// Do not simplify it back.
+		await post({ username: 'warm-up', password: 'whatever it is' }, '203.0.113.1');
+
+		const time = async (fields: Record<string, string>, address: string) => {
+			const started = performance.now();
+			await post(fields, address);
+			return performance.now() - started;
+		};
+		const median = (xs: number[]) => xs.sort((x, y) => x - y)[Math.floor(xs.length / 2)];
+
+		const unknown: number[] = [];
+		const wrong: number[] = [];
+		for (let i = 0; i < 3; i++) {
+			unknown.push(await time({ username: `nobody-${i}`, password: 'whatever' }, `198.51.100.${i}`));
+			wrong.push(await time({ username: 'ada', password: 'wrong password' }, `203.0.113.${i + 2}`));
+		}
+
+		// Half, not a quarter: scrypt dominates both paths, so the honest gap is a
+		// few percent, while an early return leaves ~1ms against ~90ms.
+		expect(median(unknown)).toBeGreaterThan(median(wrong) / 2);
+	});
+
+	it('signs in with the correct username and password', async () => {
+		// Without this, every other test in this file passes against an action
+		// whose whole body is `return fail(400, { error: 'login.failed' })`. A
+		// suite in which nobody can ever sign in was 100% green.
+		const result = await post({ username: 'ada', password: 'correct horse battery' });
+		expect(result?.status).toBe(303);
+		expect(result?.location).toBe('/groups');
 	});
 
 	it('rate-limits by address before it ever looks the account up', async () => {
@@ -959,13 +988,15 @@ import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { rateLimit } from '$lib/server/rate-limit';
 import { safeRedirectPath } from '$lib/server/redirect';
-import { userByUsername } from '$lib/server/users';
+import { userByUsername, validateUsername } from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, url }) => {
 	if (locals.user) redirect(303, '/groups');
-	return { redirectTo: safeRedirectPath(url.searchParams.get('redirectTo')) };
+	// '/groups', not safeRedirectPath's default '/': otherwise every plain
+	// sign-in takes a pointless extra hop through a page that only redirects.
+	return { redirectTo: safeRedirectPath(url.searchParams.get('redirectTo'), '/groups') };
 };
 
 export const actions: Actions = {
@@ -977,9 +1008,13 @@ export const actions: Actions = {
 		}
 
 		const form = await request.formData();
-		const username = String(form.get('username') ?? '')
-			.trim()
-			.toLowerCase();
+		// validateUsername rather than a bare trim/lowercase: it bounds what can
+		// become a `login-user:` rate-limit key below to 32 characters. A raw form
+		// value is attacker-controlled and unbounded — with a 512KB body and
+		// MAX_WINDOWS = 10_000 that is multi-gigabyte growth in the process-wide
+		// window map. An unusable username becomes '', which no account can hold,
+		// so it takes the same path and the same ~100ms as any other wrong guess.
+		const username = validateUsername(form.get('username')) ?? '';
 		const password = String(form.get('password') ?? '');
 
 		// Defence in depth against a distributed attack on one account. Evictable
@@ -1019,7 +1054,7 @@ Run the full gates, then **by hand on port 5599** from a fresh `rm -rf data`: co
 
 ```bash
 git add -A
-git commit -m "feat(auth): username and password login, without a user-enumeration oracle"
+git commit -m "feat(auth): username and password login without an enumeration oracle"
 ```
 
 ---
