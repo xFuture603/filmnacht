@@ -18,16 +18,27 @@ import type { Actions, PageServerLoad } from './$types';
 // a POST a browser will not issue without the visitor pressing the button.
 export const load: PageServerLoad = ({ params, locals, getClientAddress }) => {
 	if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
-		return { invite: null, rateLimited: true, signedIn: !!locals.user };
+		return { invite: null, rateLimited: true, user: locals.user };
 	}
 	const invite = lookupInvite(db, params.token);
-	return { invite, rateLimited: false, signedIn: !!locals.user };
+	return { invite, rateLimited: false, user: locals.user };
 };
 
 export const actions: Actions = {
-	default: async ({ request, params, cookies, getClientAddress, url }) => {
+	default: async ({ request, params, cookies, getClientAddress, locals, url }) => {
 		if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
 			return fail(429, { error: 'invite.rate_limited' });
+		}
+
+		// A signed-in visitor joins as themselves, not as a new account: a second
+		// account would split their suggestions, ratings and history across two
+		// identities, and Plan 5's fairness-weighted draw would count them as two
+		// different people. redeemInvite does its own lookup internally and
+		// nothing here is async, so there is no race to guard against.
+		if (locals.user) {
+			const joinedGroupId = redeemInvite(db, params.token, locals.user.id);
+			if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
+			redirect(303, `/groups/${joinedGroupId}`);
 		}
 
 		const form = await request.formData();
