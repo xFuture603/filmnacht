@@ -1,3 +1,4 @@
+import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
 import type { SessionUser } from './auth/session';
 import { generateToken, hashToken } from './auth/tokens';
@@ -27,6 +28,16 @@ export function validateUsername(raw: FormDataEntryValue | null): string | null 
 	return username;
 }
 
+/**
+ * Thrown by createUser when the username collides with an existing account.
+ * usernameTaken (used by every caller) is a pre-check, not a guarantee — a
+ * second submission can still race past it while the first one spends ~100ms
+ * hashing its password. The unique index on users.username is the actual
+ * guarantee; this turns its violation into something a caller can translate
+ * instead of letting a raw SqliteError become an unhandled 500.
+ */
+export class UsernameTakenError extends Error {}
+
 export function createUser(
 	db: DB,
 	input: { username: string; displayName: string; passwordHash: string; isAdmin?: boolean }
@@ -37,18 +48,34 @@ export function createUser(
 	// lookup in userByUsername/usernameTaken must hold as a property of this
 	// function, not as an accident of every caller pre-normalising.
 	const username = input.username.trim().toLowerCase();
-	// A login token is minted so the column is never null; it is not shown
-	// anywhere. The profile's reveal action regenerates it.
-	db.insert(users)
-		.values({
-			id,
-			username,
-			displayName: input.displayName,
-			passwordHash: input.passwordHash,
-			isAdmin,
-			loginTokenHash: hashToken(generateToken())
-		})
-		.run();
+	try {
+		// A login token is minted so the column is never null; it is not shown
+		// anywhere. The profile's reveal action regenerates it.
+		db.insert(users)
+			.values({
+				id,
+				username,
+				displayName: input.displayName,
+				passwordHash: input.passwordHash,
+				isAdmin,
+				loginTokenHash: hashToken(generateToken())
+			})
+			.run();
+	} catch (err) {
+		// Matched narrowly on the username column specifically, not on the
+		// generic UNIQUE code alone: users.login_token_hash is also unique, and
+		// mislabelling that astronomically unlikely collision as "username
+		// taken" would hide a real bug behind a wrong, reassuring message.
+		// Anything else — including a login-token collision — is rethrown.
+		if (
+			err instanceof Database.SqliteError &&
+			err.code === 'SQLITE_CONSTRAINT_UNIQUE' &&
+			err.message.includes('users.username')
+		) {
+			throw new UsernameTakenError(username);
+		}
+		throw err;
+	}
 	return { id, displayName: input.displayName, isAdmin };
 }
 

@@ -2,7 +2,12 @@ import { hashPassword, validatePassword } from '$lib/server/auth/password';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { claimInstance } from '$lib/server/setup';
-import { usernameTaken, validateDisplayName, validateUsername } from '$lib/server/users';
+import {
+	UsernameTakenError,
+	usernameTaken,
+	validateDisplayName,
+	validateUsername
+} from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -36,7 +41,18 @@ export const actions: Actions = {
 		// transaction, never inside it.
 		const passwordHash = await hashPassword(password);
 
-		const admin = claimInstance(db, { username, displayName, passwordHash, timezone });
+		let admin: { id: string } | null;
+		try {
+			admin = claimInstance(db, { username, displayName, passwordHash, timezone });
+		} catch (err) {
+			// Same race as join: usernameTaken above is a pre-check, the unique
+			// index is the guarantee. Consistent handling with createUser's other
+			// caller rather than letting this one path surface a raw 500.
+			if (err instanceof UsernameTakenError) {
+				return fail(400, { error: 'auth.error.username_taken' });
+			}
+			throw err;
+		}
 		if (!admin) return fail(403, { error: 'setup.error.done' });
 
 		const { token, expiresAt } = createSession(db, admin.id);

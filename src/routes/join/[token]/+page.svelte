@@ -55,6 +55,7 @@
 					type="password"
 					required
 					minlength="8"
+					maxlength="200"
 					autocomplete="new-password"
 					class="input input-bordered min-h-11"
 				/>
@@ -68,6 +69,7 @@
 					type="password"
 					required
 					minlength="8"
+					maxlength="200"
 					autocomplete="new-password"
 					class="input input-bordered min-h-11"
 				/>

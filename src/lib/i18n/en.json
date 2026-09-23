@@ -25,7 +25,7 @@
 	"auth.password_repeat": "Repeat password",
 	"auth.error.username": "Pick a username of 3 to 32 characters, using only letters, digits, dot, dash or underscore.",
 	"auth.error.username_taken": "That username is already taken.",
-	"auth.error.password": "Your password needs at least 8 characters.",
+	"auth.error.password": "Your password needs to be between 8 and 200 characters.",
 	"auth.error.password_mismatch": "The two passwords do not match.",
 	"home.no_groups": "You are not in a group yet.",
 	"groups.title": "Your groups",

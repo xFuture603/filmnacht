@@ -5,6 +5,7 @@ import { lookupInvite, redeemInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
 import {
 	createUser,
+	UsernameTakenError,
 	usernameTaken,
 	validateDisplayName,
 	validateUsername
@@ -75,7 +76,19 @@ export const actions: Actions = {
 		const invite = lookupInvite(db, params.token);
 		if (!invite) return fail(410, { error: 'invite.invalid' });
 
-		const user = createUser(db, { username, displayName, passwordHash });
+		let user: { id: string };
+		try {
+			user = createUser(db, { username, displayName, passwordHash });
+		} catch (err) {
+			// usernameTaken above is a pre-check, not a guarantee: two submissions
+			// can race past it while both hash. The unique index is the real
+			// guarantee, and this is what turns its violation into the translated
+			// message instead of a 500.
+			if (err instanceof UsernameTakenError) {
+				return fail(400, { error: 'auth.error.username_taken' });
+			}
+			throw err;
+		}
 		const joinedGroupId = redeemInvite(db, params.token, user.id);
 		if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
 

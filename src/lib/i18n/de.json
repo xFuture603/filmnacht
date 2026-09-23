@@ -23,7 +23,7 @@
 	"auth.password_repeat": "Passwort wiederholen",
 	"auth.error.username": "Wähle einen Benutzernamen mit 3 bis 32 Zeichen, nur Buchstaben, Ziffern, Punkt, Bindestrich oder Unterstrich.",
 	"auth.error.username_taken": "Dieser Benutzername ist schon vergeben.",
-	"auth.error.password": "Dein Passwort braucht mindestens 8 Zeichen.",
+	"auth.error.password": "Dein Passwort muss zwischen 8 und 200 Zeichen lang sein.",
 	"auth.error.password_mismatch": "Die beiden Passwörter stimmen nicht überein.",
 	"home.no_groups": "Du bist noch in keiner Gruppe.",
 	"groups.title": "Deine Gruppen",
