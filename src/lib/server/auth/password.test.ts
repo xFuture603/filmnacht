@@ -53,26 +53,33 @@ describe('verifyPassword', () => {
 		expect(await verifyPassword('a different one', 'scrypt$AAAA$!!!')).toBe(false);
 	});
 
-	it('refuses a stored value whose key segment is the wrong length', async () => {
+	it('rejects a key segment of the wrong length (documents the gate; see note)', async () => {
+		// Not a regression guard: pre-fix this also returned false, because a real
+		// scrypt output never coincidentally equals an all-zero buffer. Only the
+		// zero-decode case above can demonstrate the original bypass, since any
+		// non-zero mismatch would need an scrypt collision to show as a `true`.
 		const shortKey = Buffer.alloc(32).toString('base64url');
 		const salt = Buffer.alloc(16).toString('base64url');
 		expect(await verifyPassword('any password at all', `scrypt$${salt}$${shortKey}`)).toBe(false);
 	});
 
-	it('refuses a stored value whose salt is the wrong length', async () => {
+	it('rejects a salt segment of the wrong length (documents the gate; see note)', async () => {
+		// Not a regression guard, for the same reason as the key-length test above:
+		// pre-fix this also returned false, since real scrypt output never matches
+		// an all-zero buffer by chance.
 		const key = Buffer.alloc(64).toString('base64url');
 		expect(await verifyPassword('any password at all', `scrypt$AAAA$${key}`)).toBe(false);
 	});
 
 	it('does not let an oversized stored value dictate how much work it does', async () => {
-		// A huge key segment used to become a huge keylen. Now it is simply the
-		// wrong length and is refused, so this must be fast, not a 10MB allocation.
-		const huge = Buffer.alloc(1_000_000).toString('base64url');
+		// Pre-fix this segment's decoded length became the scrypt keylen, which
+		// measured around 1.4 seconds. Post-fix the keylen is always 64, so the
+		// only cost is one normal hash plus a decode. The bound sits between the
+		// two deliberately — widen it and this stops being a regression test.
+		const huge = Buffer.alloc(10_000_000).toString('base64url');
 		const started = Date.now();
 		expect(await verifyPassword('any password at all', `scrypt$AAAA$${huge}`)).toBe(false);
-		// Still does one real scrypt for timing, so allow for that, but nothing
-		// proportional to the input.
-		expect(Date.now() - started).toBeLessThan(1000);
+		expect(Date.now() - started).toBeLessThan(600);
 	});
 
 	it('takes comparable time for a wrong password and an unparseable one', async () => {
