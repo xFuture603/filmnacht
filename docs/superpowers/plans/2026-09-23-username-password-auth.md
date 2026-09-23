@@ -728,10 +728,29 @@ To `src/lib/i18n/de.json`:
 The order below is not arbitrary. Hashing is the expensive step and must not run for a request that was going to fail anyway, and the invite check must sit past the last `await` so it cannot be raced:
 
 ```ts
-	default: async ({ request, params, cookies, getClientAddress, url }) => {
+	default: async ({ request, params, cookies, getClientAddress, locals, url }) => {
 		if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
 			return fail(429, { error: 'invite.rate_limited' });
 		}
+
+		// A signed-in visitor joins as themselves. A second account would split
+		// their suggestions, ratings and history across two identities, and Plan 5's
+		// fairness-weighted draw would count them as two different people.
+		// redeemInvite does its own lookup and nothing here is async.
+		if (locals.user) {
+			const joinedGroupId = redeemInvite(db, params.token, locals.user.id);
+			if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
+			redirect(303, `/groups/${joinedGroupId}`);
+		}
+
+		// Authorization, and deliberately above anything that reveals instance
+		// state: without a valid invite a visitor must not be able to learn whether
+		// a username exists. The lookup below, past the last await, stays the
+		// authoritative freshness check. Check twice — see FIX 8 in the movie-pool
+		// decisions. Someone HOLDING a valid invite can still tell a taken username
+		// from a free one; that is intended, since they can join and read the
+		// member list anyway.
+		if (!lookupInvite(db, params.token)) return fail(410, { error: 'invite.invalid' });
 
 		const form = await request.formData();
 		const username = validateUsername(form.get('username'));
@@ -767,7 +786,7 @@ The order below is not arbitrary. Hashing is the expensive step and must not run
 	}
 ```
 
-Note the `usernameTaken` check is a convenience, not the guarantee — the unique index is. A race between two people claiming the same username at the same instant will surface as a constraint violation from `createUser`, which is correct; the check exists so the common case gets a translated message instead of a 500.
+Note the `usernameTaken` check is a convenience, not the guarantee — the unique index is. A race between two people claiming the same username at the same instant surfaces as `SQLITE_CONSTRAINT_UNIQUE` from `createUser`. Catch that specific code and return the same translated `auth.error.username_taken`, and rethrow every other error — an uncaught constraint violation renders a SvelteKit 500, which is a worse answer than the message the non-racing path already gives. The check exists so the common case never reaches the constraint at all.
 
 - [ ] **Step 3: Add the fields to both forms**
 
@@ -808,6 +827,8 @@ This is the security-critical task of the plan. Read the two new Global Constrai
 - **`login-user:<username>` is defence in depth** against a distributed attack on one account. It is evictable under flood, and that is an accepted degradation rather than a bypass, because the IP gate still holds.
 
 Check both. Never the username alone.
+
+**Record the lockout trade-off rather than absorbing it.** A blocking username gate means ten failures in five minutes keeps a known user out of their own account, and `rateLimit` consumes atomically so there is no check-without-consume variant to reach for. It is still the right call here — refusing the work *before* `scrypt` runs is what stops CPU exhaustion — but put a comment at that gate naming both the trade-off and the upgrade path (letting a correct password through the username gate, if lockout ever bites in practice). It must not read as an oversight.
 
 - [ ] **Step 1: Add the translation keys**
 
@@ -898,16 +919,27 @@ describe('POST /login', () => {
 	});
 
 	it('rate-limits by address before it ever looks the account up', async () => {
-		for (let i = 0; i < 10; i++) await post({ username: 'ada', password: 'wrong password' });
+		// A different username every time, so only the address budget is spent and
+		// this can only pass if the ADDRESS gate fired.
+		for (let i = 0; i < 10; i++) await post({ username: `nobody-${i}`, password: 'wrong' });
 		const result = await post({ username: 'ada', password: 'correct horse battery' });
 		// Even the correct password is refused once the address is over budget.
 		expect(result?.data?.error).toBe('login.rate_limited');
 	});
 
 	it('does not let one address exhaust another address budget', async () => {
-		for (let i = 0; i < 10; i++) await post({ username: 'ada', password: 'wrong' }, '1.1.1.1');
+		// NOT 'ada': flooding her name would exhaust login-user:ada as well, and
+		// the username gate would answer first.
+		for (let i = 0; i < 10; i++) await post({ username: 'nobody-at-all', password: 'wrong' }, '1.1.1.1');
 		const result = await post({ username: 'ada', password: 'wrong password' }, '2.2.2.2');
 		expect(result?.data?.error).toBe('login.failed');
+	});
+
+	it('limits one account even when each attempt comes from a new address', async () => {
+		// Every address fresh, so only the USERNAME gate can produce this.
+		for (let i = 0; i < 10; i++) await post({ username: 'ada', password: 'wrong' }, `10.0.0.${i}`);
+		const result = await post({ username: 'ada', password: 'wrong password' }, '10.0.0.99');
+		expect(result?.data?.error).toBe('login.rate_limited');
 	});
 });
 ```
@@ -975,7 +1007,7 @@ export const actions: Actions = {
 
 - [ ] **Step 5: Write the page**
 
-A plain form: username, password, submit, and the `login.forgot` line. No JavaScript. `autocomplete="username"` and `autocomplete="current-password"`, `min-h-11` on both inputs and the button, `role="alert"` on the error.
+A plain form: username, password, submit, and the `login.forgot` line. It **must** carry `<input type="hidden" name="redirectTo" value={data.redirectTo} />` — `load` computes `redirectTo` and the action reads it from the form, so without this field it is always null and every login lands on `/groups`, silently discarding the deep link. No JavaScript. `autocomplete="username"` and `autocomplete="current-password"`, `min-h-11` on both inputs and the button, `role="alert"` on the error.
 
 - [ ] **Step 6: Point signed-out visitors at it**
 
@@ -996,6 +1028,7 @@ git commit -m "feat(auth): username and password login, without a user-enumerati
 
 **Files:**
 - Modify: `src/routes/profile/+page.server.ts`, `src/routes/profile/+page.svelte`
+- Modify: `src/lib/server/db/schema.ts` (email gains `.unique()`), regenerate the migration
 - Modify: `src/lib/i18n/en.json`, `src/lib/i18n/de.json`
 
 **Interfaces:**
@@ -1042,11 +1075,13 @@ German:
 
 - [ ] **Step 2: Add the three actions**
 
-`changePassword` — verify the current password against the stored hash (unconditionally, same reasoning as login), validate the new one, confirm it matches the repeat, hash it, `setPassword`, then `deleteOtherSessions` keeping this one.
+`changePassword` — **rate-limit first**, keyed on the user id: `rateLimit(`password-change:${locals.user.id}`, 5, 300_000)`, returning `profile.rate_limited`. The current-password check is the only barrier between a borrowed session and a permanent takeover, and an ungated form lets it be guessed freely. A user id is a safe key here — `rate-limit.ts` names it explicitly as non-enumerable, unlike the submitted username that constrains the login limiter. Then verify the current password against the stored hash (there is no branch to skip here; the enumeration-timing reasoning from login does **not** apply, because the account is already known — keep the behaviour but do not repeat that justification, or someone will later "optimise" it away), validate the new one, confirm it matches the repeat, hash it, `setPassword`, then `deleteOtherSessions` keeping this one.
 
 `changeDisplayName` — `validateDisplayName`, update. No uniqueness check; duplicates are allowed by design.
 
 `setEmail` — accept an empty value as "clear it", otherwise a minimal shape check. **Do not** write a clever email regex: the only definitive test of an address is sending to it, which is Plan 4's job. Something of the form `x@y.z` with no spaces is the right level of strictness here, and the plan should say so rather than leaving the next person to invent RFC 5322.
+
+**Email must be unique, and the constraint alone is not enough.** Plan 4 resolves an address back to one account to send a reset link, which is ambiguous the moment two people set the same address. Verified against better-sqlite3: `UNIQUE` on a nullable column permits many NULLs (so an optional email still works) and rejects duplicates with `SQLITE_CONSTRAINT_UNIQUE` — but it accepts `Ada@x.com` alongside `ada@x.com`. So both halves are required: `.unique()` in the schema, **and** `setEmail` lowercasing and trimming before it writes. Catch the constraint violation and return a new `profile.error.email_taken` in both locales rather than rendering a 500; rethrow anything else. That error does confirm the address has an account on this instance — acceptable for a private 3–12 person group, and worth the usability, but say so in a comment so it reads as a decision.
 
 Each action returns its own success key so the page can say what happened.
 
