@@ -20,8 +20,16 @@ let grace: string;
 beforeEach(() => {
 	db = createDb(':memory:').db;
 	applyMigrations(db);
-	ada = createUser(db, 'Ada').id;
-	grace = createUser(db, 'Grace').id;
+	ada = createUser(db, {
+		username: 'ada',
+		displayName: 'Ada',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
+	grace = createUser(db, {
+		username: 'grace',
+		displayName: 'Grace',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
 });
 
 function status(fn: () => unknown): number | undefined {

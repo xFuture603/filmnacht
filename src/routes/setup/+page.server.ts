@@ -1,3 +1,4 @@
+import { hashPassword } from '$lib/server/auth/password';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { claimInstance } from '$lib/server/setup';
@@ -18,7 +19,18 @@ export const actions: Actions = {
 		const timezone = String(form.get('timezone') ?? '');
 		if (!timezones.includes(timezone)) return fail(400, { error: 'setup.error.timezone' });
 
-		const admin = claimInstance(db, displayName, timezone);
+		// Task 4 collects a real username and password from this form; until then
+		// mint an unguessable placeholder so the admin account cannot be signed
+		// into directly, matching today's link-only behaviour. hashPassword is
+		// async and must run here, before claimInstance's transaction, never inside it.
+		const passwordHash = await hashPassword(crypto.randomUUID());
+
+		const admin = claimInstance(db, {
+			username: `user-${crypto.randomUUID()}`,
+			displayName,
+			passwordHash,
+			timezone
+		});
 		if (!admin) return fail(403, { error: 'setup.error.done' });
 
 		const { token, expiresAt } = createSession(db, admin.id);

@@ -38,8 +38,16 @@ let groupId: string;
 
 beforeEach(() => {
 	vi.mocked(fetchMovie).mockReset();
-	ownerId = createUser(db, 'Ada').id;
-	outsiderId = createUser(db, 'Grace').id;
+	ownerId = createUser(db, {
+		username: 'ada',
+		displayName: 'Ada',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
+	outsiderId = createUser(db, {
+		username: 'grace',
+		displayName: 'Grace',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
 	groupId = createGroup(db, { name: 'Movie Club', ownerId });
 	// Grace is deliberately never added as a member of this group.
 });

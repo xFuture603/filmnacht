@@ -23,8 +23,16 @@ let groupId: string;
 beforeEach(() => {
 	db = createDb(':memory:').db;
 	applyMigrations(db);
-	ada = createUser(db, 'Ada').id;
-	grace = createUser(db, 'Grace').id;
+	ada = createUser(db, {
+		username: 'ada',
+		displayName: 'Ada',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
+	grace = createUser(db, {
+		username: 'grace',
+		displayName: 'Grace',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
 	groupId = createGroup(db, { name: 'Movie Club', ownerId: ada });
 });
 
@@ -76,10 +84,18 @@ describe('the default redemption cap', () => {
 	it('refuses the redemption after the cap is reached', () => {
 		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
 		for (let i = 0; i < INVITE_MAX_USES; i++) {
-			const joiner = createUser(db, `Member ${i}`).id;
+			const joiner = createUser(db, {
+				username: `member-${i}`,
+				displayName: `Member ${i}`,
+				passwordHash: 'scrypt$placeholder$placeholder'
+			}).id;
 			expect(redeemInvite(db, token, joiner, NOW)).toBe(groupId);
 		}
-		const oneTooMany = createUser(db, 'Latecomer').id;
+		const oneTooMany = createUser(db, {
+			username: 'latecomer',
+			displayName: 'Latecomer',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
 		expect(lookupInvite(db, token, NOW)).toBeNull();
 		expect(redeemInvite(db, token, oneTooMany, NOW)).toBeNull();
 	});
@@ -87,7 +103,11 @@ describe('the default redemption cap', () => {
 	it('still allows an explicitly uncapped invite', () => {
 		const token = createInvite(db, { groupId, createdBy: ada, maxUses: null, now: NOW });
 		for (let i = 0; i < INVITE_MAX_USES + 1; i++) {
-			const joiner = createUser(db, `Member ${i}`).id;
+			const joiner = createUser(db, {
+				username: `member-${i}`,
+				displayName: `Member ${i}`,
+				passwordHash: 'scrypt$placeholder$placeholder'
+			}).id;
 			expect(redeemInvite(db, token, joiner, NOW)).toBe(groupId);
 		}
 		expect(lookupInvite(db, token, NOW)).not.toBeNull();
@@ -104,7 +124,11 @@ describe('redeemInvite', () => {
 
 	it('is reusable by default', () => {
 		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
-		const carol = createUser(db, 'Carol').id;
+		const carol = createUser(db, {
+			username: 'carol',
+			displayName: 'Carol',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
 		redeemInvite(db, token, grace, NOW);
 		redeemInvite(db, token, carol, NOW);
 		expect(listMembers(db, groupId)).toHaveLength(3);

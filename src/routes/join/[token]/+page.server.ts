@@ -1,3 +1,4 @@
+import { hashPassword } from '$lib/server/auth/password';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { lookupInvite, redeemInvite } from '$lib/server/invites';
@@ -34,6 +35,12 @@ export const actions: Actions = {
 		const displayName = validateDisplayName(form.get('displayName'));
 		if (!displayName) return fail(400, { error: 'invite.error.name' });
 
+		// Task 4 collects a real username and password from this form; until then
+		// mint an unguessable placeholder so the account cannot be signed into
+		// directly, matching today's link-only behaviour. hashPassword is async,
+		// so it must run here, before the last-await line below — not after it.
+		const passwordHash = await hashPassword(crypto.randomUUID());
+
 		// Past the last await, nothing yields: better-sqlite3 is synchronous and
 		// Node is single-threaded, so the invite cannot change under us between
 		// this lookup and the redeem below. Checking before the await could not
@@ -41,7 +48,11 @@ export const actions: Actions = {
 		const invite = lookupInvite(db, params.token);
 		if (!invite) return fail(410, { error: 'invite.invalid' });
 
-		const user = createUser(db, displayName);
+		const user = createUser(db, {
+			username: `user-${crypto.randomUUID()}`,
+			displayName,
+			passwordHash
+		});
 		const joinedGroupId = redeemInvite(db, params.token, user.id);
 		if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
 
