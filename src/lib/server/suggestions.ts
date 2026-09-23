@@ -74,8 +74,6 @@ export function addSuggestion(
 		// revealing who added the film first.
 		if (clash && clash.status !== 'withdrawn') return { ok: false, reason: 'duplicate' } as const;
 
-		const movieId = findOrCreateMovie(db, { ...input.movie, title });
-
 		if (clash) {
 			// Revive rather than insert: the unique (group_id, dedupe_key) constraint
 			// still holds the withdrawn row's slot, so an insert would collide.
@@ -85,14 +83,20 @@ export function addSuggestion(
 			// added it. The old note is dropped rather than carried: it was written
 			// to be revealed alongside that person's suggestion, and moving it to a
 			// different member's row is an indirect leak of exactly the kind §5 exists
-			// to prevent.
+			// to prevent. `movieId` is deliberately left untouched: the dedupe key
+			// match guarantees this is the same film, so the revived row keeps
+			// pointing at its existing `movies` row. Calling `findOrCreateMovie` here
+			// would, for a hand-typed film with no `tmdb_id`, insert a brand new
+			// `movies` row that nothing then references — exactly the leak this
+			// branch exists to avoid.
 			db.update(suggestions)
-				.set({ status: 'open', suggestedBy: input.userId, note, movieId })
+				.set({ status: 'open', suggestedBy: input.userId, note })
 				.where(eq(suggestions.id, clash.id))
 				.run();
 			return { ok: true, suggestionId: clash.id } as const;
 		}
 
+		const movieId = findOrCreateMovie(db, { ...input.movie, title });
 		const suggestionId = crypto.randomUUID();
 		db.insert(suggestions)
 			.values({

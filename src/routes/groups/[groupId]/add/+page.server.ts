@@ -1,13 +1,15 @@
+import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { requireMember, requireUser } from '$lib/server/groups';
 import { addSuggestion, NOTE_MAX } from '$lib/server/suggestions';
+import { fetchMovie, searchMovies } from '$lib/server/tmdb';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, params }) => {
 	const user = requireUser(locals);
 	const group = requireMember(db, user.id, params.groupId);
-	return { group, noteMax: NOTE_MAX };
+	return { group, noteMax: NOTE_MAX, tmdbEnabled: !!env.TMDB_API_KEY };
 };
 
 export const actions: Actions = {
@@ -26,6 +28,52 @@ export const actions: Actions = {
 			groupId: params.groupId,
 			userId: user.id,
 			movie: { title: String(form.get('title') ?? ''), year, posterUrl },
+			note: String(form.get('note') ?? ''),
+			settings: group.settings
+		});
+		if (!result.ok) return fail(400, { error: `pool.error.${result.reason}` });
+		redirect(303, `/groups/${params.groupId}`);
+	},
+
+	search: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
+		requireMember(db, user.id, params.groupId);
+		const key = env.TMDB_API_KEY;
+		if (!key) return fail(400, { error: 'add.search_disabled' });
+
+		const query = String((await request.formData()).get('query') ?? '').trim();
+		if (!query) return { results: [], query };
+		try {
+			return { results: await searchMovies(key, query), query };
+		} catch {
+			// TMDB being down must never block the mandated manual path.
+			return fail(502, { error: 'add.search_failed' });
+		}
+	},
+
+	adopt: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
+		const group = requireMember(db, user.id, params.groupId);
+		const key = env.TMDB_API_KEY;
+		if (!key) return fail(400, { error: 'add.search_disabled' });
+
+		const form = await request.formData();
+		const tmdbId = Number(form.get('tmdbId'));
+		if (!Number.isInteger(tmdbId)) return fail(400, { error: 'pool.error.bad_title' });
+
+		let detail;
+		try {
+			detail = await fetchMovie(key, tmdbId);
+		} catch {
+			return fail(502, { error: 'add.search_failed' });
+		}
+		if (!detail) return fail(404, { error: 'add.search_none' });
+
+		// Past the last await: the cap check inside addSuggestion is now unraceable.
+		const result = addSuggestion(db, {
+			groupId: params.groupId,
+			userId: user.id,
+			movie: detail,
 			note: String(form.get('note') ?? ''),
 			settings: group.settings
 		});

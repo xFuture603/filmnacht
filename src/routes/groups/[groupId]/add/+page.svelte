@@ -11,6 +11,60 @@
 	<div class="alert alert-error mb-4" role="alert">{t(data.locale, form.error)}</div>
 {/if}
 
+<h2 class="mb-2 text-lg font-semibold">{t(data.locale, 'add.search_heading')}</h2>
+
+{#if !data.tmdbEnabled}
+	<div class="alert mb-4" role="status">{t(data.locale, 'add.search_disabled')}</div>
+{:else}
+	<form method="POST" action="?/search" class="mb-4 flex max-w-md gap-2">
+		<input
+			name="query"
+			required
+			placeholder={t(data.locale, 'add.search_placeholder')}
+			aria-label={t(data.locale, 'add.search_placeholder')}
+			class="input input-bordered min-h-11 flex-1"
+		/>
+		<button class="btn btn-primary min-h-11">{t(data.locale, 'add.search_submit')}</button>
+	</form>
+
+	{#if form?.results}
+		{#if form.results.length === 0}
+			<p class="mb-4">{t(data.locale, 'add.search_none')}</p>
+		{:else}
+			<ul class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+				{#each form.results as result (result.tmdbId)}
+					<li class="card bg-base-100 shadow-sm">
+						{#if result.posterUrl}
+							<img
+								class="aspect-[2/3] w-full rounded-t-box object-cover"
+								src={result.posterUrl}
+								alt={result.title}
+								loading="lazy"
+							/>
+						{:else}
+							<div
+								class="bg-base-300 flex aspect-[2/3] w-full items-center justify-center rounded-t-box p-2 text-center text-sm"
+							>
+								{t(data.locale, 'pool.no_poster')}
+							</div>
+						{/if}
+						<div class="card-body gap-1 p-3">
+							<p class="font-medium">{result.title}</p>
+							<p class="text-sm opacity-70">{result.year ?? ''}</p>
+							<form method="POST" action="?/adopt">
+								<input type="hidden" name="tmdbId" value={result.tmdbId} />
+								<button class="btn btn-secondary btn-sm mt-1 min-h-11 w-full">
+									{t(data.locale, 'add.adopt')}
+								</button>
+							</form>
+						</div>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	{/if}
+{/if}
+
 <h2 class="mb-2 text-lg font-semibold">{t(data.locale, 'add.manual_heading')}</h2>
 <form method="POST" action="?/manual" class="mb-6 flex max-w-md flex-col gap-3">
 	<label class="form-control">

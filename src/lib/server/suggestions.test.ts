@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from './db/client';
-import { DEFAULT_GROUP_SETTINGS, suggestions, type GroupSettings } from './db/schema';
+import { DEFAULT_GROUP_SETTINGS, movies, suggestions, type GroupSettings } from './db/schema';
 import { createGroup, addMember } from './groups';
 import { addSuggestion, countOpenSuggestions, listPool, withdrawSuggestion } from './suggestions';
 import { createUser } from './users';
@@ -133,9 +133,31 @@ describe('addSuggestion', () => {
 			settings
 		});
 		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
-		addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: dune,
+			note: "Grace's own reason",
+			settings
+		});
 		const row = db.select().from(suggestions).get();
-		expect(row?.note).toBeNull();
+		expect(row?.note).toBe("Grace's own reason");
+		expect(row?.note).not.toBe("Ada's private reason");
+	});
+
+	it('does not leak a movies row on a withdraw/re-add cycle of a hand-typed film', () => {
+		const handTyped = { title: 'A Hand-Typed Film', year: 2020 };
+		const before = db.select({ id: movies.id }).from(movies).all().length;
+		// Three withdraw/re-add cycles of the same hand-typed film.
+		for (let i = 0; i < 3; i++) {
+			const added = addSuggestion(db, { groupId, userId: ada, movie: handTyped, settings });
+			withdrawSuggestion(db, ada, (added as { suggestionId: string }).suggestionId);
+		}
+		addSuggestion(db, { groupId, userId: ada, movie: handTyped, settings });
+		const after = db.select({ id: movies.id }).from(movies).all().length;
+		// One row for the film's first insert, none added by any of the later
+		// withdraw/re-add cycles.
+		expect(after - before).toBe(1);
 	});
 
 	it('still refuses a duplicate that is open, without reviving anything', () => {
