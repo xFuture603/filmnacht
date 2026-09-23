@@ -97,6 +97,60 @@ describe('addSuggestion', () => {
 		expect(result.ok).toBe(true);
 		expect(row?.note).toHaveLength(200);
 	});
+
+	it('revives a withdrawn suggestion rather than colliding on the group+dedupeKey unique index', () => {
+		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		const second = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		expect(second.ok).toBe(true);
+		expect(listPool(db, groupId, ada, settings).map((e) => e.title)).toEqual(['Dune']);
+	});
+
+	it('lets a different member claim a film the original suggester withdrew, attributing it to them', () => {
+		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		const second = addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
+		expect(second.ok).toBe(true);
+		expect(listPool(db, groupId, grace, settings).find((e) => e.title === 'Dune')?.mine).toBe(true);
+		expect(listPool(db, groupId, ada, settings).find((e) => e.title === 'Dune')?.mine).toBe(false);
+	});
+
+	it("counts a revived suggestion against the reviver's cap, not the original suggester's", () => {
+		const capped = { ...settings, maxOpenSuggestions: 1 };
+		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings: capped });
+		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		addSuggestion(db, { groupId, userId: grace, movie: dune, settings: capped });
+		expect(countOpenSuggestions(db, groupId, ada)).toBe(0);
+		expect(countOpenSuggestions(db, groupId, grace)).toBe(1);
+	});
+
+	it('drops the old note when reviving rather than carrying it to the new suggester', () => {
+		const first = addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: dune,
+			note: "Ada's private reason",
+			settings
+		});
+		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
+		const row = db.select().from(suggestions).get();
+		expect(row?.note).toBeNull();
+	});
+
+	it('still refuses a duplicate that is open, without reviving anything', () => {
+		addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		const result = addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
+		expect(result).toEqual({ ok: false, reason: 'duplicate' });
+	});
+
+	it('still refuses a duplicate that has already been drawn, without reviving it', () => {
+		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		const id = (first as { suggestionId: string }).suggestionId;
+		db.update(suggestions).set({ status: 'drawn' }).where(eq(suggestions.id, id)).run();
+		const result = addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
+		expect(result).toEqual({ ok: false, reason: 'duplicate' });
+	});
 });
 
 describe('withdrawSuggestion', () => {

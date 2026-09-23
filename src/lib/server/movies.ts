@@ -12,6 +12,25 @@ export type MovieInput = {
 	tmdbRating?: number | null;
 };
 
+const POSTER_URL_MAX = 500;
+
+/**
+ * A poster URL is dereferenced by every viewer's browser, so only http(s) is
+ * allowed through and anything unparseable or absurdly long becomes no poster
+ * at all. Applied here, at the point movie data enters the cache, so every
+ * caller inherits it rather than each route remembering.
+ */
+export function safePosterUrl(raw: unknown): string | null {
+	const value = typeof raw === 'string' ? raw.trim() : '';
+	if (!value || value.length > POSTER_URL_MAX) return null;
+	try {
+		const url = new URL(value);
+		return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+	} catch {
+		return null;
+	}
+}
+
 /**
  * The `movies` table is a cache, not a catalogue: metadata is fetched from TMDB
  * once and read from SQLite forever after, so a detail view works with no API
@@ -38,7 +57,7 @@ export function findOrCreateMovie(db: DB, input: MovieInput): string {
 			tmdbId: input.tmdbId ?? null,
 			title: input.title,
 			year: input.year ?? null,
-			posterUrl: input.posterUrl ?? null,
+			posterUrl: safePosterUrl(input.posterUrl),
 			runtime: input.runtime ?? null,
 			genres: input.genres ?? null,
 			tmdbRating: input.tmdbRating ?? null,

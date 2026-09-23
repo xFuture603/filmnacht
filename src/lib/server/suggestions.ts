@@ -66,15 +66,33 @@ export function addSuggestion(
 			return { ok: false, reason: 'cap_reached' } as const;
 		}
 		const clash = db
-			.select({ id: suggestions.id })
+			.select({ id: suggestions.id, status: suggestions.status })
 			.from(suggestions)
 			.where(and(eq(suggestions.groupId, input.groupId), eq(suggestions.dedupeKey, key)))
 			.get();
 		// Deliberately does not say who: PRD §5 rejects duplicates without
 		// revealing who added the film first.
-		if (clash) return { ok: false, reason: 'duplicate' } as const;
+		if (clash && clash.status !== 'withdrawn') return { ok: false, reason: 'duplicate' } as const;
 
 		const movieId = findOrCreateMovie(db, { ...input.movie, title });
+
+		if (clash) {
+			// Revive rather than insert: the unique (group_id, dedupe_key) constraint
+			// still holds the withdrawn row's slot, so an insert would collide.
+			// Reattributed to whoever is adding it now — cap accounting keys off
+			// suggestedBy, so leaving the old attribution would charge the film to
+			// the original suggester and show as not-yours to the person who just
+			// added it. The old note is dropped rather than carried: it was written
+			// to be revealed alongside that person's suggestion, and moving it to a
+			// different member's row is an indirect leak of exactly the kind §5 exists
+			// to prevent.
+			db.update(suggestions)
+				.set({ status: 'open', suggestedBy: input.userId, note, movieId })
+				.where(eq(suggestions.id, clash.id))
+				.run();
+			return { ok: true, suggestionId: clash.id } as const;
+		}
+
 		const suggestionId = crypto.randomUUID();
 		db.insert(suggestions)
 			.values({
