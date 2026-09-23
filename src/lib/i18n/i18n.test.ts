@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import de from './de.json';
+import en from './en.json';
 import { resolveLocale, t } from './index';
 
 describe('t', () => {
@@ -25,6 +27,15 @@ describe('t', () => {
 
 	it('leaves a placeholder intact when params omits its key', () => {
 		expect(t('en', 'test.greeting', {})).toBe('Hello {name}');
+	});
+});
+
+describe('dictionary parity', () => {
+	it('has a German counterpart for every non-test English key', () => {
+		const missing = Object.keys(en)
+			.filter((key) => !key.startsWith('test.'))
+			.filter((key) => !(key in (de as Record<string, string>)));
+		expect(missing).toEqual([]);
 	});
 });
 

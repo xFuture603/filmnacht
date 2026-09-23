@@ -15,9 +15,11 @@ export const load: PageServerLoad = ({ locals, params }) => {
 export const actions: Actions = {
 	manual: async ({ request, locals, params }) => {
 		const user = requireUser(locals);
-		const group = requireMember(db, user.id, params.groupId);
 
 		const form = await request.formData();
+		// The membership/settings snapshot is taken only after the last await, so
+		// it cannot go stale between the check and the write below.
+		const group = requireMember(db, user.id, params.groupId);
 		// Everything below this line is synchronous, so the cap check inside
 		// addSuggestion cannot be raced by a second tab.
 		const rawYear = String(form.get('year') ?? '').trim();
@@ -53,13 +55,14 @@ export const actions: Actions = {
 
 	adopt: async ({ request, locals, params }) => {
 		const user = requireUser(locals);
-		const group = requireMember(db, user.id, params.groupId);
 		const key = env.TMDB_API_KEY;
 		if (!key) return fail(400, { error: 'add.search_disabled' });
 
 		const form = await request.formData();
 		const tmdbId = Number(form.get('tmdbId'));
-		if (!Number.isInteger(tmdbId)) return fail(400, { error: 'pool.error.bad_title' });
+		if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
+			return fail(400, { error: 'pool.error.bad_title' });
+		}
 
 		let detail;
 		try {
@@ -69,7 +72,9 @@ export const actions: Actions = {
 		}
 		if (!detail) return fail(404, { error: 'add.search_none' });
 
-		// Past the last await: the cap check inside addSuggestion is now unraceable.
+		// Past the last await: the membership/settings snapshot and the cap check
+		// inside addSuggestion are both now unraceable.
+		const group = requireMember(db, user.id, params.groupId);
 		const result = addSuggestion(db, {
 			groupId: params.groupId,
 			userId: user.id,

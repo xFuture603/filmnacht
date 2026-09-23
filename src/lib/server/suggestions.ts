@@ -1,10 +1,11 @@
 import { and, eq, or } from 'drizzle-orm';
 import type { DB } from './db/client';
-import { movies, suggestions, type GroupSettings } from './db/schema';
+import { movieNights, movies, suggestions, type GroupSettings } from './db/schema';
 import { dedupeKey } from './dedupe';
 import { findOrCreateMovie, type MovieInput } from './movies';
 
 export const NOTE_MAX = 200;
+export const TITLE_MAX = 200;
 
 export type AddResult =
 	| { ok: true; suggestionId: string }
@@ -50,7 +51,7 @@ export function addSuggestion(
 	}
 ): AddResult {
 	const title = input.movie.title.trim();
-	if (!title) return { ok: false, reason: 'bad_title' };
+	if (!title || title.length > TITLE_MAX) return { ok: false, reason: 'bad_title' };
 
 	const key = dedupeKey({ ...input.movie, title });
 	// An over-long note is trimmed rather than rejected: losing the film because
@@ -75,6 +76,16 @@ export function addSuggestion(
 		if (clash && clash.status !== 'withdrawn') return { ok: false, reason: 'duplicate' } as const;
 
 		if (clash) {
+			const used = db
+				.select({ id: movieNights.id })
+				.from(movieNights)
+				.where(eq(movieNights.suggestionId, clash.id))
+				.get();
+			// A night already points at this suggestion, so its suggester is part of
+			// the group's history — reviving would retroactively re-credit a film
+			// someone else had drawn or watched.
+			if (used) return { ok: false, reason: 'duplicate' } as const;
+
 			// Revive rather than insert: the unique (group_id, dedupe_key) constraint
 			// still holds the withdrawn row's slot, so an insert would collide.
 			// Reattributed to whoever is adding it now — cap accounting keys off
@@ -88,9 +99,10 @@ export function addSuggestion(
 			// pointing at its existing `movies` row. Calling `findOrCreateMovie` here
 			// would, for a hand-typed film with no `tmdb_id`, insert a brand new
 			// `movies` row that nothing then references — exactly the leak this
-			// branch exists to avoid.
+			// branch exists to avoid. `createdAt` is reset because the row now
+			// represents a different member's suggestion, in every other field.
 			db.update(suggestions)
-				.set({ status: 'open', suggestedBy: input.userId, note })
+				.set({ status: 'open', suggestedBy: input.userId, note, createdAt: new Date() })
 				.where(eq(suggestions.id, clash.id))
 				.run();
 			return { ok: true, suggestionId: clash.id } as const;
@@ -158,6 +170,7 @@ export function listPool(
 		.from(suggestions)
 		.innerJoin(movies, eq(movies.id, suggestions.movieId))
 		.where(and(eq(suggestions.groupId, groupId), visible))
+		.orderBy(movies.title)
 		.all()
 		.map((row) => ({
 			suggestionId: row.suggestionId,

@@ -35,6 +35,7 @@
 							src={entry.posterUrl}
 							alt={entry.title}
 							loading="lazy"
+							referrerpolicy="no-referrer"
 						/>
 					{:else}
 						<div
@@ -56,7 +57,10 @@
 							{#if entry.status === 'open'}
 								<form method="POST" action="?/withdraw">
 									<input type="hidden" name="suggestionId" value={entry.suggestionId} />
-									<button class="btn btn-ghost btn-sm mt-1 min-h-11 w-full">
+									<button
+										class="btn btn-ghost btn-sm mt-1 min-h-11 w-full"
+										aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
+									>
 										{t(data.locale, 'pool.withdraw')}
 									</button>
 								</form>

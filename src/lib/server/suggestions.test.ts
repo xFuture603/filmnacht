@@ -1,8 +1,20 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from './db/client';
-import { DEFAULT_GROUP_SETTINGS, movies, suggestions, type GroupSettings } from './db/schema';
+import {
+	DEFAULT_GROUP_SETTINGS,
+	movieNights,
+	movies,
+	suggestions,
+	type GroupSettings
+} from './db/schema';
 import { createGroup, addMember } from './groups';
-import { addSuggestion, countOpenSuggestions, listPool, withdrawSuggestion } from './suggestions';
+import {
+	addSuggestion,
+	countOpenSuggestions,
+	listPool,
+	TITLE_MAX,
+	withdrawSuggestion
+} from './suggestions';
 import { createUser } from './users';
 import { eq } from 'drizzle-orm';
 
@@ -90,6 +102,19 @@ describe('addSuggestion', () => {
 		});
 	});
 
+	it('accepts a title exactly at the length limit', () => {
+		const title = 'x'.repeat(TITLE_MAX);
+		expect(addSuggestion(db, { groupId, userId: ada, movie: { title }, settings }).ok).toBe(true);
+	});
+
+	it('rejects a title one character over the length limit, rather than truncating it', () => {
+		const title = 'x'.repeat(TITLE_MAX + 1);
+		expect(addSuggestion(db, { groupId, userId: ada, movie: { title }, settings })).toEqual({
+			ok: false,
+			reason: 'bad_title'
+		});
+	});
+
 	it('truncates an over-long note rather than refusing the film', () => {
 		const note = 'x'.repeat(500);
 		const result = addSuggestion(db, { groupId, userId: ada, movie: dune, note, settings });
@@ -143,6 +168,15 @@ describe('addSuggestion', () => {
 		const row = db.select().from(suggestions).get();
 		expect(row?.note).toBe("Grace's own reason");
 		expect(row?.note).not.toBe("Ada's private reason");
+	});
+
+	it('refuses to revive a withdrawn suggestion a movie_nights row already references', () => {
+		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		const id = (first as { suggestionId: string }).suggestionId;
+		withdrawSuggestion(db, ada, id);
+		db.insert(movieNights).values({ groupId, scheduledAt: new Date(), suggestionId: id }).run();
+		const second = addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
+		expect(second).toEqual({ ok: false, reason: 'duplicate' });
 	});
 
 	it('does not leak a movies row on a withdraw/re-add cycle of a hand-typed film', () => {
@@ -226,6 +260,14 @@ describe('listPool', () => {
 		expect(listPool(db, groupId, ada, settings)).toHaveLength(0);
 	});
 
+	it('orders the pool by title, not by when a film was added', () => {
+		// Insertion order is Zebra then Apple — the reverse of title order — so a
+		// result matching title order cannot be an accident of row order.
+		addSuggestion(db, { groupId, userId: ada, movie: { title: 'Zebra' }, settings });
+		addSuggestion(db, { groupId, userId: grace, movie: { title: 'Apple' }, settings });
+		expect(listPool(db, groupId, ada, settings).map((e) => e.title)).toEqual(['Apple', 'Zebra']);
+	});
+
 	it('keeps a drawn film in the pool when the group allows repeats', () => {
 		const repeats = { ...settings, repeatDrawnFilms: true };
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings: repeats });
@@ -239,6 +281,14 @@ describe('countOpenSuggestions', () => {
 	it("counts only this member's open suggestions in this group", () => {
 		addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		addSuggestion(db, { groupId, userId: grace, movie: arrival, settings });
+		expect(countOpenSuggestions(db, groupId, ada)).toBe(1);
+	});
+
+	it("does not count a member's open suggestions in a different group", () => {
+		const other = createGroup(db, { name: 'Other', ownerId: ada });
+		addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		expect(countOpenSuggestions(db, groupId, ada)).toBe(1);
+		addSuggestion(db, { groupId: other, userId: ada, movie: arrival, settings });
 		expect(countOpenSuggestions(db, groupId, ada)).toBe(1);
 	});
 });

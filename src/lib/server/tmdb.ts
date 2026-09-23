@@ -88,6 +88,10 @@ export async function fetchMovie(
 	if (response.status === 404) return null;
 	if (!response.ok) refuse('detail lookup', response.status);
 	const item = await parse(response, 'detail lookup');
+	// A malformed body must not produce `tmdbId: NaN` — that value still passes
+	// the `!= null` check in findOrCreateMovie and collides every malformed film
+	// in a group onto the single dedupe key `tmdb:NaN`.
+	if (!Number.isInteger(Number(item.id)) || Number(item.id) <= 0) return null;
 	const genres = Array.isArray(item.genres)
 		? (item.genres as { name?: unknown }[]).map((g) => String(g.name ?? '')).filter(Boolean)
 		: [];

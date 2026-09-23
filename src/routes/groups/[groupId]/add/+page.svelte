@@ -31,36 +31,47 @@
 		{#if form.results.length === 0}
 			<p class="mb-4">{t(data.locale, 'add.search_none')}</p>
 		{:else}
-			<ul class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-				{#each form.results as result (result.tmdbId)}
-					<li class="card bg-base-100 shadow-sm">
-						{#if result.posterUrl}
-							<img
-								class="aspect-[2/3] w-full rounded-t-box object-cover"
-								src={result.posterUrl}
-								alt={result.title}
-								loading="lazy"
-							/>
-						{:else}
-							<div
-								class="bg-base-300 flex aspect-[2/3] w-full items-center justify-center rounded-t-box p-2 text-center text-sm"
-							>
-								{t(data.locale, 'pool.no_poster')}
-							</div>
-						{/if}
-						<div class="card-body gap-1 p-3">
-							<p class="font-medium">{result.title}</p>
-							<p class="text-sm opacity-70">{result.year ?? ''}</p>
-							<form method="POST" action="?/adopt">
-								<input type="hidden" name="tmdbId" value={result.tmdbId} />
-								<button class="btn btn-secondary btn-sm mt-1 min-h-11 w-full">
+			<form method="POST" action="?/adopt">
+				<ul class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+					{#each form.results as result (result.tmdbId)}
+						<li class="card bg-base-100 shadow-sm">
+							{#if result.posterUrl}
+								<img
+									class="aspect-[2/3] w-full rounded-t-box object-cover"
+									src={result.posterUrl}
+									alt={result.title}
+									loading="lazy"
+									referrerpolicy="no-referrer"
+								/>
+							{:else}
+								<div
+									class="bg-base-300 flex aspect-[2/3] w-full items-center justify-center rounded-t-box p-2 text-center text-sm"
+								>
+									{t(data.locale, 'pool.no_poster')}
+								</div>
+							{/if}
+							<div class="card-body gap-1 p-3">
+								<p class="font-medium">{result.title}</p>
+								<p class="text-sm opacity-70">{result.year ?? ''}</p>
+								<button
+									name="tmdbId"
+									value={result.tmdbId}
+									class="btn btn-secondary btn-sm mt-1 min-h-11 w-full"
+									aria-label={t(data.locale, 'add.adopt_named', { title: result.title })}
+								>
 									{t(data.locale, 'add.adopt')}
 								</button>
-							</form>
-						</div>
-					</li>
-				{/each}
-			</ul>
+							</div>
+						</li>
+					{/each}
+				</ul>
+				<label class="form-control mb-6 max-w-md">
+					<span class="label-text">{t(data.locale, 'add.note')}</span>
+					<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea textarea-bordered"
+					></textarea>
+					<span class="label-text-alt">{t(data.locale, 'add.note_hint')}</span>
+				</label>
+			</form>
 		{/if}
 	{/if}
 {/if}

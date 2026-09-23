@@ -24,10 +24,12 @@ export function rateLimit(key: string, limit = 10, windowMs = 60_000, now = Date
 		// Still full means every window is live, so expiry-based pruning cannot
 		// help. Map iterates in insertion order, so dropping from the front
 		// evicts the oldest. Evicting a live window hands that key a fresh budget
-		// early. That is safe only while every key is a value the client cannot
-		// cheaply enumerate — both current call sites are IP-keyed. A caller that
-		// keys this map on attacker-supplied input (a username, say) must not
-		// rely on it for brute-force protection.
+		// early. That is safe only while every key is not cheaply enumerable by an
+		// attacker — a user id (as used by the invite-create limiter) qualifies
+		// just as an IP address does. A future caller that keys this map on
+		// attacker-chosen input, such as a login handler keyed on a submitted
+		// username, must not rely on it for brute-force protection: an attacker
+		// could cheaply enumerate that key space and evict a victim's window early.
 		while (windows.size >= MAX_WINDOWS) {
 			const oldest = windows.keys().next();
 			if (oldest.done) break;
