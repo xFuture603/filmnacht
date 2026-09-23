@@ -189,21 +189,34 @@ A duel mode with Elo ratings stays documented as a backlog candidate, see sectio
 
 For self-hosting, login is not the easy part but the hardest one — not because of the code, but because of its prerequisites. Every OIDC provider means the operator creating their own OAuth app; Google is 10–15 minutes of clicking through a console that changes regularly, Apple requires a paid developer membership and a signed JWT that expires twice a year, and both require a publicly reachable HTTPS redirect URI that a home-network instance does not have. Magic links avoid all of that and introduce SMTP instead, which is the most common thing to be misconfigured in a self-hosted stack.
 
-So the MVP has neither, and depends on nothing external.
+So the MVP has neither *as its login mechanism*. It has a username and a password, hashed with `scrypt` from Node's standard library — no password-hashing dependency, no native module, nothing for an operator's arm64 box to fail to compile.
 
-**How accounts come into existence.** The invite token from section 4 creates the account on first open; the user sets their display name and is logged in. That is the whole registration flow.
+**Registration stays closed.** An account is still created only through a valid group invite link. That is a security property worth keeping: a publicly reachable instance cannot be filled with strangers, and it is the reason this app needs no CAPTCHA, no email confirmation and no moderation queue.
 
-**How a user gets back in.** This is the part an invite link alone does not solve, and it bites on day one rather than after the session expires: someone joins on their laptop and then opens the app on their phone, where there is no session and nothing identifies them. Every member therefore has a **personal login link** — a 128-bit token at `/login/<token>` — shown in their profile behind a copy button, together with "revoke and regenerate". They paste it once on the second device. It is the same primitive as the invite token, and it is the entire login system.
+**How accounts come into existence.** The invite token from section 4 creates the account on first open. The join form asks for three things: a **username** (unique per instance, the thing you log in with), a **display name** (what the group sees, free to duplicate and free to change), and a **password**. An email address is optional and may be added later. That is the whole registration flow.
+
+**Why a separate username rather than logging in with the display name.** Two friends called Alex should both be able to be "Alex" to the group, and anyone should be able to change what the group calls them without changing how they sign in. Conflating the two makes one of those impossible.
+
+**How a user gets back in.** Username and password, at `/login`. On a second device, the same.
+
+**When they forget the password**, there are two recoveries, and the order matters:
+
+1. **The personal login link** — a 128-bit token at `/login/<token>`, revealed from any device still signed in, which regenerates on reveal and signs out every other session. This works on an instance with **no mail server at all**, and it is the reason the rule below still holds.
+2. **An emailed reset link**, when the operator has configured SMTP *and* the member has set an address. Short-lived, single-use, and stored hashed like every other token here.
+
+If neither is available — no signed-in device, no email, no SMTP — recovery needs the instance admin. That is the honest cost of refusing to make mail a prerequisite, and it is written down rather than discovered.
 
 **What "revoke" means, precisely.** Only the hash of the login token is stored, so the link cannot be displayed a second time: revealing it *generates a new one* and the previous link stops working. That is the same action as revoking, which is why there is one button and not two. Revoking also **ends every other session that member has** — the device doing the revoking stays signed in, every other one is signed out and must use the new link. This matters because the threat this feature has to answer is a link pasted into the wrong chat: rotating the token alone would kill the link while leaving the session it already granted alive and renewing itself indefinitely. Revoking the credential without revoking the access it bought is not revocation.
 
-The honest trade-off: this is a bearer token that will end up in browser history and in a chat message. For eight friends and a list of films that is the right exchange rate. Anyone who wants real authentication configures OIDC from v2. Nothing in this app should ever hold something that makes the trade-off wrong.
+The honest trade-off on the login link: it is a bearer token that will end up in browser history and in a chat message. It is now a *recovery* path rather than the whole login system, which is a materially smaller exposure than it was — and revealing a new one signs out every other session, so a leaked link can be shut off from any device still signed in. Anyone who wants real authentication configures OIDC from v2.
 
 **Sessions.** HTTP-only, secure, SameSite=Lax cookies; server-side sessions in the database; 30-day lifetime with sliding expiration. No JWT in local storage. Session tokens are stored **hashed**, so a leaked database is not also a set of live sessions.
 
-**Email.** Not collected in the MVP: with no magic link and no notifications, nothing consumes an address, so the column stays nullable and empty until something does. From v1.0, when SMTP arrives for rating reminders, a member may add an address to their profile — optional, per user, used for nothing else.
+**Email.** Optional, per user, nullable, and collected for exactly one purpose: password reset. A member who does not set one loses nothing except that recovery path. Nothing else reads the column, and the app sends no other mail until rating reminders arrive in v1.0.
 
-One rule holds permanently, and it is the rule that keeps section 4's argument honest: **login never depends on SMTP.** The personal login link works on an instance with no mail server at all. Email is allowed to make the app nicer; it is never allowed to be the thing standing between a member and their account.
+**SMTP is optional per instance.** With none configured, the reset form says so plainly and points at the personal login link. Everything else — joining, logging in, suggesting, drawing, rating — works unchanged.
+
+One rule holds permanently, and it is what keeps section 4's argument honest: **login never depends on SMTP.** Signing in is username and password, which needs no mail server, and the personal login link recovers an account without one. Email is allowed to make recovery nicer; it is never allowed to be the thing standing between a member and their account.
 
 **Extending to OIDC (v2).** One configurable generic provider via `.env` — issuer URL, client ID, client secret — which covers Google, Authentik, Keycloak, Zitadel, Pocket-ID and every other OIDC server with one code path. Google then needs documentation rather than special-case code. The `identity` table exists from the MVP (section 10) so that adding a provider later is an insert, not a migration over live accounts.
 
@@ -285,7 +298,7 @@ One caveat belongs in the README rather than in a bug report: the volume holding
 
 **Testing and CI.** Vitest from the first commit, covering the logic that can actually be wrong: the draw weighting and its 1000-night fairness simulation, dedupe key generation, rating-window arithmetic, and the state transitions of section 6. No browser tests in the MVP — for a handful of screens they cost more maintenance than the bugs they would catch. One GitHub Action: install, lint, test, build, plus a multi-arch `docker buildx` on tag, which is also the release process.
 
-**Privacy.** Only a display name and an optional avatar are stored; the MVP does not collect email addresses at all. No analytics, no trackers, no external fonts — everything served locally. Outgoing connections go to TMDB only, and only for metadata. A user can export their data as JSON and delete their account; their ratings are then reassigned to a placeholder "former member" so group statistics do not break. This consequence is shown clearly before deletion.
+**Privacy.** A username, a display name, an optional avatar and an **optional** email address are stored. The address is used for password reset and nothing else; a member who does not set one is not nagged and loses no functionality except that recovery path. No analytics, no trackers, no external fonts — everything served locally. Outgoing connections go to TMDB only, and only for metadata. A user can export their data as JSON and delete their account; their ratings are then reassigned to a placeholder "former member" so group statistics do not break. This consequence is shown clearly before deletion.
 
 **Timezone.** All timestamps are stored in UTC. The instance admin sets a single timezone for the instance in the setup screen and can change it later in the admin settings. Per-group timezones are overhead: friends who share a couch share a timezone.
 
@@ -352,9 +365,10 @@ The cut is drawn by one criterion only: when can your own group use the app at a
 | 4 | Who may rate? | Any member of the group. The attendance gate and the owner-unlock flow were dropped as overkill for eight friends |
 | 5 | Who suggested the film? | Revealed with the draw; the pool is anonymous before that |
 | 6 | Is the fairness weighting needed? | Yes, over a rolling window of the last 10 movie nights, counting films *watched* |
+| 20 | Identity | A separate unique username for signing in, distinct from the display name the group sees, so two friends can share a display name and either can change theirs without changing how they log in |
 | 7 | Project name | `filmnacht` — confirmed available as a GitHub user and org, on npm, on PyPI, and as a Docker Hub namespace |
-| 8 | Login in the MVP | Invite token creates the account; a personal revocable login link covers further devices. No magic link, no SMTP, no OIDC |
-| 9 | Auth library | None. Hand-rolled sessions; `openid-client` when OIDC arrives. Auth.js is not adopted |
+| 8 | Login in the MVP | **Revised.** Username and password (`scrypt`, stdlib). An invite token still creates the account and registration stays closed. The personal login link is retained as a no-SMTP recovery path, not as the login mechanism |
+| 9 | Auth library | None. Hand-rolled sessions and `scrypt` from `node:crypto`; `openid-client` when OIDC arrives. Auth.js is not adopted |
 | 10 | Framework | SvelteKit |
 | 11 | Database | SQLite alone; Postgres to the backlog |
 | 12 | Component library | daisyUI on top of Tailwind |
@@ -362,7 +376,7 @@ The cut is drawn by one criterion only: when can your own group use the app at a
 | 14 | Empty pool | MVP disables the draw; v1.0 draws a TMDB wildcard belonging to nobody |
 | 15 | Rating storage | Integer 2–20, not a float |
 | 16 | Leaving vs. deleting | Leaving preserves history and name; only account deletion anonymizes |
-| 17 | SMTP | Yes, in v1.0 — optional, for individual rating reminders only. Login never depends on it |
+| 17 | SMTP | **Revised.** Optional per instance, for password reset and later rating reminders. Login never depends on it: signing in is username and password, and the personal login link recovers an account with no mail server |
 | 18 | ORM | Drizzle. Plain SQL migrations, no engine binary to fail on an operator's arm64 box |
 | 19 | Leaderboard | v2, not v1.0 |
 
