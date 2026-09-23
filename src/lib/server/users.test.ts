@@ -5,6 +5,7 @@ import { hashToken } from './auth/tokens';
 import { applyMigrations, createDb, type DB } from './db/client';
 import { users } from './db/schema';
 import {
+	UsernameTakenError,
 	createUser,
 	regenerateLoginToken,
 	setPassword,
@@ -231,6 +232,19 @@ describe('createUser with a username', () => {
 		expect(() =>
 			createUser(db, { username: 'ada', displayName: 'Someone Else', passwordHash: hash })
 		).toThrow();
+	});
+
+	it('throws UsernameTakenError specifically, not just any error', async () => {
+		// Pins the behaviour to the error CLASS rather than to createUser's
+		// internal string match against a better-sqlite3 message
+		// ("UNIQUE constraint failed: users.username") — a dependency bump that
+		// reworded that message would silently revert callers to an unhandled
+		// 500 while a bare .toThrow() here would keep passing either way.
+		const hash = await hashPassword('a password');
+		createUser(db, { username: 'ada', displayName: 'Ada', passwordHash: hash });
+		expect(() =>
+			createUser(db, { username: 'ada', displayName: 'Someone Else', passwordHash: hash })
+		).toThrow(UsernameTakenError);
 	});
 
 	it('lowercases and trims its own input, independent of any caller pre-normalising', async () => {

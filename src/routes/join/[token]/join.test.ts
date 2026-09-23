@@ -190,3 +190,20 @@ describe('password validation', () => {
 		expect(userByUsername(db, 'mismatch')).toBeNull();
 	});
 });
+
+describe('username validation', () => {
+	it('rejects a username that is already taken, against a live invite', async () => {
+		const token = createInvite(db, { groupId, createdBy: ownerId });
+		createUser(db, { username: 'taken', displayName: 'Taken', passwordHash: PLACEHOLDER_HASH });
+
+		const result = await post(token, {
+			username: 'taken',
+			displayName: 'Someone',
+			password: 'a fine password here',
+			passwordRepeat: 'a fine password here'
+		});
+
+		expect(result?.status).toBe(400);
+		expect(result?.data?.error).toBe('auth.error.username_taken');
+	});
+});
