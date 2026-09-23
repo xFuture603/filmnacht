@@ -151,6 +151,24 @@ describe('verifyPassword', () => {
 	});
 });
 
+describe('verifyPassword against a crafted stored value', () => {
+	it('refuses a stored value whose key segment decodes to nothing', async () => {
+		// The original bypass. '!!!' is a non-empty STRING that decodes to zero
+		// BYTES, and a keylen derived from it made every password match.
+		expect(await verifyPassword('any password at all', 'scrypt$AAAA$!!!')).toBe(false);
+		expect(await verifyPassword('a different one', 'scrypt$AAAA$!!!')).toBe(false);
+	});
+
+	it('does not let an oversized stored value dictate how much work it does', async () => {
+		// Measured: vulnerable 1316-1366ms, fixed 66-152ms. The bound sits between
+		// them deliberately — widen it and this stops being a regression test.
+		const huge = Buffer.alloc(10_000_000).toString('base64url');
+		const started = Date.now();
+		expect(await verifyPassword('any password at all', `scrypt$AAAA$${huge}`)).toBe(false);
+		expect(Date.now() - started).toBeLessThan(600);
+	});
+});
+
 describe('validatePassword', () => {
 	it('accepts a password at the minimum length', () => {
 		expect(validatePassword('a'.repeat(PASSWORD_MIN))).toHaveLength(PASSWORD_MIN);
@@ -203,6 +221,7 @@ const scryptAsync = promisify(scrypt) as (
  * as a natural brake on online guessing.
  */
 const PARAMS = { N: 16384, r: 8, p: 1 };
+const SALT_LEN = 16;
 const KEYLEN = 64;
 const SCHEME = 'scrypt';
 
@@ -211,7 +230,7 @@ export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 200;
 
 export async function hashPassword(password: string): Promise<string> {
-	const salt = randomBytes(16);
+	const salt = randomBytes(SALT_LEN);
 	const key = await scryptAsync(password, salt, KEYLEN, PARAMS);
 	return `${SCHEME}$${salt.toString('base64url')}$${key.toString('base64url')}`;
 }
@@ -219,17 +238,28 @@ export async function hashPassword(password: string): Promise<string> {
 /**
  * Always does the work, even when there is nothing to compare against. An early
  * return for a missing or malformed hash would take microseconds where a real
- * check takes ~100ms, which tells an attacker the account exists but has no
- * password — and, at the route layer, whether the account exists at all.
+ * check takes ~100ms, which tells an attacker whether the account exists.
+ *
+ * **Never derive a length from the stored value.** An earlier version of this
+ * function fed `expected.length` back into scrypt as the keylen, which made the
+ * comparison below tautological — both sides were forced equal by construction.
+ * A key segment of `'!!!'` decodes to zero bytes, scrypt returned zero bytes,
+ * `timingSafeEqual(empty, empty)` was true, and **every password authenticated**.
+ * That was a live authentication bypass. SALT_LEN and KEYLEN are our own
+ * constants on both branches, and it is the DECODED lengths that are validated,
+ * never the strings' — a non-empty string can decode to nothing.
  */
 export async function verifyPassword(password: string, stored: string | null): Promise<boolean> {
 	const parts = (stored ?? '').split('$');
-	const usable = parts.length === 3 && parts[0] === SCHEME && parts[1] && parts[2];
-	const salt = usable ? Buffer.from(parts[1], 'base64url') : randomBytes(16);
-	const expected = usable ? Buffer.from(parts[2], 'base64url') : randomBytes(KEYLEN);
-	const actual = await scryptAsync(password, salt, expected.length, PARAMS);
-	const matches = actual.length === expected.length && timingSafeEqual(actual, expected);
-	return usable && matches;
+	const tagged = parts.length === 3 && parts[0] === SCHEME;
+	const salt = tagged ? Buffer.from(parts[1], 'base64url') : Buffer.alloc(0);
+	const expected = tagged ? Buffer.from(parts[2], 'base64url') : Buffer.alloc(0);
+	const usable = salt.length === SALT_LEN && expected.length === KEYLEN;
+	// KEYLEN on both branches, so the work and the timing are identical whether
+	// or not the stored value was usable.
+	const actual = await scryptAsync(password, usable ? salt : randomBytes(SALT_LEN), KEYLEN, PARAMS);
+	if (!usable) return false;
+	return timingSafeEqual(actual, expected);
 }
 
 export function validatePassword(raw: FormDataEntryValue | null): string | null {
