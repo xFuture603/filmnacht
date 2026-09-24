@@ -19,10 +19,10 @@ import type { Actions, PageServerLoad } from './$types';
 // a POST a browser will not issue without the visitor pressing the button.
 export const load: PageServerLoad = ({ params, locals, getClientAddress }) => {
 	if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
-		return { invite: null, rateLimited: true, user: locals.user };
+		return { invite: null, rateLimited: true, user: locals.user, token: params.token };
 	}
 	const invite = lookupInvite(db, params.token);
-	return { invite, rateLimited: false, user: locals.user };
+	return { invite, rateLimited: false, user: locals.user, token: params.token };
 };
 
 export const actions: Actions = {

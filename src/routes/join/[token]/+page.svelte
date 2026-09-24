@@ -77,5 +77,11 @@
 
 			<button class="btn btn-primary min-h-11">{t(data.locale, 'invite.join_submit')}</button>
 		</form>
+
+		<p class="mt-4 text-sm">
+			<a class="link" href="/login?redirectTo=/join/{data.token}">
+				{t(data.locale, 'invite.have_account')}
+			</a>
+		</p>
 	{/if}
 {/if}
