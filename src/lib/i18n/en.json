@@ -65,7 +65,7 @@
 	"profile.change_password": "Change password",
 	"profile.current_password": "Current password",
 	"profile.new_password": "New password",
-	"profile.password_changed": "Password changed. Every other device has been signed out.",
+	"profile.password_changed": "Password changed. Every other device has been signed out, and your old personal login link no longer works — reveal a new one below if you want one.",
 	"profile.error.current_password": "That is not your current password.",
 	"profile.error.email": "That does not look like an email address.",
 	"profile.error.email_taken": "That email address is already in use on this instance.",

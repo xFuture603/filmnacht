@@ -18,8 +18,15 @@ const { createSession, deleteOtherSessions, SESSION_COOKIE, validateSession } =
 	await import('$lib/server/auth/session');
 const { hashToken } = await import('$lib/server/auth/tokens');
 const { resetRateLimits } = await import('$lib/server/rate-limit');
-const { createUser, setEmail, setPassword, storedPasswordHash, userProfile } =
-	await import('$lib/server/users');
+const {
+	createUser,
+	regenerateLoginToken,
+	setEmail,
+	setPassword,
+	storedPasswordHash,
+	userByLoginToken,
+	userProfile
+} = await import('$lib/server/users');
 const { actions, load } = await import('./+page.server');
 
 const PASSWORD = 'correct horse battery';
@@ -84,9 +91,17 @@ beforeEach(() => {
 });
 
 describe('GET /profile', () => {
-	it('shows the username, display name and email', () => {
+	it('shows the username, display name and email, read fresh from the database', () => {
 		setEmail(db, ada.id, 'ada@example.com');
-		const data = load({ locals: { user: ada, locale: 'en' } } as never) as Record<string, unknown>;
+		// locals.user deliberately carries a STALE name: it is what hooks resolved
+		// at the start of this request, so after a display-name change it is one
+		// version behind. A load rewritten to serve locals.user.displayName would
+		// render the pre-change name and pass every other test in this file.
+		const stale = { ...ada, displayName: 'Before The Change' };
+		const data = load({ locals: { user: stale, locale: 'en' } } as never) as Record<
+			string,
+			unknown
+		>;
 		expect(data).toMatchObject({ username: 'ada', displayName: 'Ada', email: 'ada@example.com' });
 	});
 
@@ -215,6 +230,44 @@ describe('changePassword', () => {
 		expect(other?.data?.error).toBe('profile.error.current_password');
 	});
 
+	it('kills a revealed login link too, and keeps this session', async () => {
+		// The login link is a standing, reusable, password-equivalent bearer
+		// token: /login/[token] mints a session from it and never consumes it. So
+		// sweeping sessions alone is not the remediation the success message
+		// promises — someone who copied that link off an unlocked laptop is still
+		// fully signed in after the victim changes her password, and can reveal a
+		// fresh one to lock her out. Both credentials have to rotate.
+		const token = regenerateLoginToken(db, ada.id);
+		expect(userByLoginToken(db, token)?.id).toBe(ada.id);
+		const mine = createSession(db, ada.id);
+
+		const result = await post(
+			'changePassword',
+			{ currentPassword: PASSWORD, newPassword: NEW_PASSWORD, passwordRepeat: NEW_PASSWORD },
+			ada,
+			cookieSpy(mine.token)
+		);
+
+		expect(result).toEqual({ success: 'profile.password_changed' });
+		expect(userByLoginToken(db, token)).toBeNull();
+		// The other direction, so "rotate everything" cannot be satisfied by
+		// throwing the caller out along with the attacker.
+		expect(validateSession(db, mine.token)?.user.id).toBe(ada.id);
+	});
+
+	it('leaves the login link alone when the change is refused', async () => {
+		// Otherwise the change form becomes a denial of service against the
+		// recovery path: submit any wrong current password and the saved link dies.
+		const token = regenerateLoginToken(db, ada.id);
+		const refused = await post('changePassword', {
+			currentPassword: 'not her password',
+			newPassword: NEW_PASSWORD,
+			passwordRepeat: NEW_PASSWORD
+		});
+		expect(refused?.data?.error).toBe('profile.error.current_password');
+		expect(userByLoginToken(db, token)?.id).toBe(ada.id);
+	});
+
 	it('refuses a signed-out visitor', async () => {
 		expect(
 			await statusOfThrow(() => post('changePassword', { currentPassword: PASSWORD }, null))
@@ -285,6 +338,19 @@ describe('setEmail', () => {
 		expect(result?.status).toBe(400);
 		expect(result?.data?.error).toBe('profile.error.email_taken');
 		expect(userProfile(db, ada.id)?.email).toBeNull();
+	});
+
+	it('refuses a request with no email field at all, rather than clearing it', async () => {
+		// An absent field is not an empty one. The form always sends `email`, so a
+		// request without it is malformed — and silently wiping a stored address
+		// while answering "saved" collapses "not provided" with "explicitly
+		// cleared", which is exactly the distinction Plan 4 needs when it resolves
+		// an address back to an account.
+		await post('setEmail', { email: 'ada@example.com' });
+		const result = await post('setEmail', {});
+		expect(result?.status).toBe(400);
+		expect(result?.data?.error).toBe('profile.error.email');
+		expect(userProfile(db, ada.id)?.email).toBe('ada@example.com');
 	});
 
 	it('refuses a signed-out visitor', async () => {

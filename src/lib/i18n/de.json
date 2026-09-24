@@ -63,7 +63,7 @@
 	"profile.change_password": "Passwort ändern",
 	"profile.current_password": "Aktuelles Passwort",
 	"profile.new_password": "Neues Passwort",
-	"profile.password_changed": "Passwort geändert. Alle anderen Geräte wurden abgemeldet.",
+	"profile.password_changed": "Passwort geändert. Alle anderen Geräte wurden abgemeldet, und dein alter persönlicher Login-Link funktioniert nicht mehr — zeige unten einen neuen an, wenn du einen brauchst.",
 	"profile.error.current_password": "Das ist nicht dein aktuelles Passwort.",
 	"profile.error.email": "Das sieht nicht nach einer E-Mail-Adresse aus.",
 	"profile.error.email_taken": "Diese E-Mail-Adresse wird auf dieser Instanz schon verwendet.",

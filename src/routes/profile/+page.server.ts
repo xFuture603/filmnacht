@@ -58,6 +58,18 @@ export const actions: Actions = {
 		// used to flood rate-limit.ts's shared map — which is a statement about
 		// causing eviction, not about surviving it. Every window in that map is
 		// evictable oldest-first, this one included.
+		//
+		// Trade-off accepted deliberately, not overlooked — the same one
+		// login/+page.server.ts records, and for the same reason. rateLimit
+		// consumes atomically and this gate sits ahead of the form, so the budget
+		// is spent by successes and by malformed submissions too: five mistyped
+		// current passwords lock the owner out of their own change form for five
+		// minutes. It stays because refusing the work *before* scrypt runs is what
+		// stops CPU exhaustion, and because this check is the only barrier between
+		// a borrowed session and a permanent takeover. If the lockout ever bites in
+		// practice, the upgrade is to verify first and consume only on failure,
+		// which costs exactly the CPU this gate is here to save. Do not simply
+		// remove the gate.
 		if (!rateLimit(`password-change:${user.id}`, 5, 300_000)) {
 			return fail(429, { error: 'profile.rate_limited' });
 		}
@@ -79,10 +91,20 @@ export const actions: Actions = {
 		const passwordHash = await hashPassword(password);
 
 		// Past the last await. A password change is the other moment when "I think
-		// someone else has access" is the reason you are here, so the sessions the
-		// old password granted go with it — rotating the credential while leaving
-		// them alive and self-renewing would not be a change at all.
+		// someone else has access" is the reason you are here, so everything the
+		// old password reached goes with it — rotating a credential while leaving
+		// the access it bought alive and self-renewing would not be a change at all.
+		//
+		// BOTH credentials rotate, not just the password. The personal login link
+		// is a standing, reusable, password-equivalent bearer token:
+		// /login/[token] mints a session from it and does not consume it. Sweeping
+		// sessions alone left someone who copied that link off an unlocked laptop
+		// fully signed in after the victim changed her password — while the page
+		// told her every other device had been signed out. The cost is that a
+		// member's saved recovery link dies on every password change, which
+		// profile.password_changed now says in both locales.
 		setPassword(db, user.id, passwordHash);
+		regenerateLoginToken(db, user.id);
 		keepOnlyThisSession(user.id, cookies);
 		return { success: 'profile.password_changed' };
 	},
@@ -101,8 +123,16 @@ export const actions: Actions = {
 	setEmail: async ({ locals, request }) => {
 		const user = requireUser(locals);
 		const form = await request.formData();
-		// '' means "clear it"; null means the input was not an address.
-		const email = validateEmail(form.get('email'));
+		// A missing field is NOT an empty one. The form always sends `email`, and
+		// clearing an address is submitting it empty — so a request that omits it
+		// entirely is malformed, not a considered "remove my address", and must not
+		// wipe one and answer "saved". validateEmail stays as it is: '' means clear
+		// it, null means the value was not an address. Only the presence check is
+		// the route's business, and Plan 4 resolving addresses back to accounts is
+		// why collapsing the two at this boundary stops being harmless.
+		const raw = form.get('email');
+		if (raw === null) return fail(400, { error: 'profile.error.email' });
+		const email = validateEmail(raw);
 		if (email === null) return fail(400, { error: 'profile.error.email' });
 		try {
 			setEmail(db, user.id, email);
