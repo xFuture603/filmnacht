@@ -24,12 +24,25 @@ export function rateLimit(key: string, limit = 10, windowMs = 60_000, now = Date
 		// Still full means every window is live, so expiry-based pruning cannot
 		// help. Map iterates in insertion order, so dropping from the front
 		// evicts the oldest. Evicting a live window hands that key a fresh budget
-		// early. That is safe only while every key is not cheaply enumerable by an
-		// attacker — a user id (as used by the invite-create limiter) qualifies
-		// just as an IP address does. A future caller that keys this map on
-		// attacker-chosen input, such as a login handler keyed on a submitted
-		// username, must not rely on it for brute-force protection: an attacker
-		// could cheaply enumerate that key space and evict a victim's window early.
+		// early — and it is the OLDEST window that goes, never the flooder's, so
+		// whether a key is cheaply enumerable says nothing about whether it
+		// survives. Every limiter sharing this map is evictable, the IP-keyed
+		// ones included. Do not write "this key cannot be evicted" at any call
+		// site; it is not true of any of them.
+		//
+		// What an enumerable key space actually costs is the flood itself. Only a
+		// caller whose key the caller's caller chooses — /login's login-user:
+		// gate, keyed on a submitted username — can fill this map on purpose; an
+		// IP address or a user id cannot be minted at will.
+		//
+		// ponytail: filling it needs 10,000 live windows at once, which against a
+		// 300s window is >=33 req/s sustained, and cycling the map to evict one
+		// specific key then costs ~10,000 insertions — more requests than the
+		// guesses it buys, with that window's TTL expiring on much the same
+		// schedule. So below that rate nothing here is evicted and above it every
+		// limiter degrades continuously. Upgrade, if a public instance ever makes
+		// the flood pay: one map per limiter class, so flooding one cannot evict
+		// another.
 		while (windows.size >= MAX_WINDOWS) {
 			const oldest = windows.keys().next();
 			if (oldest.done) break;

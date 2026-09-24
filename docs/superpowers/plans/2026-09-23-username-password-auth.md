@@ -29,7 +29,7 @@ Carried forward, all still binding:
 New for this plan, and the first two are the ones that matter:
 
 - **Login must not enable user enumeration.** A wrong username and a wrong password must be indistinguishable in response body, status **and timing**. Because `scrypt` is deliberately slow, an early return on "no such user" is a timing oracle — so the handler hashes against a dummy even when the username is unknown.
-- **The login rate limit may not be keyed on the username alone.** `src/lib/server/rate-limit.ts` shares one global map with oldest-first eviction, and its own comment warns the eviction is safe only while keys are not cheaply enumerable. A username-keyed limiter lets one attacker mint 10,000 distinct keys, evict a victim's live window, and win that victim a fresh budget. **The IP-keyed limit is the primary gate and is always checked; the username-keyed limit is defence-in-depth against a distributed attack on one account.** Check both; never the username alone.
+- **The login rate limit may not be keyed on the username alone.** `src/lib/server/rate-limit.ts` shares one global map with oldest-first eviction, and eviction is by insertion order, so it drops the oldest window whatever its key — nothing in that map is immune, the IP-keyed windows included. What an attacker-chosen key space costs is the ability to *cause* the flood: a username-keyed limiter lets one attacker mint 10,000 distinct keys and evict live windows, which an IP address or a user id cannot do. **The IP-keyed limit is the primary gate and is always checked; the username-keyed limit is defence-in-depth against a distributed attack on one account.** Check both; never the username alone. Both are hard caps only below the flood rate (>=33 req/s sustained); above it both degrade continuously, and the fix would be one map per limiter class rather than anything at a call site.
 - **`login never depends on SMTP`** (PRD §9). Nothing in this plan may make signing in require mail. SMTP arrives in Plan 4 for reset only.
 - **No new runtime dependency.** `scrypt` is in `node:crypto`. If you find yourself reaching for bcrypt or argon2, stop and report.
 
@@ -151,6 +151,24 @@ describe('verifyPassword', () => {
 	});
 });
 
+describe('verifyPassword against a crafted stored value', () => {
+	it('refuses a stored value whose key segment decodes to nothing', async () => {
+		// The original bypass. '!!!' is a non-empty STRING that decodes to zero
+		// BYTES, and a keylen derived from it made every password match.
+		expect(await verifyPassword('any password at all', 'scrypt$AAAA$!!!')).toBe(false);
+		expect(await verifyPassword('a different one', 'scrypt$AAAA$!!!')).toBe(false);
+	});
+
+	it('does not let an oversized stored value dictate how much work it does', async () => {
+		// Measured: vulnerable 1316-1366ms, fixed 66-152ms. The bound sits between
+		// them deliberately — widen it and this stops being a regression test.
+		const huge = Buffer.alloc(10_000_000).toString('base64url');
+		const started = Date.now();
+		expect(await verifyPassword('any password at all', `scrypt$AAAA$${huge}`)).toBe(false);
+		expect(Date.now() - started).toBeLessThan(600);
+	});
+});
+
 describe('validatePassword', () => {
 	it('accepts a password at the minimum length', () => {
 		expect(validatePassword('a'.repeat(PASSWORD_MIN))).toHaveLength(PASSWORD_MIN);
@@ -203,6 +221,7 @@ const scryptAsync = promisify(scrypt) as (
  * as a natural brake on online guessing.
  */
 const PARAMS = { N: 16384, r: 8, p: 1 };
+const SALT_LEN = 16;
 const KEYLEN = 64;
 const SCHEME = 'scrypt';
 
@@ -211,7 +230,7 @@ export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 200;
 
 export async function hashPassword(password: string): Promise<string> {
-	const salt = randomBytes(16);
+	const salt = randomBytes(SALT_LEN);
 	const key = await scryptAsync(password, salt, KEYLEN, PARAMS);
 	return `${SCHEME}$${salt.toString('base64url')}$${key.toString('base64url')}`;
 }
@@ -219,17 +238,28 @@ export async function hashPassword(password: string): Promise<string> {
 /**
  * Always does the work, even when there is nothing to compare against. An early
  * return for a missing or malformed hash would take microseconds where a real
- * check takes ~100ms, which tells an attacker the account exists but has no
- * password — and, at the route layer, whether the account exists at all.
+ * check takes ~100ms, which tells an attacker whether the account exists.
+ *
+ * **Never derive a length from the stored value.** An earlier version of this
+ * function fed `expected.length` back into scrypt as the keylen, which made the
+ * comparison below tautological — both sides were forced equal by construction.
+ * A key segment of `'!!!'` decodes to zero bytes, scrypt returned zero bytes,
+ * `timingSafeEqual(empty, empty)` was true, and **every password authenticated**.
+ * That was a live authentication bypass. SALT_LEN and KEYLEN are our own
+ * constants on both branches, and it is the DECODED lengths that are validated,
+ * never the strings' — a non-empty string can decode to nothing.
  */
 export async function verifyPassword(password: string, stored: string | null): Promise<boolean> {
 	const parts = (stored ?? '').split('$');
-	const usable = parts.length === 3 && parts[0] === SCHEME && parts[1] && parts[2];
-	const salt = usable ? Buffer.from(parts[1], 'base64url') : randomBytes(16);
-	const expected = usable ? Buffer.from(parts[2], 'base64url') : randomBytes(KEYLEN);
-	const actual = await scryptAsync(password, salt, expected.length, PARAMS);
-	const matches = actual.length === expected.length && timingSafeEqual(actual, expected);
-	return usable && matches;
+	const tagged = parts.length === 3 && parts[0] === SCHEME;
+	const salt = tagged ? Buffer.from(parts[1], 'base64url') : Buffer.alloc(0);
+	const expected = tagged ? Buffer.from(parts[2], 'base64url') : Buffer.alloc(0);
+	const usable = salt.length === SALT_LEN && expected.length === KEYLEN;
+	// KEYLEN on both branches, so the work and the timing are identical whether
+	// or not the stored value was usable.
+	const actual = await scryptAsync(password, usable ? salt : randomBytes(SALT_LEN), KEYLEN, PARAMS);
+	if (!usable) return false;
+	return timingSafeEqual(actual, expected);
 }
 
 export function validatePassword(raw: FormDataEntryValue | null): string | null {
@@ -698,10 +728,29 @@ To `src/lib/i18n/de.json`:
 The order below is not arbitrary. Hashing is the expensive step and must not run for a request that was going to fail anyway, and the invite check must sit past the last `await` so it cannot be raced:
 
 ```ts
-	default: async ({ request, params, cookies, getClientAddress, url }) => {
+	default: async ({ request, params, cookies, getClientAddress, locals, url }) => {
 		if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
 			return fail(429, { error: 'invite.rate_limited' });
 		}
+
+		// A signed-in visitor joins as themselves. A second account would split
+		// their suggestions, ratings and history across two identities, and Plan 5's
+		// fairness-weighted draw would count them as two different people.
+		// redeemInvite does its own lookup and nothing here is async.
+		if (locals.user) {
+			const joinedGroupId = redeemInvite(db, params.token, locals.user.id);
+			if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
+			redirect(303, `/groups/${joinedGroupId}`);
+		}
+
+		// Authorization, and deliberately above anything that reveals instance
+		// state: without a valid invite a visitor must not be able to learn whether
+		// a username exists. The lookup below, past the last await, stays the
+		// authoritative freshness check. Check twice — see FIX 8 in the movie-pool
+		// decisions. Someone HOLDING a valid invite can still tell a taken username
+		// from a free one; that is intended, since they can join and read the
+		// member list anyway.
+		if (!lookupInvite(db, params.token)) return fail(410, { error: 'invite.invalid' });
 
 		const form = await request.formData();
 		const username = validateUsername(form.get('username'));
@@ -737,7 +786,7 @@ The order below is not arbitrary. Hashing is the expensive step and must not run
 	}
 ```
 
-Note the `usernameTaken` check is a convenience, not the guarantee — the unique index is. A race between two people claiming the same username at the same instant will surface as a constraint violation from `createUser`, which is correct; the check exists so the common case gets a translated message instead of a 500.
+Note the `usernameTaken` check is a convenience, not the guarantee — the unique index is. A race between two people claiming the same username at the same instant surfaces as `SQLITE_CONSTRAINT_UNIQUE` from `createUser`. Catch that specific code and return the same translated `auth.error.username_taken`, and rethrow every other error — an uncaught constraint violation renders a SvelteKit 500, which is a worse answer than the message the non-racing path already gives. The check exists so the common case never reaches the constraint at all.
 
 - [ ] **Step 3: Add the fields to both forms**
 
@@ -772,12 +821,14 @@ This is the security-critical task of the plan. Read the two new Global Constrai
 
 **No user enumeration.** A wrong username and a wrong password must be indistinguishable in body, status **and timing**. `scrypt` takes about 100ms; returning early when the username is unknown would take microseconds, and that difference is a reliable oracle for "does this person have an account here". So the handler calls `verifyPassword` **unconditionally**, passing `null` when there is no such user — Task 1's implementation hashes against random bytes in that case specifically so the timing matches.
 
-**The rate limit may not be keyed on the username alone.** `rate-limit.ts` shares one global map with oldest-first eviction, and its own comment warns that is safe only while keys are not cheaply enumerable. A username-keyed limiter lets an attacker mint 10,000 fake usernames, evict a victim's live window, and hand that victim a fresh budget. So:
+**The rate limit may not be keyed on the username alone.** `rate-limit.ts` shares one global map that evicts the oldest window by insertion order once it is full. A username-keyed limiter lets an attacker mint 10,000 fake usernames and evict live windows — any live window, since eviction does not care whose key it is. So:
 
-- **`login-ip:<address>` is the primary gate**, checked first and always. An attacker who floods keys is still stopped by their own IP budget.
+- **`login-ip:<address>` is the primary gate**, checked first and always — not because it cannot be evicted (it can; it sits in the same map under the same rule) but because an attacker cannot *expand* its key space: one key per source address, where they can mint usernames at will.
 - **`login-user:<username>` is defence in depth** against a distributed attack on one account. It is evictable under flood, and that is an accepted degradation rather than a bypass, because the IP gate still holds.
 
 Check both. Never the username alone.
+
+**Record the lockout trade-off rather than absorbing it.** A blocking username gate means ten failures in five minutes keeps a known user out of their own account, and `rateLimit` consumes atomically so there is no check-without-consume variant to reach for. It is still the right call here — refusing the work *before* `scrypt` runs is what stops CPU exhaustion — but put a comment at that gate naming both the trade-off and the upgrade path (letting a correct password through the username gate, if lockout ever bites in practice). It must not read as an oversight.
 
 - [ ] **Step 1: Add the translation keys**
 
@@ -858,26 +909,83 @@ describe('POST /login', () => {
 	it('takes comparable time for an unknown username and a wrong password', async () => {
 		// The point of the dummy hash in verifyPassword. A fast path for "no such
 		// user" would tell an attacker which accounts exist.
-		const a = Date.now();
-		await post({ username: 'nobody-here', password: 'whatever it is' });
-		const unknownMs = Date.now() - a;
-		const b = Date.now();
-		await post({ username: 'ada', password: 'wrong password' }, '5.6.7.8');
-		const wrongMs = Date.now() - b;
-		expect(unknownMs).toBeGreaterThan(wrongMs / 4);
+		//
+		// Warmed up first, and medians rather than single samples. The very first
+		// request through this action costs ~45ms of one-off module and JIT work,
+		// which is by itself enough to make a microsecond-fast early return look
+		// like a real hash. THIS TEST WAS ORIGINALLY WRITTEN COLD AND PASSED
+		// AGAINST AN IMPLEMENTATION THAT RETURNED EARLY ON AN UNKNOWN USERNAME
+		// (unknown 45ms vs wrong 91ms, clearing wrongMs/4 on one-off cost alone).
+		// Do not simplify it back.
+		await post({ username: 'warm-up', password: 'whatever it is' }, '203.0.113.1');
+
+		const time = async (fields: Record<string, string>, address: string) => {
+			const started = performance.now();
+			await post(fields, address);
+			return performance.now() - started;
+		};
+		const median = (xs: number[]) => xs.sort((x, y) => x - y)[Math.floor(xs.length / 2)];
+
+		const unknown: number[] = [];
+		const wrong: number[] = [];
+		for (let i = 0; i < 3; i++) {
+			unknown.push(await time({ username: `nobody-${i}`, password: 'whatever' }, `198.51.100.${i}`));
+			wrong.push(await time({ username: 'ada', password: 'wrong password' }, `203.0.113.${i + 2}`));
+		}
+
+		// Half, not a quarter: scrypt dominates both paths, so the honest gap is a
+		// few percent, while an early return leaves ~1ms against ~90ms.
+		expect(median(unknown)).toBeGreaterThan(median(wrong) / 2);
+	});
+
+	it('signs in with the correct username and password', async () => {
+		// Without this, every other test in this file passes against an action
+		// whose whole body is `return fail(400, { error: 'login.failed' })`. A
+		// suite in which nobody can ever sign in was 100% green.
+		//
+		// Note `redirect()` THROWS rather than returning, so a success cannot be
+		// asserted off `post()`'s return value the way a `fail()` can. Catch it
+		// and check `isRedirect`, or wrap it in a helper that does.
+		const { redirect, cookies } = await postExpectRedirect({
+			username: 'ada',
+			password: 'correct horse battery'
+		});
+		expect(redirect.status).toBe(303);
+		expect(redirect.location).toBe('/groups');
+		// Assert the cookie FLAGS here too, not just that a cookie was set —
+		// `secure` in particular. See the Global Constraints: shipping
+		// `secure: !dev` once made an instance permanently unreachable over
+		// plain HTTP, and with Step 6 routing every signed-out visitor through
+		// /login there is no longer another way in.
+		expect(cookies.set).toHaveBeenCalledWith(
+			SESSION_COOKIE,
+			expect.any(String),
+			expect.objectContaining({ httpOnly: true, secure: false })
+		);
 	});
 
 	it('rate-limits by address before it ever looks the account up', async () => {
-		for (let i = 0; i < 10; i++) await post({ username: 'ada', password: 'wrong password' });
+		// A different username every time, so only the address budget is spent and
+		// this can only pass if the ADDRESS gate fired.
+		for (let i = 0; i < 10; i++) await post({ username: `nobody-${i}`, password: 'wrong' });
 		const result = await post({ username: 'ada', password: 'correct horse battery' });
 		// Even the correct password is refused once the address is over budget.
 		expect(result?.data?.error).toBe('login.rate_limited');
 	});
 
 	it('does not let one address exhaust another address budget', async () => {
-		for (let i = 0; i < 10; i++) await post({ username: 'ada', password: 'wrong' }, '1.1.1.1');
+		// NOT 'ada': flooding her name would exhaust login-user:ada as well, and
+		// the username gate would answer first.
+		for (let i = 0; i < 10; i++) await post({ username: 'nobody-at-all', password: 'wrong' }, '1.1.1.1');
 		const result = await post({ username: 'ada', password: 'wrong password' }, '2.2.2.2');
 		expect(result?.data?.error).toBe('login.failed');
+	});
+
+	it('limits one account even when each attempt comes from a new address', async () => {
+		// Every address fresh, so only the USERNAME gate can produce this.
+		for (let i = 0; i < 10; i++) await post({ username: 'ada', password: 'wrong' }, `10.0.0.${i}`);
+		const result = await post({ username: 'ada', password: 'wrong password' }, '10.0.0.99');
+		expect(result?.data?.error).toBe('login.rate_limited');
 	});
 });
 ```
@@ -897,13 +1005,15 @@ import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { rateLimit } from '$lib/server/rate-limit';
 import { safeRedirectPath } from '$lib/server/redirect';
-import { userByUsername } from '$lib/server/users';
+import { userByUsername, validateUsername } from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, url }) => {
 	if (locals.user) redirect(303, '/groups');
-	return { redirectTo: safeRedirectPath(url.searchParams.get('redirectTo')) };
+	// '/groups', not safeRedirectPath's default '/': otherwise every plain
+	// sign-in takes a pointless extra hop through a page that only redirects.
+	return { redirectTo: safeRedirectPath(url.searchParams.get('redirectTo'), '/groups') };
 };
 
 export const actions: Actions = {
@@ -915,9 +1025,13 @@ export const actions: Actions = {
 		}
 
 		const form = await request.formData();
-		const username = String(form.get('username') ?? '')
-			.trim()
-			.toLowerCase();
+		// validateUsername rather than a bare trim/lowercase: it bounds what can
+		// become a `login-user:` rate-limit key below to 32 characters. A raw form
+		// value is attacker-controlled and unbounded — with a 512KB body and
+		// MAX_WINDOWS = 10_000 that is multi-gigabyte growth in the process-wide
+		// window map. An unusable username becomes '', which no account can hold,
+		// so it takes the same path and the same ~100ms as any other wrong guess.
+		const username = validateUsername(form.get('username')) ?? '';
 		const password = String(form.get('password') ?? '');
 
 		// Defence in depth against a distributed attack on one account. Evictable
@@ -945,7 +1059,7 @@ export const actions: Actions = {
 
 - [ ] **Step 5: Write the page**
 
-A plain form: username, password, submit, and the `login.forgot` line. No JavaScript. `autocomplete="username"` and `autocomplete="current-password"`, `min-h-11` on both inputs and the button, `role="alert"` on the error.
+A plain form: username, password, submit, and the `login.forgot` line. It **must** carry `<input type="hidden" name="redirectTo" value={data.redirectTo} />` — `load` computes `redirectTo` and the action reads it from the form, so without this field it is always null and every login lands on `/groups`, silently discarding the deep link. No JavaScript. `autocomplete="username"` and `autocomplete="current-password"`, `min-h-11` on both inputs and the button, `role="alert"` on the error.
 
 - [ ] **Step 6: Point signed-out visitors at it**
 
@@ -957,7 +1071,7 @@ Run the full gates, then **by hand on port 5599** from a fresh `rm -rf data`: co
 
 ```bash
 git add -A
-git commit -m "feat(auth): username and password login, without a user-enumeration oracle"
+git commit -m "feat(auth): username and password login without an enumeration oracle"
 ```
 
 ---
@@ -966,6 +1080,7 @@ git commit -m "feat(auth): username and password login, without a user-enumerati
 
 **Files:**
 - Modify: `src/routes/profile/+page.server.ts`, `src/routes/profile/+page.svelte`
+- Modify: `src/lib/server/db/schema.ts` (email gains `.unique()`), regenerate the migration
 - Modify: `src/lib/i18n/en.json`, `src/lib/i18n/de.json`
 
 **Interfaces:**
@@ -1012,11 +1127,13 @@ German:
 
 - [ ] **Step 2: Add the three actions**
 
-`changePassword` — verify the current password against the stored hash (unconditionally, same reasoning as login), validate the new one, confirm it matches the repeat, hash it, `setPassword`, then `deleteOtherSessions` keeping this one.
+`changePassword` — **rate-limit first**, keyed on the user id: `rateLimit(`password-change:${locals.user.id}`, 5, 300_000)`, returning `profile.rate_limited`. The current-password check is the only barrier between a borrowed session and a permanent takeover, and an ungated form lets it be guessed freely. A user id is a safe key here — the caller cannot mint more of them, so this limiter cannot be used to flood the shared map, unlike the submitted username that constrains the login limiter. That is a statement about causing eviction, not about surviving it: every window in that map is evictable oldest-first, user ids included. Do not write that a key "cannot be evicted". Then verify the current password against the stored hash (there is no branch to skip here; the enumeration-timing reasoning from login does **not** apply, because the account is already known — keep the behaviour but do not repeat that justification, or someone will later "optimise" it away), validate the new one, confirm it matches the repeat, hash it, `setPassword`, then `deleteOtherSessions` keeping this one.
 
 `changeDisplayName` — `validateDisplayName`, update. No uniqueness check; duplicates are allowed by design.
 
 `setEmail` — accept an empty value as "clear it", otherwise a minimal shape check. **Do not** write a clever email regex: the only definitive test of an address is sending to it, which is Plan 4's job. Something of the form `x@y.z` with no spaces is the right level of strictness here, and the plan should say so rather than leaving the next person to invent RFC 5322.
+
+**Email must be unique, and the constraint alone is not enough.** Plan 4 resolves an address back to one account to send a reset link, which is ambiguous the moment two people set the same address. Verified against better-sqlite3: `UNIQUE` on a nullable column permits many NULLs (so an optional email still works) and rejects duplicates with `SQLITE_CONSTRAINT_UNIQUE` — but it accepts `Ada@x.com` alongside `ada@x.com`. So both halves are required: `.unique()` in the schema, **and** `setEmail` lowercasing and trimming before it writes. Catch the constraint violation and return a new `profile.error.email_taken` in both locales rather than rendering a 500; rethrow anything else. That error does confirm the address has an account on this instance — acceptable for a private 3–12 person group, and worth the usability, but say so in a comment so it reads as a decision.
 
 Each action returns its own success key so the page can say what happened.
 

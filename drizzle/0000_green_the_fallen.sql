@@ -125,9 +125,13 @@ CREATE TABLE `users` (
 	`display_name` text NOT NULL,
 	`avatar_url` text,
 	`email` text,
+	`username` text NOT NULL,
+	`password_hash` text NOT NULL,
 	`login_token_hash` text NOT NULL,
 	`is_admin` integer DEFAULT false NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
+CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);--> statement-breakpoint
 CREATE UNIQUE INDEX `users_login_token_hash_unique` ON `users` (`login_token_hash`);

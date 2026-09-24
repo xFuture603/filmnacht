@@ -1,8 +1,15 @@
+import { hashPassword, validatePassword } from '$lib/server/auth/password';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { lookupInvite, redeemInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
-import { createUser, validateDisplayName } from '$lib/server/users';
+import {
+	createUser,
+	UsernameTakenError,
+	usernameTaken,
+	validateDisplayName,
+	validateUsername
+} from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -12,10 +19,10 @@ import type { Actions, PageServerLoad } from './$types';
 // a POST a browser will not issue without the visitor pressing the button.
 export const load: PageServerLoad = ({ params, locals, getClientAddress }) => {
 	if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
-		return { invite: null, rateLimited: true, signedIn: !!locals.user };
+		return { invite: null, rateLimited: true, user: locals.user, token: params.token };
 	}
 	const invite = lookupInvite(db, params.token);
-	return { invite, rateLimited: false, signedIn: !!locals.user };
+	return { invite, rateLimited: false, user: locals.user, token: params.token };
 };
 
 export const actions: Actions = {
@@ -24,6 +31,17 @@ export const actions: Actions = {
 			return fail(429, { error: 'invite.rate_limited' });
 		}
 
+		// Authorization, deliberately above anything that reveals instance state:
+		// without a valid invite a visitor must not learn whether a username
+		// exists. The lookup below, past the last await, stays the authoritative
+		// freshness check. Check twice — see FIX 8, movie-pool decisions.
+		if (!lookupInvite(db, params.token)) return fail(410, { error: 'invite.invalid' });
+
+		// A signed-in visitor joins as themselves, not as a new account: a second
+		// account would split their suggestions, ratings and history across two
+		// identities, and Plan 5's fairness-weighted draw would count them as two
+		// different people. redeemInvite does its own lookup internally and
+		// nothing here is async, so there is no race to guard against.
 		if (locals.user) {
 			const joinedGroupId = redeemInvite(db, params.token, locals.user.id);
 			if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
@@ -31,17 +49,46 @@ export const actions: Actions = {
 		}
 
 		const form = await request.formData();
+		const username = validateUsername(form.get('username'));
+		if (!username) return fail(400, { error: 'auth.error.username' });
 		const displayName = validateDisplayName(form.get('displayName'));
 		if (!displayName) return fail(400, { error: 'invite.error.name' });
+		const password = validatePassword(form.get('password'));
+		if (!password) return fail(400, { error: 'auth.error.password' });
+		if (password !== form.get('passwordRepeat')) {
+			return fail(400, { error: 'auth.error.password_mismatch' });
+		}
 
-		// Past the last await, nothing yields: better-sqlite3 is synchronous and
-		// Node is single-threaded, so the invite cannot change under us between
-		// this lookup and the redeem below. Checking before the await could not
-		// make that promise.
+		// Cheap rejection before the expensive hash: a taken username is by far
+		// the most common failure here, and hashing first would burn ~100ms of
+		// CPU on every one of them. Reaching this line already required a live
+		// invite (checked above), so a visitor who gets here CAN tell a taken
+		// username from a free one — that is fine and intended: they could just
+		// as easily join and read the member list. The early check only stops
+		// someone with no invite at all from learning anything.
+		if (usernameTaken(db, username)) return fail(400, { error: 'auth.error.username_taken' });
+
+		const passwordHash = await hashPassword(password);
+
+		// Past the last await. The invite lookup, the account creation and the
+		// redemption are now one uninterruptible sequence, which is what stops a
+		// second tab from racing an invite that is expiring or filling up.
 		const invite = lookupInvite(db, params.token);
 		if (!invite) return fail(410, { error: 'invite.invalid' });
 
-		const user = createUser(db, displayName);
+		let user: { id: string };
+		try {
+			user = createUser(db, { username, displayName, passwordHash });
+		} catch (err) {
+			// usernameTaken above is a pre-check, not a guarantee: two submissions
+			// can race past it while both hash. The unique index is the real
+			// guarantee, and this is what turns its violation into the translated
+			// message instead of a 500.
+			if (err instanceof UsernameTakenError) {
+				return fail(400, { error: 'auth.error.username_taken' });
+			}
+			throw err;
+		}
 		const joinedGroupId = redeemInvite(db, params.token, user.id);
 		if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
 

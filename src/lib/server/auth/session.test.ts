@@ -16,7 +16,15 @@ let db: DB;
 beforeEach(() => {
 	db = createDb(':memory:').db;
 	applyMigrations(db);
-	db.insert(users).values({ id: 'u1', displayName: 'Ada', loginTokenHash: 'h1' }).run();
+	db.insert(users)
+		.values({
+			id: 'u1',
+			displayName: 'Ada',
+			username: 'ada',
+			passwordHash: 'scrypt$placeholder$placeholder',
+			loginTokenHash: 'h1'
+		})
+		.run();
 });
 
 describe('generateToken', () => {
@@ -104,7 +112,15 @@ describe('deleteOtherSessions', () => {
 	});
 
 	it('leaves other users signed in', () => {
-		db.insert(users).values({ id: 'u2', displayName: 'Grace', loginTokenHash: 'h2' }).run();
+		db.insert(users)
+			.values({
+				id: 'u2',
+				displayName: 'Grace',
+				username: 'grace',
+				passwordHash: 'scrypt$placeholder$placeholder',
+				loginTokenHash: 'h2'
+			})
+			.run();
 		const mine = createSession(db, 'u1');
 		const theirs = createSession(db, 'u2');
 		deleteOtherSessions(db, 'u1', null);

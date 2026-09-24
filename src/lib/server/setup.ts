@@ -14,11 +14,19 @@ import { createUser } from './users';
  * applies to every statement issued through `db` until COMMIT. Do not "fix"
  * this by threading a `tx` handle through the helpers.
  */
-export function claimInstance(db: DB, displayName: string, timezone: string): SessionUser | null {
+export function claimInstance(
+	db: DB,
+	input: { username: string; displayName: string; passwordHash: string; timezone: string }
+): SessionUser | null {
 	return db.transaction(() => {
 		if (isSetupComplete(db)) return null;
-		const admin = createUser(db, displayName, true);
-		setSetting(db, 'timezone', timezone);
+		const admin = createUser(db, {
+			username: input.username,
+			displayName: input.displayName,
+			passwordHash: input.passwordHash,
+			isAdmin: true
+		});
+		setSetting(db, 'timezone', input.timezone);
 		setSetting(db, 'setup_complete', '1');
 		return admin;
 	});

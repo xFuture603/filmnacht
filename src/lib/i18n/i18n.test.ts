@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PASSWORD_MAX, PASSWORD_MIN } from '$lib/server/auth/password';
 import de from './de.json';
 import en from './en.json';
 import { resolveLocale, t } from './index';
@@ -36,6 +37,20 @@ describe('dictionary parity', () => {
 			.filter((key) => !key.startsWith('test.'))
 			.filter((key) => !(key in (de as Record<string, string>)));
 		expect(missing).toEqual([]);
+	});
+});
+
+describe('auth.error.password names the real bounds', () => {
+	// Not interpolation — the page can't import from $lib/server, so tying the
+	// string to the constant at build time isn't available here. This is the
+	// cheap alternative: if PASSWORD_MIN/PASSWORD_MAX is ever bumped without
+	// updating both locale strings, this fails loudly instead of the message
+	// quietly lying again (the exact bug FIX 3 fixed).
+	it('both locales mention the actual PASSWORD_MIN and PASSWORD_MAX', () => {
+		for (const dict of [en, de] as Record<string, string>[]) {
+			expect(dict['auth.error.password']).toContain(String(PASSWORD_MIN));
+			expect(dict['auth.error.password']).toContain(String(PASSWORD_MAX));
+		}
 	});
 });
 

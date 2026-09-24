@@ -30,8 +30,16 @@ const arrival = { tmdbId: 329865, title: 'Arrival', year: 2016 };
 beforeEach(() => {
 	db = createDb(':memory:').db;
 	applyMigrations(db);
-	ada = createUser(db, 'Ada').id;
-	grace = createUser(db, 'Grace').id;
+	ada = createUser(db, {
+		username: 'ada',
+		displayName: 'Ada',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
+	grace = createUser(db, {
+		username: 'grace',
+		displayName: 'Grace',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	}).id;
 	groupId = createGroup(db, { name: 'Movie Club', ownerId: ada });
 	addMember(db, grace, groupId);
 });

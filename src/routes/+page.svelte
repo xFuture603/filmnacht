@@ -1,7 +1,3 @@
-<script lang="ts">
-	import { t } from '$lib/i18n';
-	let { data } = $props();
-</script>
-
-<h1 class="text-2xl font-bold">{t(data.locale, 'app.name')}</h1>
-<p>{t(data.locale, 'home.no_groups')}</p>
+<!-- Unreachable: +page.server.ts redirects a signed-in visitor to /groups and
+     a signed-out one to /login. A page route still needs a component to exist
+     at all, so this is the component and nothing more. -->
