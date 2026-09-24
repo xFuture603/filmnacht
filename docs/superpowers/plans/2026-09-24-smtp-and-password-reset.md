@@ -272,8 +272,12 @@ export const passwordResets = sqliteTable('password_resets', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
-	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
-	usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+	// `timestamp`, not `timestamp_ms`: every other datetime column in this
+	// schema is seconds, and one exception is how a later reader ends up
+	// comparing a seconds column against a millisecond one. The cost is that an
+	// expiry truncates down by up to 999ms, which is nothing against an hour.
+	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+	usedAt: integer('used_at', { mode: 'timestamp' }),
 	createdAt: createdAt()
 });
 ```
@@ -321,15 +325,22 @@ describe('reset tokens', () => {
 		expect(consumeReset(db, 'not-a-real-token')).toBeNull();
 	});
 
-	it('accepts a token one millisecond before it expires and refuses it one after', () => {
+	it('accepts a token just before it expires and refuses it just after', () => {
 		// Review Focus 5. Off by one here is either a token that never works or
 		// one that outlives its window.
+		//
+		// One SECOND either side, not one millisecond: expires_at is a seconds
+		// column, so `minted + TTL` and `minted + TTL - 1ms` truncate to the same
+		// stored value and a millisecond boundary would be asserting a
+		// distinction the storage cannot represent. At ±1000ms the result is
+		// deterministic — truncation moves the stored expiry down by at most
+		// 999ms, which can never cross a full second.
 		const minted = Date.now();
 		const a = createReset(db, userId, minted);
-		expect(consumeReset(db, a, minted + RESET_TTL_MS - 1)).toBe(userId);
+		expect(consumeReset(db, a, minted + RESET_TTL_MS - 1000)).toBe(userId);
 
 		const b = createReset(db, userId, minted);
-		expect(consumeReset(db, b, minted + RESET_TTL_MS + 1)).toBeNull();
+		expect(consumeReset(db, b, minted + RESET_TTL_MS + 1000)).toBeNull();
 	});
 
 	it('stores no plaintext token', () => {
@@ -370,7 +381,8 @@ export function createReset(db: DB, userId: string, now = Date.now()): string {
 	const token = generateToken();
 	db.insert(passwordResets)
 		.values({
-			id: crypto.randomUUID(),
+			// No explicit id: the schema's uuid() helper already defaults it, and
+			// nothing here needs the value back.
 			tokenHash: hashToken(token),
 			userId,
 			expiresAt: new Date(now + RESET_TTL_MS)
