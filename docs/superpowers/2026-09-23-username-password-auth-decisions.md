@@ -130,10 +130,31 @@ where `redirect()` throws.
 - **Changing your username** — frees the old one for someone else to claim, an
   impersonation vector in a group that identifies people by it, and invalidates every
   saved credential. Recorded in PRD §13 v1.0 backlog.
-- **`reveal` requires no re-authentication** while `changePassword` directly above it
-  does, and reveal yields the *more* powerful credential: permanent, reusable, surviving
-  logout and session expiry. PRD §9 specifies the behaviour and the recovery works
-  (a password change now rotates the link). **Open product decision.**
+**22. Revealing a login link now requires the current password (decision 21).** Resolved
+by the user after the trade-off was laid out. `reveal` minted the *more* powerful
+credential — permanent, reusable, surviving logout and session expiry — on a bare session
+cookie, while `changePassword` directly above it demanded re-authentication. Thirty
+seconds at an unlocked laptop bought access that outlived the borrowed session.
+
+Both actions share **one** rate-limit bucket through a single `reauthenticate()` helper,
+because they guess the same secret and two keys would double the budget. Making it one
+function rather than two call sites is what stops that being "tidied" apart later.
+
+**The cost, recorded and not solved.** This narrows SMTP-free recovery from "any device
+still signed in" to "a link saved in advance", and PRD §12's rule that *login never
+depends on SMTP* is now strained rather than met: a member who forgets their password,
+saved no link, and is still signed in has no self-service way back. There is no
+admin-side reset in the product. The PRD says so plainly instead of rewriting the rule to
+match the code, and the fix belongs to the plan that owns recovery — Plan 4 — rather than
+to the change that created the gap.
+
+**An honest GREEN in the mutation table.** Moving the shared rate limit to *after* the
+verify, while still consuming on failure, is not caught by any test: it preserves the
+entire observable contract and loses only "scrypt must not run before the gate", which is
+observable by timing alone. The implementer deliberately did not add a timing test at
+those margins — this plan has twice been bitten by timing tests that passed against broken
+code — and documented the limit in the function comment instead. *Not every property is
+worth a test; a property whose only test would be flaky is better named than faked.*
 - **`setEmail` has no rate limit** (~73 probes/s measured). Authenticated-only; on a 3–12
   person instance the answer space is the member list the caller can already read, and
   probing overwrites the prober's own address. **Acceptance is conditional on instance
