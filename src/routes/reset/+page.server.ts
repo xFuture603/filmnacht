@@ -53,27 +53,41 @@ export const actions: Actions = {
 
 		const account = userByEmail(db, email);
 		if (account) {
-			const token = createReset(db, account.id);
-			// Not awaited, deliberately. mail.ts allows a dead host 10s to connect
-			// and 20s on the socket, so awaiting here would answer a known address
-			// up to twenty seconds later than an unknown one — the same bytes
-			// arriving at a tell-tale time, which is the enumeration oracle this
-			// whole route exists to close, and the hung page Review Focus 1
-			// forbids. The result is discarded for the same reason.
+			const userId = account.id;
+			const origin = url.origin;
+			// Deferred past the response on purpose. The lookup above costs the same
+			// for a real address and an invented one; the insert and
+			// nodemailer.createTransport do not, and they left ~1.4ms on ~1.7ms — an
+			// 80% relative gap, which is a signal rather than noise. This route's
+			// whole stated property is that the two cases are indistinguishable, so
+			// the work that distinguishes them happens after the reply is decided.
 			//
-			// ponytail: a floating promise on the long-lived node server of PRD
-			// §11. A shutdown between the insert and the send loses that one
-			// message and the member asks for another. A queue only earns its
-			// keep once delivery has to survive a restart.
-			void sendMail(
-				email,
-				'Reset your filmnacht password',
-				`Open this link within the hour to choose a new password:\n\n${url.origin}/reset/${token}\n\nIf you did not ask for this, nothing has changed and you can ignore this message.`
-			).catch(() => {
-				// sendMail's contract is that it never rejects. Should that ever
-				// stop being true, an unhandled rejection takes the whole instance
-				// down, which is a great deal worse than one reset mail nobody gets.
-			});
+			// The rate limit does not cover this: five attempts per address per five
+			// minutes makes sampling slow, not impossible. And /profile's admitted
+			// email disclosure is no precedent, because that one requires being
+			// signed in — this route is open to anyone.
+			setTimeout(() => {
+				try {
+					const token = createReset(db, userId);
+					// ponytail: a floating send on the long-lived node server of PRD
+					// §11. A shutdown between the insert and the send loses one message
+					// and the member asks again. A queue earns its keep only once
+					// delivery has to survive a restart.
+					void sendMail(
+						email,
+						'Reset your filmnacht password',
+						`Open this link within the hour to choose a new password:\n\n${origin}/reset/${token}\n\nIf you did not ask for this, nothing has changed and you can ignore this message.`
+					).catch(() => {
+						// sendMail's contract is that it never rejects. If that ever stops
+						// being true, an unhandled rejection takes the instance down, which
+						// is far worse than one reset mail nobody receives.
+					});
+				} catch {
+					// A timer callback has no caller. A failed insert must cost one reset
+					// mail, not the process.
+					console.error('Reset delivery failed after the response was sent.');
+				}
+			}, 0);
 		}
 
 		return { success: 'reset.sent' };

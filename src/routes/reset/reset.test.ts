@@ -40,7 +40,7 @@ vi.mock('$lib/server/mail', () => ({
 const { actions, load } = await import('./+page.server');
 
 async function post(fields: Record<string, string>, address = '1.2.3.4') {
-	return actions.default({
+	const result = await actions.default({
 		request: new Request('http://localhost/reset', {
 			method: 'POST',
 			body: new URLSearchParams(fields)
@@ -48,6 +48,12 @@ async function post(fields: Record<string, string>, address = '1.2.3.4') {
 		getClientAddress: () => address,
 		url: new URL('http://localhost/reset')
 	} as never);
+	// The route mints the token and sends the mail on a timer, deliberately, so
+	// that work which only happens for a KNOWN address cannot be timed by the
+	// caller. Let that timer run before asserting on its effects — every test
+	// below that inspects password_resets or `sent` depends on this line.
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	return result;
 }
 
 beforeEach(() => {
@@ -100,6 +106,32 @@ describe('POST /reset', () => {
 		const token = sent[0].body.match(/\/reset\/([A-Za-z0-9_-]+)/)?.[1];
 		expect(token).toBeTruthy();
 		expect(hashToken(token!)).toBe(rows[0].tokenHash);
+	});
+
+	it('has done none of the known-address work by the time it answers', async () => {
+		// Pins the deferral without measuring a clock. The insert and the
+		// transport construction are the only work that happens for a real
+		// address and not an invented one, so if they ran before the reply the
+		// reply's timing would carry them — a ~1.4ms signal on ~1.7ms. Asserting
+		// that the row does not exist YET is the same property, stated in a way
+		// that cannot go flaky on a loaded machine.
+		//
+		// A timing test here would be the kind this project has twice been bitten
+		// by: one measured cold that passed against a vulnerable login.
+		const pending = actions.default({
+			request: new Request('http://localhost/reset', {
+				method: 'POST',
+				body: new URLSearchParams({ email: 'ada@example.com' })
+			}),
+			getClientAddress: () => '9.9.9.9',
+			url: new URL('http://localhost/reset')
+		} as never);
+
+		expect(await pending).toEqual({ success: 'reset.sent' });
+		expect(db.select().from(passwordResets).all()).toHaveLength(0);
+
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(db.select().from(passwordResets).all()).toHaveLength(1);
 	});
 
 	it('answers an unknown address identically and mints nothing', async () => {
