@@ -774,8 +774,8 @@ English:
 ```json
 	"reset.choose_title": "Choose a new password",
 	"reset.choose_submit": "Set password and sign in",
-	"reset.invalid": "This reset link is not valid any more. Request a new one.",
-	"reset.done": "Password set. Every other device has been signed out, and any personal login link you had saved no longer works."
+	"reset.choose_hint": "Setting a new password signs out every other device, and any personal login link you had saved stops working.",
+	"reset.invalid": "This reset link is not valid any more. Request a new one."
 ```
 
 German:
@@ -783,11 +783,17 @@ German:
 ```json
 	"reset.choose_title": "Neues Passwort wählen",
 	"reset.choose_submit": "Passwort setzen und anmelden",
-	"reset.invalid": "Dieser Link ist nicht mehr gültig. Fordere einen neuen an.",
-	"reset.done": "Passwort gesetzt. Alle anderen Geräte wurden abgemeldet, und ein gespeicherter persönlicher Login-Link funktioniert nicht mehr."
+	"reset.choose_hint": "Ein neues Passwort meldet alle anderen Geräte ab, und ein gespeicherter persönlicher Login-Link funktioniert danach nicht mehr.",
+	"reset.invalid": "Dieser Link ist nicht mehr gültig. Fordere einen neuen an."
 ```
 
 One `reset.invalid` for never-existed, expired and already-used. They must not be distinguishable.
+
+`reset.done` was specified here as past-tense confirmation copy — *"Password set. Every
+other device has been signed out…"* — for a state this route never reaches: Step 4 ends in
+`redirect(303, '/groups')`, and there is no flash mechanism in this codebase to carry a
+message across it. The same two facts are worth saying, so they are said on the form
+*before* the button is pressed, as `reset.choose_hint`. Corrected 2026-09-24.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -907,6 +913,28 @@ describe('POST /reset/[token]', () => {
 
 `storedPasswordHash` already exists in `src/lib/server/users.ts` (it is used by the profile). Confirm its signature before relying on it; if it is not exported, export it.
 
+Four additions to this file, made 2026-09-24 while implementing it, each because a
+mutation survived the version above or would have:
+
+- **Assert what SURVIVES, not only what died.** A second account (`grace`) keeps her
+  session and her login link across Ada's reset, and Ada's rotated `login_token_hash` is
+  still a 64-hex value rather than an emptied column. Without these, dropping the
+  `where` clause from `deleteOtherSessions` or from `regenerateLoginToken` — signing out
+  the whole instance — passes every test the draft had.
+- **The hash/consume ordering needs its own test.** Every other assertion here is green
+  with `hashPassword` moved below `consumeReset`, which is the exact "efficiency" trap
+  the step-4 comment warns about. A counter wrapping the real `hashPassword` (via
+  `vi.mock` + `importOriginal`) pins it structurally — an invalid token must still pay
+  for the hash — rather than by reading a clock.
+- **Pin the identical-answer test to a concrete shape too.** `a?.data` equals `b?.data`
+  holds vacuously when both sides are plain objects with no `.data`. The Task 3 defect
+  in a new place; assert `status === 400` and `data === { error: 'reset.invalid' }` as
+  well as the equality.
+- **Catch the redirect with `isRedirect`, not `.catch((thrown) => thrown)`.** The bare
+  catch swallows a genuine crash and fails `svelte-check` (`Property 'catch' does not
+  exist on type 'MaybePromise<void | Record<string, any>>'`). `login.test.ts` and
+  `join.test.ts` already have the convention.
+
 - [ ] **Step 3: Run it and watch it fail**
 
 Run: `npx vitest run "src/routes/reset/[token]/reset-token.test.ts"`
@@ -920,13 +948,28 @@ Expected: FAIL — `./+page.server` does not exist.
 import { hashPassword, validatePassword } from '$lib/server/auth/password';
 import { createSession, deleteOtherSessions, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
+import { rateLimit } from '$lib/server/rate-limit';
 import { consumeReset } from '$lib/server/resets';
 import { regenerateLoginToken, setPassword } from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 
+// No `load`. An invalid token is only discovered on submit, deliberately: a
+// load that rejected bad tokens early would turn "does this token exist" into a
+// GET oracle, reachable by link preview and by a bare cross-site <img>.
+
 export const actions: Actions = {
-	default: async ({ params, request, cookies, url }) => {
+	default: async ({ params, request, cookies, getClientAddress, url }) => {
+		// Added 2026-09-24, absent from the first draft of this task: the action
+		// runs scrypt (~100ms) for anyone who can reach the URL, and the ordering
+		// note below is exactly why that cost cannot be skipped for a token that
+		// never existed. Every other unauthenticated route here gates the same way
+		// (/login, /login/[token], /join/[token], /reset). Keyed on the client
+		// address, which a caller cannot mint at will.
+		if (!rateLimit(`reset-token:${getClientAddress()}`, 10, 60_000)) {
+			return fail(429, { error: 'reset.rate_limited' });
+		}
+
 		const form = await request.formData();
 		const password = validatePassword(form.get('password'));
 		if (!password) return fail(400, { error: 'auth.error.password' });
@@ -963,7 +1006,7 @@ export const actions: Actions = {
 
 - [ ] **Step 5: Write the page**
 
-Two password inputs (`autocomplete="new-password"`, `minlength="8"`, `maxlength="200"`, `min-h-11`), a submit button, `role="alert"` on the error. The page needs no `load`: an invalid token is only discovered on submit, and that is deliberate — a `load` that rejected bad tokens early would turn "does this token exist" into a GET oracle.
+Two password inputs (`autocomplete="new-password"`, `minlength="8"`, `maxlength="200"`, `min-h-11`), a submit button, `role="alert"` on the error, and `reset.choose_hint` under the form. The page needs no `load`: an invalid token is only discovered on submit, and that is deliberate — a `load` that rejected bad tokens early would turn "does this token exist" into a GET oracle.
 
 - [ ] **Step 6: Verify and commit**
 
