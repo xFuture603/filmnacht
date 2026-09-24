@@ -84,16 +84,26 @@ npm install -D @types/nodemailer
 ```ts
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const ORIGINAL = { ...process.env };
 afterEach(() => {
-	process.env = { ...ORIGINAL };
 	vi.resetModules();
 	vi.restoreAllMocks();
+	vi.doUnmock('$env/dynamic/private');
+	vi.doUnmock('nodemailer');
 });
 
-async function loadMail(env: Record<string, string | undefined>) {
-	process.env = { ...ORIGINAL, ...env };
+/**
+ * Mocks the env module rather than writing to process.env. SvelteKit's
+ * `$env/dynamic/private` snapshots the environment when Vite LOADS ITS CONFIG,
+ * so a test that assigns to process.env sees nothing: every variable reads
+ * undefined and the module under test looks unconfigured no matter what you
+ * set. Three tests in this file fail against a correct implementation if you
+ * do it the other way.
+ */
+async function loadMail(vars: Record<string, string | undefined>) {
 	vi.resetModules();
+	vi.doMock('$env/dynamic/private', () => ({
+		env: Object.fromEntries(Object.entries(vars).filter(([, v]) => v !== undefined))
+	}));
 	return import('./mail');
 }
 
@@ -189,15 +199,22 @@ export async function sendMail(to: string, subject: string, body: string): Promi
 	if (!isMailConfigured()) return false;
 
 	try {
-		const port = Number(env.SMTP_PORT ?? 587);
+		const parsed = Number(env.SMTP_PORT ?? 587);
+		const port = Number.isInteger(parsed) && parsed > 0 && parsed < 65536 ? parsed : 587;
 		const transport = nodemailer.createTransport({
 			host: env.SMTP_HOST,
-			port: Number.isInteger(port) && port > 0 ? port : 587,
+			port,
 			// Implicit TLS on 465, STARTTLS everywhere else — the convention every
 			// provider's documentation assumes, so an operator who copies their
 			// host and port from it gets a working instance without a third knob.
 			secure: port === 465,
-			auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined
+			auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
+			// Without these a dead host holds the request open for the OS default,
+			// which is minutes. The caller cannot distinguish slow from broken and
+			// neither should the member waiting on the page.
+			connectionTimeout: 10_000,
+			greetingTimeout: 10_000,
+			socketTimeout: 20_000
 		});
 		await transport.sendMail({ from: env.SMTP_FROM, to, subject, text: body });
 		return true;
@@ -220,7 +237,12 @@ Expected: PASS.
 
 - [ ] **Step 6: Document the variables**
 
-Create `.env.example` (or extend it) with every variable and no real values:
+**`.env.example` already exists — APPEND to it, never rewrite it.** It documents
+`ADDRESS_HEADER` and `XFF_DEPTH`, and that block is load-bearing for this plan: behind a
+reverse proxy every request appears to come from the proxy, which collapses the
+per-address rate limit into one global limit for the whole instance, and `XFF_DEPTH` must
+equal the proxy count or clients can forge their address and bypass the limit outright.
+Read the file before you touch it. Append only:
 
 ```bash
 # Optional. With none of these set, the instance works exactly as before and
