@@ -102,8 +102,24 @@
 <p class="mb-2 text-sm">{t(data.locale, 'profile.login_link_hint')}</p>
 <p class="mb-3 text-sm opacity-70">{t(data.locale, 'profile.reveal_warning')}</p>
 
-<form method="POST" action="?/reveal">
-	<button class="btn btn-secondary min-h-11">{t(data.locale, 'profile.reveal')}</button>
+<form method="POST" action="?/reveal" class="flex flex-col gap-2">
+	<label class="form-control">
+		<span class="label-text">{t(data.locale, 'profile.current_password')}</span>
+		<!-- Same proof changePassword demands, and for a stronger credential: the
+		     link is permanent, reusable, and outlives logout and session expiry.
+		     aria-label rather than the bare visible text, because this page now has
+		     two "Current password" inputs and repeated controls need distinct
+		     accessible names. No minlength, for the same reason as changePassword. -->
+		<input
+			name="currentPassword"
+			type="password"
+			required
+			autocomplete="current-password"
+			aria-label={t(data.locale, 'profile.reveal_password')}
+			class="input input-bordered min-h-11"
+		/>
+	</label>
+	<button class="btn btn-secondary min-h-11 self-start">{t(data.locale, 'profile.reveal')}</button>
 </form>
 
 {#if form?.loginUrl}

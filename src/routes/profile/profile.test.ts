@@ -359,16 +359,98 @@ describe('setEmail', () => {
 });
 
 describe('reveal', () => {
-	it('still mints a link and signs out every other session', async () => {
-		// Unchanged by this task, and pinned so it stays that way.
+	it('mints a link and signs out every other session, given the password', async () => {
 		const mine = createSession(db, ada.id);
 		const theirs = createSession(db, ada.id);
 		const cookies = cookieSpy(mine.token);
-		const result = (await post('reveal', {}, ada, cookies)) as { loginUrl: string };
+		const result = (await post('reveal', { currentPassword: PASSWORD }, ada, cookies)) as {
+			loginUrl: string;
+		};
 
 		expect(result.loginUrl).toMatch(/^http:\/\/localhost\/login\//);
 		expect(validateSession(db, mine.token)?.user.id).toBe(ada.id);
 		expect(validateSession(db, theirs.token)).toBeNull();
 		expect(hashToken(mine.token)).toBeTruthy();
+	});
+
+	it('rotates the token, so the link it returns is the one that works', async () => {
+		const previous = regenerateLoginToken(db, ada.id);
+		const result = (await post('reveal', { currentPassword: PASSWORD })) as { loginUrl: string };
+
+		const minted = result.loginUrl.split('/').pop()!;
+		expect(userByLoginToken(db, minted)?.id).toBe(ada.id);
+		expect(userByLoginToken(db, previous)).toBeNull();
+	});
+
+	it('refuses a wrong current password', async () => {
+		// The link is the MORE powerful credential: permanent, reusable, and it
+		// outlives logout and session expiry. A bare session cookie was buying
+		// thirty seconds at an unlocked laptop an access that outlived the
+		// borrowed session.
+		const result = await post('reveal', { currentPassword: 'not her password' });
+		expect(result?.status).toBe(400);
+		expect(result?.data?.error).toBe('profile.error.current_password');
+	});
+
+	it('refuses an absent current password, which the old form sent', async () => {
+		const result = await post('reveal', {});
+		expect(result?.data?.error).toBe('profile.error.current_password');
+	});
+
+	it('leaves the existing link working when the password is wrong', async () => {
+		// The other direction, and the one that matters: a failed reveal must not
+		// rotate the token. Otherwise anyone at the keyboard — or a stray
+		// submission — destroys the victim's saved recovery link without ever
+		// proving ownership, which is a denial of service against the only
+		// SMTP-free way back into the account.
+		const token = regenerateLoginToken(db, ada.id);
+
+		const refused = await post('reveal', { currentPassword: 'not her password' });
+
+		expect(refused?.data?.error).toBe('profile.error.current_password');
+		expect(userByLoginToken(db, token)?.id).toBe(ada.id);
+	});
+
+	it('leaves other sessions alone when the password is wrong', async () => {
+		const mine = createSession(db, ada.id);
+		const theirs = createSession(db, ada.id);
+
+		await post('reveal', { currentPassword: 'not her password' }, ada, cookieSpy(mine.token));
+
+		expect(validateSession(db, mine.token)?.user.id).toBe(ada.id);
+		expect(validateSession(db, theirs.token)?.user.id).toBe(ada.id);
+	});
+
+	it('shares one rate-limit bucket with changePassword', async () => {
+		// Both actions guess the SAME secret. A key per action would hand an
+		// attacker 5 + 5 attempts against one password instead of 5, so the
+		// shared bucket is the security property — not an implementation detail
+		// someone should later tidy into two keys.
+		for (let i = 0; i < 5; i++) {
+			await post('changePassword', { currentPassword: `guess ${i}` });
+		}
+		const result = await post('reveal', { currentPassword: PASSWORD });
+		expect(result?.status).toBe(429);
+		expect(result?.data?.error).toBe('profile.rate_limited');
+	});
+
+	it('spends the same bucket in the other direction too', async () => {
+		for (let i = 0; i < 5; i++) {
+			await post('reveal', { currentPassword: `guess ${i}` });
+		}
+		const result = await post('changePassword', {
+			currentPassword: PASSWORD,
+			newPassword: NEW_PASSWORD,
+			passwordRepeat: NEW_PASSWORD
+		});
+		expect(result?.status).toBe(429);
+		expect(result?.data?.error).toBe('profile.rate_limited');
+		expect(storedPasswordHash(db, ada.id)).toBe(ORIGINAL_HASH);
+	});
+
+	it('refuses a signed-out visitor', async () => {
+		expect(await statusOfThrow(() => post('reveal', { currentPassword: PASSWORD }, null))).toBe(
+			401
+		);
 	});
 });
