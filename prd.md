@@ -336,6 +336,7 @@ The cut is drawn by one criterion only: when can your own group use the app at a
 - [ ] Optional SMTP for individual rating reminders, with an optional email address on the profile
 - [ ] Group settings fully exposed in the UI
 - [ ] Data export and account deletion
+- [ ] Changing your username. Deferred deliberately from the username-and-password plan rather than dropped: freeing the old username lets someone else claim it, which is an impersonation vector in a group that identifies people by it, and it invalidates every saved credential. Needs its own decision about whether old usernames are retired permanently
 - [ ] Setup documentation and a public demo instance
 
 **v2**

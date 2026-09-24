@@ -118,3 +118,74 @@ describe('user credentials', () => {
 		expect(db.select().from(users).all()).toHaveLength(2);
 	});
 });
+
+describe('user email', () => {
+	it('allows many accounts with no email, because it is genuinely optional', () => {
+		const db = testDb();
+		db.insert(users)
+			.values({ displayName: 'Ada', username: 'ada', passwordHash: 'x', loginTokenHash: 'h1' })
+			.run();
+		db.insert(users)
+			.values({ displayName: 'Grace', username: 'grace', passwordHash: 'y', loginTokenHash: 'h2' })
+			.run();
+		expect(db.select().from(users).all()).toHaveLength(2);
+	});
+
+	it('refuses two accounts with the same email', () => {
+		// Plan 4 resolves an address back to ONE account to send a reset link.
+		// Two accounts sharing an address makes that ambiguous, and "which of
+		// these two do I send the reset to" has no safe answer.
+		const db = testDb();
+		db.insert(users)
+			.values({
+				displayName: 'Ada',
+				username: 'ada',
+				email: 'ada@example.com',
+				passwordHash: 'x',
+				loginTokenHash: 'h1'
+			})
+			.run();
+		expect(() =>
+			db
+				.insert(users)
+				.values({
+					displayName: 'Other',
+					username: 'other',
+					email: 'ada@example.com',
+					passwordHash: 'y',
+					loginTokenHash: 'h2'
+				})
+				.run()
+		).toThrow();
+	});
+
+	it('does NOT fold case, which is why setEmail has to lowercase', () => {
+		// Verified against better-sqlite3: UNIQUE here is byte comparison, so the
+		// constraint alone would let Ada@x.com and ada@x.com both exist and both
+		// be a valid reset target. The normalisation in setEmail is required, not
+		// a nicety. If SQLite ever changed this the test would fail, which is the
+		// point: the reason for that normalisation would have gone away.
+		const db = testDb();
+		db.insert(users)
+			.values({
+				displayName: 'Ada',
+				username: 'ada',
+				email: 'ada@example.com',
+				passwordHash: 'x',
+				loginTokenHash: 'h1'
+			})
+			.run();
+		expect(() =>
+			db
+				.insert(users)
+				.values({
+					displayName: 'Other',
+					username: 'other',
+					email: 'Ada@example.com',
+					passwordHash: 'y',
+					loginTokenHash: 'h2'
+				})
+				.run()
+		).not.toThrow();
+	});
+});

@@ -122,6 +122,98 @@ export function usernameTaken(db: DB, username: string): boolean {
 	return userByUsername(db, username) !== null;
 }
 
+/**
+ * Everything the profile page shows, and deliberately nothing else — the
+ * password hash in particular, which this return value is serialised straight
+ * into the browser. Keep it that way: a `passwordHash` added here for one
+ * action's convenience ships the hash to every visitor of /profile.
+ */
+export function userProfile(
+	db: DB,
+	userId: string
+): { username: string; displayName: string; email: string | null } | null {
+	return (
+		db
+			.select({ username: users.username, displayName: users.displayName, email: users.email })
+			.from(users)
+			.where(eq(users.id, userId))
+			.get() ?? null
+	);
+}
+
+/** For the current-password check, which knows the id but not the username. */
+export function storedPasswordHash(db: DB, userId: string): string | null {
+	const row = db
+		.select({ passwordHash: users.passwordHash })
+		.from(users)
+		.where(eq(users.id, userId))
+		.get();
+	return row?.passwordHash ?? null;
+}
+
+export function setDisplayName(db: DB, userId: string, displayName: string): void {
+	db.update(users).set({ displayName }).where(eq(users.id, userId)).run();
+}
+
+/**
+ * Thrown when the address already belongs to another account. The unique index
+ * is the guarantee; this is what turns its violation into something a route can
+ * translate instead of a 500. Note the message it produces does confirm that an
+ * address has an account on this instance — accepted for a private 3-12 person
+ * group, where the members already know each other, in exchange for an error a
+ * person can act on.
+ */
+export class EmailTakenError extends Error {}
+
+/**
+ * Normalises before writing, and that is load-bearing rather than tidy: the
+ * unique index compares bytes, so without lowercasing here `Ada@x.com` and
+ * `ada@x.com` are two accounts with one address between them — and Plan 4 has
+ * to resolve an address back to exactly one account. An empty value clears the
+ * column to NULL, never to '', so the constraint keeps permitting any number of
+ * accounts with no address.
+ */
+export function setEmail(db: DB, userId: string, email: string | null): void {
+	const normalised = email?.trim().toLowerCase() || null;
+	try {
+		db.update(users).set({ email: normalised }).where(eq(users.id, userId)).run();
+	} catch (err) {
+		// Matched on users.email specifically, exactly as createUser matches
+		// users.username: three columns on this table are unique, and labelling a
+		// login-token collision "that address is taken" would hide a real bug
+		// behind a wrong, reassuring message. Anything else is rethrown.
+		if (
+			err instanceof Database.SqliteError &&
+			err.code === 'SQLITE_CONSTRAINT_UNIQUE' &&
+			err.message.includes('users.email')
+		) {
+			throw new EmailTakenError(normalised ?? '');
+		}
+		throw err;
+	}
+}
+
+/** The RFC 5321 bound on a whole address. Not a security limit, just a cap. */
+export const EMAIL_MAX = 254;
+
+/**
+ * Deliberately not an RFC 5322 regex. The only definitive test of an address is
+ * sending to it, which is Plan 4's job; anything more elaborate here would only
+ * reject valid addresses more confidently. `x@y.z` with no spaces is the level
+ * of strictness that catches a typo without pretending to be a validator.
+ *
+ * Returns '' for empty input, which means "clear it" — distinct from null,
+ * which means the caller should show an error.
+ */
+export function validateEmail(raw: FormDataEntryValue | null): string | null {
+	const email = String(raw ?? '')
+		.trim()
+		.toLowerCase();
+	if (!email) return '';
+	if (email.length > EMAIL_MAX) return null;
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
+
 export function validateDisplayName(raw: FormDataEntryValue | null): string | null {
 	const name = String(raw ?? '').trim();
 	if (!name || name.length > DISPLAY_NAME_MAX) return null;

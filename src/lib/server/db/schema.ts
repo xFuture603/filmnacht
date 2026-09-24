@@ -33,8 +33,15 @@ export const users = sqliteTable('users', {
 	id: uuid(),
 	displayName: text('display_name').notNull(),
 	avatarUrl: text('avatar_url'),
-	/** Unused in the MVP (PRD §9). Nullable until SMTP arrives in v1.0. */
-	email: text('email'),
+	/**
+	 * Optional forever (PRD §9): a member who sets none loses only the emailed
+	 * reset path. Unique because Plan 4 has to resolve an address back to exactly
+	 * one account to send that reset to — two accounts sharing one address has no
+	 * safe answer. UNIQUE on a nullable column permits many NULLs, so "optional"
+	 * survives. It does NOT fold case, so `setEmail` lowercases before writing;
+	 * without that, Ada@x.com and ada@x.com would both pass this constraint.
+	 */
+	email: text('email').unique(),
 	/**
 	 * What you sign in with. Deliberately separate from `displayName` (PRD §9,
 	 * decision 20): two friends may both be "Alex" to the group, and either may

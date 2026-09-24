@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8bdbe106-f5ff-49d6-8aa5-32e5328d81e3",
+  "id": "12ca504f-2a16-4966-8a52-b2ba6c42ac62",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "attendance": {
@@ -926,6 +926,13 @@
         }
       },
       "indexes": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "columns": [
+            "email"
+          ],
+          "isUnique": true
+        },
         "users_username_unique": {
           "name": "users_username_unique",
           "columns": [
