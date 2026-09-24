@@ -114,6 +114,22 @@ export function userByUsername(
 	return row ?? null;
 }
 
+/**
+ * Returns only the id, and that is the point: the caller is an
+ * enumeration-safe route, and handing it a whole user row invites a branch
+ * that behaves differently for an address that exists. Matches lowercased
+ * because setEmail normalises before writing, so the stored bytes are already
+ * lowercase and an address that differs only in case is the same account.
+ */
+export function userByEmail(db: DB, email: string): { id: string } | null {
+	const row = db
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.email, email.trim().toLowerCase()))
+		.get();
+	return row ?? null;
+}
+
 export function setPassword(db: DB, userId: string, passwordHash: string): void {
 	db.update(users).set({ passwordHash }).where(eq(users.id, userId)).run();
 }

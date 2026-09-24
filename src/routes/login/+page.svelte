@@ -36,4 +36,7 @@
 	<button class="btn btn-primary min-h-11">{t(data.locale, 'login.submit')}</button>
 </form>
 
-<p class="mt-4 text-sm">{t(data.locale, 'login.forgot')}</p>
+<p class="mt-4 text-sm">
+	{t(data.locale, 'login.forgot')}
+	<a class="link" href="/reset">{t(data.locale, 'reset.title')}</a>
+</p>

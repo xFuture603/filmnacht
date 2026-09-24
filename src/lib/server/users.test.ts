@@ -16,6 +16,7 @@ import {
 	storedPasswordHash,
 	userProfile,
 	USERNAME_MAX,
+	userByEmail,
 	userByLoginToken,
 	userByUsername,
 	usernameTaken,
@@ -310,6 +311,39 @@ describe('userByUsername', () => {
 			'passwordHash',
 			'username'
 		]);
+	});
+});
+
+describe('userByEmail', () => {
+	function ada() {
+		return createUser(db, { username: 'ada', displayName: 'Ada', passwordHash: PLACEHOLDER_HASH });
+	}
+
+	it('finds the account and returns nothing but its id', () => {
+		const user = ada();
+		setEmail(db, user.id, 'ada@example.com');
+		expect(userByEmail(db, 'ada@example.com')).toEqual({ id: user.id });
+	});
+
+	it('is case-insensitive and ignores surrounding space', () => {
+		// The caller is /reset, which normalises too — but the property belongs
+		// to this function, not to the discipline of every future caller.
+		const user = ada();
+		setEmail(db, user.id, 'ada@example.com');
+		expect(userByEmail(db, '  ADA@Example.COM ')).toEqual({ id: user.id });
+	});
+
+	it('returns null for an address nobody has', () => {
+		ada();
+		expect(userByEmail(db, 'grace@example.com')).toBeNull();
+	});
+
+	it('returns null for an empty address rather than an account with none', () => {
+		// setEmail stores NULL, never '', for an account with no address. If it
+		// ever stored '', an empty submission to /reset would resolve to whoever
+		// was inserted first and mail them somebody else's reset link.
+		ada();
+		expect(userByEmail(db, '')).toBeNull();
 	});
 });
 
