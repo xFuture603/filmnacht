@@ -14,6 +14,7 @@ vi.mock('$lib/server/db', async () => {
 
 const { db } = await import('$lib/server/db');
 const { users } = await import('../../../lib/server/db/schema');
+const { SESSION_COOKIE } = await import('$lib/server/auth/session');
 const { createGroup } = await import('../../../lib/server/groups');
 const { createInvite, redeemInvite } = await import('../../../lib/server/invites');
 const { createUser, userByUsername } = await import('../../../lib/server/users');
@@ -21,6 +22,10 @@ const { resetRateLimits } = await import('$lib/server/rate-limit');
 const { actions } = await import('./+page.server');
 
 const PLACEHOLDER_HASH = 'scrypt$placeholder$placeholder';
+
+function cookieSpy() {
+	return { set: vi.fn(), get: vi.fn(), delete: vi.fn() };
+}
 
 function formRequest(fields: Record<string, string>) {
 	const form = new FormData();
@@ -38,28 +43,35 @@ async function post(
 	token: string,
 	fields: Record<string, string>,
 	user: Caller = null,
-	address = '1.2.3.4'
+	address = '1.2.3.4',
+	cookies = cookieSpy(),
+	origin = 'http://localhost'
 ) {
 	return actions.default({
 		request: formRequest(fields),
 		params: { token },
-		cookies: { set: vi.fn(), get: vi.fn(), delete: vi.fn() },
+		cookies,
 		getClientAddress: () => address,
 		locals: { user, locale: 'en' },
-		url: new URL(`http://localhost/join/${token}`)
+		url: new URL(`/join/${token}`, origin)
 	} as never);
 }
 
 // redirect() throws (see @sveltejs/kit's Redirect), so a successful join must
-// be awaited inside a try/catch rather than read off a return value.
+// be awaited inside a try/catch rather than read off a return value. cookies
+// defaults to a fresh spy but can be supplied by the caller to inspect what
+// was set — the join and password-secure-flag tests need that; the others
+// only need the redirect.
 async function postExpectRedirect(
 	token: string,
 	fields: Record<string, string>,
 	user: Caller = null,
-	address = '1.2.3.4'
+	address = '1.2.3.4',
+	cookies = cookieSpy(),
+	origin = 'http://localhost'
 ) {
 	try {
-		await post(token, fields, user, address);
+		await post(token, fields, user, address, cookies, origin);
 	} catch (err) {
 		if (isRedirect(err)) return err;
 		throw err;
@@ -205,5 +217,62 @@ describe('username validation', () => {
 
 		expect(result?.status).toBe(400);
 		expect(result?.data?.error).toBe('auth.error.username_taken');
+	});
+});
+
+describe('session cookie secure flag', () => {
+	// This project has already shipped `secure: !dev` once — a Secure cookie
+	// on a plain-HTTP instance (the Pi/Synology of PRD §11) is silently
+	// dropped by the browser, so sign-in appears to work and then does
+	// nothing, forever. /login pins this; the other cookie-setting sites did
+	// not, including this one.
+	it('is not secure over plain http', async () => {
+		const token = createInvite(db, { groupId, createdBy: ownerId });
+		const cookies = cookieSpy();
+
+		await postExpectRedirect(
+			token,
+			{
+				username: 'httpuser',
+				displayName: 'Http User',
+				password: 'a fine password here',
+				passwordRepeat: 'a fine password here'
+			},
+			null,
+			'1.2.3.4',
+			cookies,
+			'http://localhost'
+		);
+
+		expect(cookies.set).toHaveBeenCalledWith(
+			SESSION_COOKIE,
+			expect.any(String),
+			expect.objectContaining({ secure: false })
+		);
+	});
+
+	it('is secure over https', async () => {
+		const token = createInvite(db, { groupId, createdBy: ownerId });
+		const cookies = cookieSpy();
+
+		await postExpectRedirect(
+			token,
+			{
+				username: 'httpsuser',
+				displayName: 'Https User',
+				password: 'a fine password here',
+				passwordRepeat: 'a fine password here'
+			},
+			null,
+			'1.2.3.4',
+			cookies,
+			'https://filmnacht.example'
+		);
+
+		expect(cookies.set).toHaveBeenCalledWith(
+			SESSION_COOKIE,
+			expect.any(String),
+			expect.objectContaining({ secure: true })
+		);
 	});
 });
