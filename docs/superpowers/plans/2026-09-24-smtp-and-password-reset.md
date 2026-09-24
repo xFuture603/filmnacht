@@ -571,44 +571,64 @@ beforeEach(() => {
 });
 
 describe('POST /reset', () => {
-	it('sends a link to an address that has an account', () => {
+	it('sends a link to an address that has an account', async () => {
 		// The happy path, asserted first and deliberately: without it every other
 		// test here passes against a route that does nothing at all.
-		return post({ email: 'ada@example.com' }).then((result) => {
-			expect(result?.data?.success).toBe('reset.sent');
-			expect(sent).toHaveLength(1);
-			expect(sent[0].to).toBe('ada@example.com');
-			expect(db.select().from(passwordResets).all()).toHaveLength(1);
-		});
+		//
+		// `expect(result).toEqual(...)`, NOT `result?.data?.success`: only fail()
+		// returns an ActionFailure with a .data, and a plain success return has
+		// none — asserting on .data here reads undefined and fails against the
+		// correct route. Existing convention, see profile.test.ts.
+		const result = await post({ email: 'ada@example.com' });
+		expect(result).toEqual({ success: 'reset.sent' });
+		expect(sent).toHaveLength(1);
+		expect(sent[0].to).toBe('ada@example.com');
+		expect(db.select().from(passwordResets).all()).toHaveLength(1);
 	});
 
 	it('answers an unknown address identically and mints nothing', async () => {
 		const unknown = await post({ email: 'grace@example.com' });
 		const known = await post({ email: 'ada@example.com' }, '5.6.7.8');
-		expect(unknown?.data).toEqual(known?.data);
+		// The WHOLE return value, not .data: both successes have no .data at all,
+		// so comparing .data to .data compares undefined to undefined and passes
+		// against a route that answers the two cases completely differently.
+		expect(unknown).toEqual(known);
 		expect(unknown?.status).toBe(known?.status);
 		expect(sent.map((s) => s.to)).toEqual(['ada@example.com']);
 	});
 
-	// NOTE: re-mocking a module that is already mocked at the top of the file
-	// needs vi.doMock + vi.resetModules, and the dynamic import inside post()
-	// must happen AFTER the reset. If this proves awkward, prefer a mutable
-	// flag in the top-level mock over fighting the module registry — the
+	// Use a mutable `sendOutcome` in the top-level mock, NOT vi.doMock +
+	// vi.resetModules. Resetting the registry hands the route a second copy of
+	// rate-limit.ts, whose window map the resetRateLimits imported at the top of
+	// this file — bound to the first copy — no longer clears, and the two
+	// rate-limit tests below then assert against a limiter nobody reset. The
 	// property under test is the identical response, not the mocking style.
 	it('answers identically when the mail server rejects the message', async () => {
 		// Review Focus 1. If a send failure looked different, reachability would
 		// become an oracle for which addresses have accounts.
-		vi.doMock('$lib/server/mail', () => ({
-			isMailConfigured: () => true,
-			sendMail: async () => false
-		}));
-		vi.resetModules();
+		sendOutcome = false;
 		const failed = await post({ email: 'ada@example.com' });
-		vi.doUnmock('$lib/server/mail');
-		vi.resetModules();
+		sendOutcome = true;
 		const ok = await post({ email: 'ada@example.com' }, '5.6.7.8');
-		expect(failed?.data).toEqual(ok?.data);
+		expect(failed).toEqual(ok);
 		expect(failed?.status).toBe(ok?.status);
+	});
+
+	it('answers without waiting for the mail server', async () => {
+		// Identical bytes are only half of it. mail.ts allows a dead host 10s to
+		// connect and 20s on the socket, so an AWAITED send answers a known
+		// address up to twenty seconds later than an unknown one: same answer,
+		// different arrival, same oracle — and the hung page Review Focus 1
+		// forbids in as many words. Not a clock reading: the send is held open
+		// until after the assertion, so an awaiting route cannot pass by being
+		// fast.
+		let release!: () => void;
+		sendOutcome = new Promise<boolean>((resolve) => {
+			release = () => resolve(false);
+		});
+		const result = await post({ email: 'ada@example.com' });
+		expect(result).toEqual({ success: 'reset.sent' });
+		release();
 	});
 
 	it('is matched case-insensitively', async () => {
@@ -626,7 +646,7 @@ describe('POST /reset', () => {
 	it('does not let one address exhaust another address budget', async () => {
 		for (let i = 0; i < 5; i++) await post({ email: `nobody-${i}@example.com` }, '1.1.1.1');
 		const result = await post({ email: 'ada@example.com' }, '2.2.2.2');
-		expect(result?.data?.success).toBe('reset.sent');
+		expect(result).toEqual({ success: 'reset.sent' });
 	});
 });
 ```
@@ -678,14 +698,26 @@ export const actions: Actions = {
 		const account = userByEmail(db, email);
 		if (account) {
 			const token = createReset(db, account.id);
-			// The result is deliberately discarded. sendMail never throws, and a
+			// NOT awaited, and the result discarded. sendMail never throws, and a
 			// failed send must be indistinguishable from a successful one — if it
 			// were not, reachability would tell an attacker which addresses exist.
-			await sendMail(
+			// Awaiting leaks the same thing through the clock instead: mail.ts
+			// allows a dead host 10s to connect and 20s on the socket, so an
+			// awaited send answers a known address up to twenty seconds later than
+			// an unknown one, and hangs the page while it does. Measured on the
+			// production build against a black-holed SMTP host: 3.1ms median for a
+			// known address against 1.7ms for an unknown one, with the five
+			// redacted failures arriving in the log ten seconds after the member
+			// already had their answer.
+			void sendMail(
 				email,
 				'Reset your filmnacht password',
 				`Open this link within the hour to choose a new password:\n\n${url.origin}/reset/${token}\n\nIf you did not ask for this, nothing has changed and you can ignore this message.`
-			);
+			).catch(() => {
+				// sendMail's contract is that it never rejects. Should that stop
+				// being true, an unhandled rejection takes the whole instance down,
+				// which is worse than one reset mail nobody gets.
+			});
 		}
 
 		// One answer for every path above: unknown address, known address, mail
