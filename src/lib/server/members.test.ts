@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { eq, isNull } from 'drizzle-orm';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
-import { suggestions, users } from '$lib/server/db/schema';
+import { ratings, suggestions, users } from '$lib/server/db/schema';
 import { createGroup } from '$lib/server/groups';
 import { addSuggestion } from '$lib/server/suggestions';
+import { scheduleNight } from '$lib/server/nights';
 import { DEFAULT_GROUP_SETTINGS } from '$lib/server/db/schema';
 import { createUser } from '$lib/server/users';
 import { FORMER_MEMBER_USERNAME, formerMemberId, reassignToFormerMember } from './members';
@@ -55,7 +56,7 @@ describe('the former-member placeholder', () => {
 		});
 
 		const moved = reassignToFormerMember(db, ada);
-		expect(moved).toBe(1);
+		expect(moved).toEqual({ suggestions: 1, ratings: 0 });
 
 		const placeholder = formerMemberId(db);
 		const mine = db
@@ -104,6 +105,74 @@ describe('the former-member placeholder', () => {
 	});
 
 	it('reassigns nothing for a member with no suggestions', () => {
-		expect(reassignToFormerMember(db, ada)).toBe(0);
+		expect(reassignToFormerMember(db, ada)).toEqual({ suggestions: 0, ratings: 0 });
+	});
+
+	it('takes over a departing member’s ratings, letting the account then be deleted', () => {
+		// Grace, not the group owner, rates: so the sole row referencing her is
+		// the rating, and the delete below can only be refused by that FK.
+		const grace = createUser(db, {
+			username: 'grace',
+			displayName: 'Grace',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		const nightId = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date(),
+			location: null
+		});
+		db.insert(ratings).values({ movieNightId: nightId, userId: grace, scoreX2: 16 }).run();
+
+		expect(() => db.delete(users).where(eq(users.id, grace)).run()).toThrow(/FOREIGN KEY/);
+
+		const moved = reassignToFormerMember(db, grace);
+		expect(moved).toEqual({ suggestions: 0, ratings: 1 });
+
+		const placeholder = formerMemberId(db);
+		const rating = db
+			.select({ userId: ratings.userId })
+			.from(ratings)
+			.where(eq(ratings.movieNightId, nightId))
+			.get();
+		expect(rating).toEqual({ userId: placeholder });
+
+		expect(() => db.delete(users).where(eq(users.id, grace)).run()).not.toThrow();
+	});
+
+	it('reassigns two departed members who rated the same night without colliding (R2)', () => {
+		// The unique index that used to sit on (movie_night_id, user_id) made this
+		// impossible: both ratings end up owned by the one placeholder row, so the
+		// second reassignment collided with the first on that same night.
+		const grace = createUser(db, {
+			username: 'grace',
+			displayName: 'Grace',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		const alan = createUser(db, {
+			username: 'alan',
+			displayName: 'Alan',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		const nightId = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date(),
+			location: null
+		});
+		db.insert(ratings).values({ movieNightId: nightId, userId: grace, scoreX2: 16 }).run();
+		db.insert(ratings).values({ movieNightId: nightId, userId: alan, scoreX2: 12 }).run();
+
+		expect(reassignToFormerMember(db, grace)).toEqual({ suggestions: 0, ratings: 1 });
+		expect(reassignToFormerMember(db, alan)).toEqual({ suggestions: 0, ratings: 1 });
+
+		const placeholder = formerMemberId(db);
+		const rows = db
+			.select({ userId: ratings.userId })
+			.from(ratings)
+			.where(eq(ratings.movieNightId, nightId))
+			.all();
+		expect(rows).toHaveLength(2);
+		expect(rows.every((r) => r.userId === placeholder)).toBe(true);
 	});
 });

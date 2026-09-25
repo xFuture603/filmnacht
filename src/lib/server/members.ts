@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { hashToken } from './auth/tokens';
 import type { DB } from './db/client';
-import { suggestions, users } from './db/schema';
+import { ratings, suggestions, users } from './db/schema';
 
 /**
  * Reserved. `validateUsername` (src/lib/server/users.ts) rejects this exact
@@ -46,15 +46,22 @@ export function formerMemberId(db: DB): string {
 }
 
 /**
- * Repoints a member's suggestions at the placeholder and returns how many moved.
- * Call this BEFORE deleting an account: the foreign key is `restrict`, so a
- * delete that skips this step fails loudly instead of corrupting attribution.
+ * Repoints a member's suggestions AND ratings at the placeholder. Call this
+ * BEFORE deleting an account: both foreign keys are `restrict`, so a delete that
+ * skips this step fails loudly instead of corrupting attribution.
  */
-export function reassignToFormerMember(db: DB, userId: string): number {
+export function reassignToFormerMember(
+	db: DB,
+	userId: string
+): { suggestions: number; ratings: number } {
 	const placeholder = formerMemberId(db);
-	return db
-		.update(suggestions)
-		.set({ suggestedBy: placeholder })
-		.where(eq(suggestions.suggestedBy, userId))
-		.run().changes;
+	return db.transaction(() => ({
+		suggestions: db
+			.update(suggestions)
+			.set({ suggestedBy: placeholder })
+			.where(eq(suggestions.suggestedBy, userId))
+			.run().changes,
+		ratings: db.update(ratings).set({ userId: placeholder }).where(eq(ratings.userId, userId)).run()
+			.changes
+	}));
 }

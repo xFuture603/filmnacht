@@ -6,6 +6,12 @@
 	import Field from '$lib/components/Field.svelte';
 	import NightStatus from '$lib/components/NightStatus.svelte';
 	let { data, form } = $props();
+
+	const fmt = (n: number) =>
+		new Intl.NumberFormat(data.locale === 'de' ? 'de-DE' : 'en-GB', {
+			minimumFractionDigits: 1,
+			maximumFractionDigits: 1
+		}).format(n);
 </script>
 
 <PageHeader title={data.group.name} emoji={data.group.emoji ?? '🎬'} />
@@ -26,7 +32,14 @@
 				>
 					<div class="flex flex-wrap items-center justify-between gap-2">
 						<span class="font-semibold">{night.when}</span>
-						<NightStatus status={night.status} locale={data.locale} />
+						<span class="flex items-center gap-2">
+							{#if night.average !== null}
+								<span class="badge badge-sm badge-outline tabular-nums">
+									{t(data.locale, 'ratings.average_short', { average: fmt(night.average) })}
+								</span>
+							{/if}
+							<NightStatus status={night.status} locale={data.locale} />
+						</span>
 					</div>
 					{#if night.location}
 						<span class="text-sm break-words text-base-content/70">📍 {night.location}</span>

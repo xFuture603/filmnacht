@@ -22,6 +22,13 @@
       "when": 1790325963259,
       "tag": "0002_dizzy_iron_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790360705720,
+      "tag": "0003_far_red_hulk",
+      "breakpoints": true
     }
   ]
 }
