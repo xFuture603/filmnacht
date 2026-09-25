@@ -1,0 +1,54 @@
+import { env } from '$env/dynamic/private';
+import nodemailer from 'nodemailer';
+
+/**
+ * Half-configured counts as unconfigured. A host with no From address is
+ * rejected by most servers, and discovering that once per reset attempt is
+ * worse than saying plainly on the form that this instance cannot send mail.
+ */
+export function isMailConfigured(): boolean {
+	return Boolean(env.SMTP_HOST && env.SMTP_FROM);
+}
+
+/**
+ * Resolves true on a successful send and false on ANY failure. It never throws.
+ *
+ * The caller is an enumeration-safe route that must answer identically whether
+ * the address existed, whether this instance can send mail at all, and whether
+ * the server was reachable. A caller given the ability to tell those apart will
+ * eventually leak one of them, so the distinction is destroyed here rather than
+ * passed up and carefully ignored at every call site.
+ */
+export async function sendMail(to: string, subject: string, body: string): Promise<boolean> {
+	if (!isMailConfigured()) return false;
+
+	try {
+		const parsed = Number(env.SMTP_PORT ?? 587);
+		const port = Number.isInteger(parsed) && parsed > 0 && parsed < 65536 ? parsed : 587;
+		const transport = nodemailer.createTransport({
+			host: env.SMTP_HOST,
+			port,
+			// Implicit TLS on 465, STARTTLS everywhere else — the convention every
+			// provider's documentation assumes, so an operator who copies their
+			// host and port from it gets a working instance without a third knob.
+			secure: port === 465,
+			auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
+			// Without this a dead host holds the request open for the OS default,
+			// which is minutes. The caller cannot distinguish slow from broken and
+			// neither should the member waiting on the page.
+			connectionTimeout: 10_000,
+			greetingTimeout: 10_000,
+			socketTimeout: 20_000
+		});
+		await transport.sendMail({ from: env.SMTP_FROM, to, subject, text: body });
+		return true;
+	} catch {
+		// Bare catch, deliberately: the error object carries the host, the user
+		// and sometimes the password, in `.response` among other places. Plan 2
+		// hit this exact class with the TMDB key embedded in a request URL. The
+		// operator gets the one fact they can act on and nothing they must not
+		// paste into a bug report.
+		console.error('SMTP send failed. Check SMTP_HOST, SMTP_PORT and credentials.');
+		return false;
+	}
+}

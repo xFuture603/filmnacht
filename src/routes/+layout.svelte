@@ -12,6 +12,9 @@
 		{#if data.user}
 			<a class="btn btn-ghost min-h-11" href="/groups">{t(data.locale, 'nav.groups')}</a>
 			<a class="btn btn-ghost min-h-11" href="/profile">{t(data.locale, 'nav.profile')}</a>
+			{#if data.user.isAdmin}
+				<a class="btn btn-ghost min-h-11" href="/admin">{t(data.locale, 'nav.admin')}</a>
+			{/if}
 		{/if}
 		<form method="POST" action="/locale" class="ml-2">
 			<input type="hidden" name="redirectTo" value={data.pathname} />

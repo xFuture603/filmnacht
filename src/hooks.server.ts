@@ -8,7 +8,29 @@ import {
 import { db } from '$lib/server/db';
 import { isSetupComplete } from '$lib/server/settings';
 import { guardRedirect } from '$lib/server/setup';
-import { redirect, type Handle } from '@sveltejs/kit';
+import { redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
+
+/**
+ * Replaces SvelteKit's default error logger, which prints the request URL.
+ *
+ * Every token this app hands out lives in a path — /reset/<token>,
+ * /login/<token>, /join/<token> — so that default wrote a live, single-use
+ * credential into the operator's log on any 500, where it outlives the request
+ * and gets pasted into bug reports. Seen on the production build during the
+ * Plan 4 walkthrough: a FOREIGN KEY failure inside the reset action logged
+ * `[500] POST /reset/cONuogJsOHRgB07ew8yaoA` verbatim. Same class as the SMTP
+ * credentials mail.ts refuses to log, and the same fix — redact at the
+ * boundary rather than trust every future error to be harmless.
+ *
+ * `event.route.id` is the PATTERN, never the value, so an operator still sees
+ * which route failed and gets the whole error and its stack. Returning nothing
+ * leaves SvelteKit's own `{ message: 'Internal Error' }` body untouched, so
+ * nothing about the response changes — do not "improve" this by returning the
+ * message, which is how a stack trace reaches a browser.
+ */
+export const handleError: HandleServerError = ({ error, event, status }) => {
+	console.error(`[${status}] ${event.request.method} ${event.route.id ?? '(unrouted)'}`, error);
+};
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.locale = resolveLocale(

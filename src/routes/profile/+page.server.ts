@@ -1,16 +1,16 @@
-import { hashPassword, validatePassword, verifyPassword } from '$lib/server/auth/password';
+import { hashPassword, validatePassword } from '$lib/server/auth/password';
+import { reauthenticate } from '$lib/server/auth/reauth';
 import { deleteOtherSessions, SESSION_COOKIE } from '$lib/server/auth/session';
 import { hashToken } from '$lib/server/auth/tokens';
 import { db } from '$lib/server/db';
+import { retireResets } from '$lib/server/resets';
 import { requireUser } from '$lib/server/groups';
-import { rateLimit } from '$lib/server/rate-limit';
 import {
 	EmailTakenError,
 	regenerateLoginToken,
 	setDisplayName,
 	setEmail,
 	setPassword,
-	storedPasswordHash,
 	userProfile,
 	validateDisplayName,
 	validateEmail
@@ -33,45 +33,6 @@ export const load: PageServerLoad = ({ locals }) => {
 function keepOnlyThisSession(userId: string, cookies: { get(name: string): string | undefined }) {
 	const currentToken = cookies.get(SESSION_COOKIE);
 	deleteOtherSessions(db, userId, currentToken ? hashToken(currentToken) : null);
-}
-
-/**
- * The re-authentication both mutating actions below require. A session cookie
- * proves someone is at the keyboard; it does not prove it is the account's
- * owner rather than whoever sat down at their unlocked laptop.
- *
- * **ONE rate-limit bucket for both call sites, deliberately.** They guess the
- * SAME secret, so a key per action would hand an attacker 5 + 5 attempts
- * against one password instead of 5. Do not "tidy" this into two keys — the
- * shared bucket is the point, and splitting it silently doubles the budget.
- *
- * The gate is consulted before the password is verified, so the budget is spent
- * by malformed submissions too. Trade-off accepted deliberately, not
- * overlooked, and the same one login/+page.server.ts records: rateLimit
- * consumes atomically, so five mistyped current passwords lock the owner out
- * for five minutes. It stays because refusing the work *before* scrypt runs is
- * what stops CPU exhaustion, and because this check is the only barrier between
- * a borrowed session and a permanent takeover. If the lockout ever bites in
- * practice, the upgrade is to verify first and consume only on failure, which
- * costs exactly the CPU this gate is here to save. Do not simply remove it.
- *
- * A user id is a safe key: the caller cannot mint more of them, so this limiter
- * cannot be used to flood rate-limit.ts's shared map. That is a statement about
- * causing eviction, not about surviving it — every window in that map is
- * evictable oldest-first, this one included.
- *
- * Returns the failure to return, or null once ownership is proven.
- */
-async function reauthenticate(userId: string, form: FormData) {
-	if (!rateLimit(`password-change:${userId}`, 5, 300_000)) {
-		return fail(429, { error: 'profile.rate_limited' });
-	}
-	// Verified unconditionally: no branch skips this.
-	const ok = await verifyPassword(
-		String(form.get('currentPassword') ?? ''),
-		storedPasswordHash(db, userId)
-	);
-	return ok ? null : fail(400, { error: 'profile.error.current_password' });
 }
 
 export const actions: Actions = {
@@ -119,6 +80,11 @@ export const actions: Actions = {
 		// profile.password_changed now says in both locales.
 		setPassword(db, user.id, passwordHash);
 		regenerateLoginToken(db, user.id);
+		// Third credential. An emailed reset link outlives the password it was
+		// issued to reset unless it is retired here, and it would then overwrite
+		// the password this member just chose — while the very reason to be on
+		// this form may be a reset email they did not request.
+		retireResets(db, user.id);
 		keepOnlyThisSession(user.id, cookies);
 		return { success: 'profile.password_changed' };
 	},
@@ -171,10 +137,10 @@ export const actions: Actions = {
 	 * laptop an access that outlived the session they borrowed. Gating the
 	 * stronger credential behind the same proof as the weaker one is the point.
 	 *
-	 * The cost is recorded in PRD §9 as a known gap rather than solved here: a
-	 * member who has forgotten their password and saved no link in advance now
-	 * has no self-service recovery on an SMTP-free instance. Closing it needs
-	 * Plan 4's emailed reset or an admin-side reset that does not exist yet.
+	 * The cost decision 21 accepted — a member who forgot their password and
+	 * saved no link in advance has no self-service way back — is no longer open.
+	 * /reset emails a link where the operator configured SMTP, and /admin mints
+	 * the same reset token with no mail server involved where they did not.
 	 */
 	reveal: async ({ locals, request, url, cookies }) => {
 		const user = requireUser(locals);

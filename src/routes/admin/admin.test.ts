@@ -1,0 +1,252 @@
+import { isHttpError } from '@sveltejs/kit';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { hashPassword, verifyPassword } from '$lib/server/auth/password';
+import { createSession, validateSession } from '$lib/server/auth/session';
+import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
+import { passwordResets } from '$lib/server/db/schema';
+import { resetRateLimits } from '$lib/server/rate-limit';
+import { consumeReset } from '$lib/server/resets';
+import {
+	createUser,
+	regenerateLoginToken,
+	storedPasswordHash,
+	userByLoginToken
+} from '$lib/server/users';
+
+let db: DB;
+
+// A fresh database per test, read through a getter so the route's module-scope
+// `import { db }` picks up the reassignment instead of binding the first one.
+vi.mock('$lib/server/db', () => ({
+	get db() {
+		return db;
+	}
+}));
+
+const { actions, load } = await import('./+page.server');
+// The other half of the shared re-auth bucket, imported to prove the two
+// routes really do draw on one budget. See the last test in this file.
+const { actions: profileActions } = await import('../profile/+page.server');
+
+const ADMIN_PASSWORD = 'the admin password';
+const ADA_PASSWORD = 'adas own password';
+
+// Hashed once at module scope: scrypt is deliberately ~100ms.
+const ADMIN_HASH = await hashPassword(ADMIN_PASSWORD);
+const ADA_HASH = await hashPassword(ADA_PASSWORD);
+
+let admin: { id: string };
+let ada: { id: string };
+let grace: { id: string };
+
+type Caller = { id: string; displayName: string; isAdmin: boolean } | null;
+const asAdmin = (): Caller => ({ id: admin.id, displayName: 'Admin', isAdmin: true });
+const asAda = (): Caller => ({ id: ada.id, displayName: 'Ada', isAdmin: false });
+
+/** Either shape this action can answer with: an ActionFailure, or a success. */
+type Answer = {
+	status?: number;
+	data?: { error?: string };
+	recoveryUrl?: string;
+	recoveredName?: string;
+};
+
+async function post(user: Caller, fields: Record<string, string>): Promise<Answer> {
+	return ((await actions.recover({
+		locals: { user, locale: 'en' },
+		request: new Request('http://localhost/admin', {
+			method: 'POST',
+			body: new URLSearchParams(fields)
+		}),
+		url: new URL('http://localhost/admin')
+	} as never)) ?? {}) as Answer;
+}
+
+/** requireUser and requireAdmin throw an HttpError rather than returning fail(). */
+async function statusOfThrow(run: () => unknown | Promise<unknown>) {
+	try {
+		await run();
+	} catch (err) {
+		if (isHttpError(err)) return err.status;
+		throw err;
+	}
+	throw new Error('expected a throw, but it returned normally');
+}
+
+beforeEach(() => {
+	db = createDb(':memory:').db;
+	applyMigrations(db);
+	resetRateLimits();
+	admin = createUser(db, {
+		username: 'admin',
+		displayName: 'Admin',
+		passwordHash: ADMIN_HASH,
+		isAdmin: true
+	});
+	ada = createUser(db, { username: 'ada', displayName: 'Ada', passwordHash: ADA_HASH });
+	grace = createUser(db, {
+		username: 'grace',
+		displayName: 'Grace',
+		passwordHash: 'scrypt$placeholder$placeholder'
+	});
+});
+
+describe('GET /admin', () => {
+	it('lists every account on the instance', () => {
+		const data = load({ locals: { user: asAdmin(), locale: 'en' } } as never) as {
+			members: Array<{ username: string }>;
+		};
+		expect(data.members.map((m) => m.username)).toEqual(['ada', 'admin', 'grace']);
+	});
+
+	it('never sends a password hash or a token hash to the browser', () => {
+		// This return value is serialised into the page. A hash here is a hash in
+		// the admin's HTML source, ready for an offline attack.
+		const data = load({ locals: { user: asAdmin(), locale: 'en' } } as never) as {
+			members: Array<Record<string, unknown>>;
+		};
+		expect(Object.keys(data.members[0]).sort()).toEqual(['displayName', 'id', 'username']);
+	});
+
+	it('refuses a member who is not the instance admin', async () => {
+		expect(
+			await statusOfThrow(() => load({ locals: { user: asAda(), locale: 'en' } } as never))
+		).toBe(403);
+	});
+
+	it('refuses a signed-out visitor', async () => {
+		expect(await statusOfThrow(() => load({ locals: { user: null, locale: 'en' } } as never))).toBe(
+			401
+		);
+	});
+});
+
+describe('POST /admin?/recover', () => {
+	it('mints a one-time recovery link for a member', async () => {
+		// The happy path, asserted first and deliberately: without it every refusal
+		// below passes against an action that does nothing at all.
+		//
+		// The WHOLE return value, not `result?.data?.recoveryUrl`: a success is a
+		// plain object with no `.data` at all — only fail() produces one — so
+		// asserting through `.data` reads undefined and fails against a correct
+		// action.
+		const result = await post(asAdmin(), {
+			userId: ada.id,
+			currentPassword: ADMIN_PASSWORD
+		});
+		expect(result).toEqual({
+			recoveryUrl: expect.stringMatching(/^http:\/\/localhost\/reset\/[A-Za-z0-9_-]+$/),
+			recoveredName: 'Ada'
+		});
+
+		expect(db.select().from(passwordResets).all()).toHaveLength(1);
+		// Not just shaped like a link: the token in it must actually resolve to
+		// Ada's account, which is the only thing that makes it a recovery.
+		const token = result.recoveryUrl!.split('/').pop()!;
+		expect(consumeReset(db, token)).toBe(ada.id);
+		// And once, as the copy promises.
+		expect(consumeReset(db, token)).toBeNull();
+	});
+
+	it('leaves every credential alone until the link is used', async () => {
+		// Minting is not revocation. An admin may generate a link the member never
+		// uses, and until they do, nothing about their account may change — the
+		// sweep belongs to /reset/<token>, which is where the member finds out.
+		// Grace is here for the other half: recovering one account must not touch
+		// anybody else's.
+		const adasSession = createSession(db, ada.id);
+		const adasLink = regenerateLoginToken(db, ada.id);
+		const gracesSession = createSession(db, grace.id);
+		const gracesLink = regenerateLoginToken(db, grace.id);
+
+		await post(asAdmin(), { userId: ada.id, currentPassword: ADMIN_PASSWORD });
+
+		expect(validateSession(db, adasSession.token)?.user.id).toBe(ada.id);
+		expect(userByLoginToken(db, adasLink)?.id).toBe(ada.id);
+		expect(await verifyPassword(ADA_PASSWORD, storedPasswordHash(db, ada.id))).toBe(true);
+
+		expect(validateSession(db, gracesSession.token)?.user.id).toBe(grace.id);
+		expect(userByLoginToken(db, gracesLink)?.id).toBe(grace.id);
+		// One reset row, and it belongs to Ada. A mint that also minted for every
+		// account would pass every assertion above.
+		const rows = db.select().from(passwordResets).all();
+		expect(rows).toHaveLength(1);
+		expect(rows[0].userId).toBe(ada.id);
+	});
+
+	it('refuses a member who is not the instance admin and mints nothing', async () => {
+		expect(
+			await statusOfThrow(() => post(asAda(), { userId: admin.id, currentPassword: ADA_PASSWORD }))
+		).toBe(403);
+		expect(db.select().from(passwordResets).all()).toHaveLength(0);
+	});
+
+	it('refuses a signed-out visitor and mints nothing', async () => {
+		expect(
+			await statusOfThrow(() => post(null, { userId: ada.id, currentPassword: ADMIN_PASSWORD }))
+		).toBe(401);
+		expect(db.select().from(passwordResets).all()).toHaveLength(0);
+	});
+
+	it('refuses an admin who cannot produce their own password', async () => {
+		// An admin's unlocked laptop must not be a master key. Decision 21 gated
+		// revealing your OWN link; minting one for somebody else is stronger.
+		const result = await post(asAdmin(), {
+			userId: ada.id,
+			currentPassword: 'not the admin password'
+		});
+		expect(result?.status).toBe(400);
+		expect(result?.data).toEqual({ error: 'profile.error.current_password' });
+		expect(db.select().from(passwordResets).all()).toHaveLength(0);
+	});
+
+	it('refuses an admin who sends no password at all', async () => {
+		const result = await post(asAdmin(), { userId: ada.id });
+		expect(result?.status).toBe(400);
+		expect(result?.data).toEqual({ error: 'profile.error.current_password' });
+		expect(db.select().from(passwordResets).all()).toHaveLength(0);
+	});
+
+	it('refuses a user id that does not exist', async () => {
+		const result = await post(asAdmin(), {
+			userId: 'no-such-user',
+			currentPassword: ADMIN_PASSWORD
+		});
+		expect(result?.status).toBe(400);
+		expect(result?.data).toEqual({ error: 'admin.error.no_such_member' });
+		expect(db.select().from(passwordResets).all()).toHaveLength(0);
+	});
+
+	it('draws on the same re-auth budget as the profile actions', async () => {
+		// The shared bucket is load-bearing, not tidiness waiting to happen: all
+		// three actions verify the SAME secret, so a key per action would hand an
+		// attacker 5 + 5 + 5 guesses against one password instead of 5. This test
+		// is what fails if someone later splits `reauth:${userId}` into three
+		// self-documenting keys.
+		for (let i = 0; i < 5; i++) {
+			await post(asAdmin(), { userId: ada.id, currentPassword: `guess ${i}` });
+		}
+		const locked = await profileActions.reveal({
+			locals: { user: asAdmin(), locale: 'en' },
+			request: new Request('http://localhost/profile', {
+				method: 'POST',
+				body: new URLSearchParams({ currentPassword: ADMIN_PASSWORD })
+			}),
+			cookies: { get: () => undefined, set: vi.fn(), delete: vi.fn() },
+			url: new URL('http://localhost/profile')
+		} as never);
+		expect((locked as Answer)?.status).toBe(429);
+		// The admin's own budget, not the instance's: Ada must still be able to
+		// prove herself on her own account.
+		const adasOwn = await profileActions.reveal({
+			locals: { user: asAda(), locale: 'en' },
+			request: new Request('http://localhost/profile', {
+				method: 'POST',
+				body: new URLSearchParams({ currentPassword: ADA_PASSWORD })
+			}),
+			cookies: { get: () => undefined, set: vi.fn(), delete: vi.fn() },
+			url: new URL('http://localhost/profile')
+		} as never);
+		expect((adasOwn as { loginUrl?: string })?.loginUrl).toMatch(/\/login\//);
+	});
+});

@@ -61,6 +61,29 @@ export const users = sqliteTable('users', {
 });
 
 /** Empty until OIDC lands in v2 (PRD §9). Created now so that is an insert, not a migration. */
+/**
+ * Short-lived, single-use password-reset tokens (PRD §9). Only the SHA-256 hash
+ * is stored, exactly as for sessions and login links: a leaked database must not
+ * yield a working credential. `usedAt` rather than a delete, so a second click
+ * on a link that is sitting in a mailbox forever is refused rather than silently
+ * behaving like a fresh one.
+ *
+ * `timestamp`, not `timestamp_ms`: every other datetime column in this schema is
+ * seconds, and one exception is how a later reader ends up comparing a seconds
+ * column against a millisecond one. Truncation moves an expiry down by at most
+ * 999ms, which is nothing against an hour.
+ */
+export const passwordResets = sqliteTable('password_resets', {
+	id: uuid(),
+	tokenHash: text('token_hash').notNull().unique(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+	usedAt: integer('used_at', { mode: 'timestamp' }),
+	createdAt: createdAt()
+});
+
 export const identities = sqliteTable(
 	'identities',
 	{

@@ -19,7 +19,7 @@ const { SESSION_COOKIE, createSession } = await import('$lib/server/auth/session
 const { hashToken } = await import('$lib/server/auth/tokens');
 const { createUser } = await import('$lib/server/users');
 const { setSetting } = await import('$lib/server/settings');
-const { handle } = await import('./hooks.server');
+const { handle, handleError } = await import('./hooks.server');
 
 // guardRedirect funnels every path to /setup until this is set — done once,
 // for every test in this file, rather than per test.
@@ -87,5 +87,52 @@ describe('sliding session refresh sets the cookie with the right secure flag', (
 			expect.any(String),
 			expect.objectContaining({ secure: true })
 		);
+	});
+});
+
+describe('handleError keeps path tokens out of the log', () => {
+	// SvelteKit's default logger prints the request URL, and every token this
+	// app issues lives in a path. On the production build a FOREIGN KEY failure
+	// inside the reset action logged `[500] POST /reset/cONuogJsOHRgB07ew8yaoA`
+	// — a live single-use credential, written to a file that outlives the
+	// request. Same class as the SMTP credentials mail.ts refuses to log.
+	const TOKEN = 'cONuogJsOHRgB07ew8yaoA';
+
+	function logFrom(routeId: string | null, path: string) {
+		const logged: unknown[] = [];
+		vi.spyOn(console, 'error').mockImplementation((...args) => logged.push(...args));
+		handleError({
+			error: new Error('FOREIGN KEY constraint failed'),
+			event: {
+				request: new Request(`http://localhost${path}`, { method: 'POST' }),
+				url: new URL(`http://localhost${path}`),
+				route: { id: routeId }
+			},
+			status: 500,
+			message: 'Internal Error'
+		} as never);
+		vi.restoreAllMocks();
+		return logged.map((e) => (e instanceof Error ? e.stack : String(e))).join(' ');
+	}
+
+	it('logs the route pattern and not the token', () => {
+		const logged = logFrom('/reset/[token]', `/reset/${TOKEN}`);
+		expect(logged).not.toContain(TOKEN);
+		expect(logged).toContain('/reset/[token]');
+	});
+
+	it('still reports the status, the method and the error itself', () => {
+		const logged = logFrom('/reset/[token]', `/reset/${TOKEN}`);
+		expect(logged).toContain('500');
+		expect(logged).toContain('POST');
+		expect(logged).toContain('FOREIGN KEY constraint failed');
+	});
+
+	it('logs nothing from the URL even when the request matched no route', () => {
+		// route.id is null for a request that reached no route. Falling back to
+		// the pathname here would put the token straight back in the log.
+		const logged = logFrom(null, `/login/${TOKEN}`);
+		expect(logged).not.toContain(TOKEN);
+		expect(logged).toContain('unrouted');
 	});
 });
