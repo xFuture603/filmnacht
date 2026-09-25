@@ -183,8 +183,19 @@ export const suggestions = sqliteTable(
 		movieId: text('movie_id')
 			.notNull()
 			.references(() => movies.id),
-		/** Null for the v1.0 wildcard pick, which belongs to nobody (PRD §10). */
-		suggestedBy: text('suggested_by').references(() => users.id, { onDelete: 'set null' }),
+		/**
+		 * NULL means WILDCARD and nothing else (PRD §6): a film belonging to nobody,
+		 * counting toward no member's fairness window. A departed member's films are
+		 * reassigned to the "former member" placeholder (PRD §4, §12), which is a real
+		 * row, so the two states stay distinguishable.
+		 *
+		 * `restrict`, deliberately not `set null`: a delete that reached here would
+		 * silently turn somebody's suggestions into wildcards and drop them out of
+		 * fairness counting. Whoever builds account deletion must call
+		 * reassignToFormerMember first and should hit a loud constraint error if they
+		 * forget, rather than shipping quiet data corruption.
+		 */
+		suggestedBy: text('suggested_by').references(() => users.id, { onDelete: 'restrict' }),
 		dedupeKey: text('dedupe_key').notNull(),
 		note: text('note'),
 		status: text('status', { enum: ['open', 'drawn', 'withdrawn'] })

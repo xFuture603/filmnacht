@@ -4,6 +4,7 @@ import type { SessionUser } from './auth/session';
 import { generateToken, hashToken } from './auth/tokens';
 import type { DB } from './db/client';
 import { users } from './db/schema';
+import { FORMER_MEMBER_USERNAME } from './members';
 
 export const DISPLAY_NAME_MAX = 60;
 export const USERNAME_MIN = 3;
@@ -25,6 +26,11 @@ export function validateUsername(raw: FormDataEntryValue | null): string | null 
 	// A username of only dots or separators identifies nobody and is the sort
 	// of thing that later turns into a path-handling surprise ('...', '.').
 	if (!/[a-z0-9]/.test(username)) return null;
+	// Reserved for the "former member" placeholder (members.ts). Without this,
+	// a real person could register it through join or setup before the
+	// placeholder row exists, and formerMemberId would then adopt that real,
+	// signable-in account instead of creating its own.
+	if (username === FORMER_MEMBER_USERNAME) return null;
 	return username;
 }
 

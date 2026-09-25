@@ -215,6 +215,13 @@ describe('validateUsername', () => {
 		expect(validateUsername('a-b')).toBe('a-b');
 		expect(validateUsername('a_b')).toBe('a_b');
 	});
+
+	it('reserves the former-member placeholder username', () => {
+		// Otherwise a real person could register it via join or setup before the
+		// placeholder row exists, and formerMemberId would adopt that real,
+		// signable-in account (see members.ts).
+		expect(validateUsername('former-member')).toBeNull();
+	});
 });
 
 describe('createUser with a username', () => {
