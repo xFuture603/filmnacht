@@ -154,5 +154,18 @@
 	"night.cancel": "Filmnacht absagen",
 	"night.mark_watched": "Haben wir gesehen",
 	"night.mark_watched_hint": "Keine Filmnacht wird automatisch als gesehen markiert. Bis das jemand tut, zählt dieser Film für niemanden als Zug.",
-	"night.error.not_drawn": "Für diese Filmnacht wurde noch kein Film gezogen."
+	"night.error.not_drawn": "Für diese Filmnacht wurde noch kein Film gezogen.",
+	"nights.upcoming": "Demnächst",
+	"nights.past": "Vergangen",
+	"nights.counts": "{yes} dabei · {maybe} vielleicht · {no} nicht dabei",
+	"night.back": "Alle Filmnächte",
+	"night.film": "Der Film",
+	"night.hidden": "Der Film bleibt eine Überraschung, bis die Filmnacht beginnt.",
+	"night.responses": "Wer kommt",
+	"night.no_responses": "Noch hat niemand geantwortet.",
+	"night.owner": "Für die Gruppenleitung",
+	"night.redraw_hint": "Pro Filmnacht darf einmal neu gezogen werden. Beide Ergebnisse bleiben festgehalten.",
+	"night.error.reason": "Sag kurz, warum neu gezogen wird.",
+	"night.error.cannot_cancel": "Diese Filmnacht kann nicht mehr abgesagt werden.",
+	"night.error.response": "Diese Antwort gibt es hier nicht."
 }

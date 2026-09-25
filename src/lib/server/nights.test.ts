@@ -6,9 +6,12 @@ import { addMember, createGroup, leaveGroup } from '$lib/server/groups';
 import { addSuggestion, listPool } from '$lib/server/suggestions';
 import { createUser } from '$lib/server/users';
 import type { DrawLogEntry } from './draw';
+import { reassignToFormerMember } from './members';
 import {
 	LOCATION_MAX,
 	candidatesFor,
+	isResultVisible,
+	unrevealedDrawnIds,
 	cancelNight,
 	drawForNight,
 	listNights,
@@ -449,5 +452,76 @@ describe('redraw', () => {
 			.where(eq(movieNights.id, id))
 			.get()?.log as DrawLogEntry[];
 		expect(log).toHaveLength(1);
+	});
+});
+
+describe('what the night page is told about the draw', () => {
+	function film(userId: string, title: string) {
+		addSuggestion(db, { groupId, userId, movie: { title }, settings: DEFAULT_GROUP_SETTINGS });
+	}
+
+	it('says a lone suggestion won without dice, and not when there was a choice', () => {
+		film(ada, 'Dune');
+		const lone = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, lone, ada);
+		expect(nightDetail(db, lone, ada)?.onlyCandidate).toBe(true);
+
+		film(ada, 'Arrival');
+		film(ada, 'Solaris');
+		const choice = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, choice, ada);
+		// One person with two films is still a roll of the dice.
+		expect(nightDetail(db, choice, ada)?.onlyCandidate).toBe(false);
+	});
+
+	it('marks a film whose suggester has since become the former-member placeholder', () => {
+		film(grace, 'Arrival');
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		expect(nightDetail(db, id, ada)?.drawnByFormer).toBe(false);
+
+		reassignToFormerMember(db, grace);
+		expect(nightDetail(db, id, ada)?.drawnByFormer).toBe(true);
+	});
+
+	it('reports when the one permitted re-draw is spent', () => {
+		film(ada, 'Dune');
+		film(grace, 'Arrival');
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		expect(nightDetail(db, id, ada)?.redrawUsed).toBe(false);
+		redraw(db, id, ada, 'seen it');
+		expect(nightDetail(db, id, ada)?.redrawUsed).toBe(true);
+	});
+});
+
+describe('isResultVisible', () => {
+	const at = new Date('2030-01-01T20:00:00Z');
+	it('always shows the film when the group reveals immediately', () => {
+		expect(isResultVisible(DEFAULT_GROUP_SETTINGS, at, new Date('2029-12-31T00:00:00Z'))).toBe(
+			true
+		);
+	});
+	it('hides it until the night when the group keeps it a surprise', () => {
+		const settings = { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' as const };
+		expect(isResultVisible(settings, at, new Date('2030-01-01T19:59:59Z'))).toBe(false);
+		expect(isResultVisible(settings, at, at)).toBe(true);
+	});
+});
+
+describe('unrevealedDrawnIds', () => {
+	it('lists films drawn for nights still to come, and only those', () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const future = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		const drawn = drawForNight(db, future, ada);
+		if (!drawn.ok) throw new Error('draw failed');
+
+		expect([...unrevealedDrawnIds(db, groupId, new Date())]).toEqual([drawn.suggestionId]);
+		expect(unrevealedDrawnIds(db, groupId, new Date(LATER.getTime() + 1000)).size).toBe(0);
 	});
 });

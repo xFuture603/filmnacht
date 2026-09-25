@@ -7,8 +7,17 @@ import {
 	type DrawLogEntry
 } from './draw';
 import type { DB } from './db/client';
-import { attendance, memberships, movieNights, movies, suggestions, users } from './db/schema';
+import {
+	attendance,
+	memberships,
+	movieNights,
+	movies,
+	suggestions,
+	users,
+	type GroupSettings
+} from './db/schema';
 import { requireMember, requireOwner } from './groups';
+import { FORMER_MEMBER_USERNAME } from './members';
 
 /**
  * PRD §6 says "the owner (optionally any member, per setting)" may schedule a
@@ -37,6 +46,12 @@ export type NightDetail = NightSummary & {
 	groupId: string;
 	drawnTitle: string | null;
 	drawnBy: string | null;
+	/** The drawn film's suggester has left and been replaced by the placeholder. */
+	drawnByFormer: boolean;
+	/** The latest draw had exactly one film to choose from: no dice were rolled (§6). */
+	onlyCandidate: boolean;
+	/** The one permitted re-draw has been used (§6). */
+	redrawUsed: boolean;
 	myResponse: 'yes' | 'no' | 'maybe' | null;
 	responses: Array<{ displayName: string; response: 'yes' | 'no' | 'maybe' }>;
 };
@@ -147,6 +162,8 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 			status: movieNights.status,
 			drawnTitle: movies.title,
 			drawnBy: users.displayName,
+			drawnByUsername: users.username,
+			drawLog: movieNights.drawLog,
 			yes: responseCount('yes'),
 			no: responseCount('no'),
 			maybe: responseCount('maybe')
@@ -181,8 +198,20 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 		.where(and(eq(attendance.movieNightId, nightId), eq(attendance.userId, viewerId)))
 		.get();
 
+	// Derived from the log rather than stored: `onlyCandidate` is a fact about
+	// the latest draw, and the log is where that draw is recorded. The log itself
+	// (user ids, weights, seed) is not handed to the page.
+	const { drawLog, drawnByUsername, ...rest } = night;
+	const log = (drawLog as DrawLogEntry[] | null) ?? [];
+	const latest = log.at(-1);
 	return {
-		...night,
+		...rest,
+		drawnByFormer: drawnByUsername === FORMER_MEMBER_USERNAME,
+		onlyCandidate:
+			latest !== undefined &&
+			latest.candidates.length === 1 &&
+			latest.candidates[0].suggestions === 1,
+		redrawUsed: log.length >= 2,
 		myResponse: myResponseRow?.response ?? null,
 		responses
 	};
@@ -477,4 +506,27 @@ function appendDrawLog(db: DB, nightId: string, entry: DrawLogEntry): void {
 		.set({ drawLog: [...existing, entry] })
 		.where(eq(movieNights.id, nightId))
 		.run();
+}
+
+/**
+ * `resultVisible: 'on_night'` keeps the drawn film a surprise until the night
+ * starts. Everything that could name the film has to ask this first — the
+ * night page and the pool alike — because a title withheld in one place and
+ * shown in another is not withheld.
+ */
+export function isResultVisible(settings: GroupSettings, scheduledAt: Date, now: Date): boolean {
+	return settings.resultVisible === 'immediately' || now.getTime() >= scheduledAt.getTime();
+}
+
+/** Suggestions drawn for a night that has not started yet. */
+export function unrevealedDrawnIds(db: DB, groupId: string, now: Date): Set<string> {
+	return new Set(
+		db
+			.select({ suggestionId: movieNights.suggestionId, scheduledAt: movieNights.scheduledAt })
+			.from(movieNights)
+			.where(and(eq(movieNights.groupId, groupId), eq(movieNights.status, 'drawn')))
+			.all()
+			.filter((n) => n.suggestionId !== null && n.scheduledAt.getTime() > now.getTime())
+			.map((n) => n.suggestionId as string)
+	);
 }

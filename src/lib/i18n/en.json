@@ -156,5 +156,18 @@
 	"night.cancel": "Cancel this night",
 	"night.mark_watched": "We watched it",
 	"night.mark_watched_hint": "Nothing marks a night watched automatically. Until somebody does, this film does not count towards anyone's turn.",
-	"night.error.not_drawn": "No film has been drawn for this night yet."
+	"night.error.not_drawn": "No film has been drawn for this night yet.",
+	"nights.upcoming": "Coming up",
+	"nights.past": "Earlier",
+	"nights.counts": "{yes} in · {maybe} maybe · {no} out",
+	"night.back": "All nights",
+	"night.film": "The film",
+	"night.hidden": "The film stays a surprise until the night starts.",
+	"night.responses": "Who's coming",
+	"night.no_responses": "Nobody has answered yet.",
+	"night.owner": "For the owner",
+	"night.redraw_hint": "One re-draw per night. Both results stay on record.",
+	"night.error.reason": "Say briefly why you are drawing again.",
+	"night.error.cannot_cancel": "This night can no longer be cancelled.",
+	"night.error.response": "That is not an answer this page offers."
 }
