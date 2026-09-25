@@ -140,5 +140,15 @@
 	"nights.error.when": "Damit kann diese Instanz kein Datum und keine Uhrzeit bilden.",
 	"nights.error.past": "Dieser Zeitpunkt ist schon vorbei.",
 	"nights.error.location": "Dieser Ort ist zu lang.",
-	"nights.error.not_owner": "Nur die Gruppenleitung kann das tun."
+	"nights.error.not_owner": "Nur die Gruppenleitung kann das tun.",
+	"night.draw": "Film ziehen",
+	"night.redraw": "Neu ziehen",
+	"night.redraw_reason": "Warum wird neu gezogen?",
+	"night.drawn_one": "Es wurde nur ein Film vorgeschlagen, also wird es {title} — gewürfelt wurde nicht.",
+	"night.drawn": "{title}, vorgeschlagen von {name}.",
+	"night.drawn_former": "{title}, vorgeschlagen von einem Mitglied, das die Gruppe verlassen hat.",
+	"night.error.no_candidates": "Es hat noch niemand etwas vorgeschlagen.",
+	"night.error.not_scheduled": "Für diese Filmnacht steht keine Ziehung an.",
+	"night.error.redraw_used": "Für diese Filmnacht wurde schon einmal neu gezogen.",
+	"night.error.sole_suggestion": "Es liegt nur ein Film im Pool, neu ziehen würde ihn wieder liefern. Schlag zuerst einen weiteren vor."
 }

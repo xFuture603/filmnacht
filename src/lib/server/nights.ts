@@ -1,6 +1,13 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import {
+	drawFrom,
+	newSeed,
+	FAIRNESS_WINDOW_NIGHTS,
+	type Candidate,
+	type DrawLogEntry
+} from './draw';
 import type { DB } from './db/client';
-import { attendance, movieNights, movies, suggestions, users } from './db/schema';
+import { attendance, memberships, movieNights, movies, suggestions, users } from './db/schema';
 import { requireMember, requireOwner } from './groups';
 
 /**
@@ -33,6 +40,13 @@ export type NightDetail = NightSummary & {
 	myResponse: 'yes' | 'no' | 'maybe' | null;
 	responses: Array<{ displayName: string; response: 'yes' | 'no' | 'maybe' }>;
 };
+
+export type DrawOutcome =
+	| { ok: true; suggestionId: string; title: string; onlyCandidate: boolean }
+	| {
+			ok: false;
+			reason: 'not_found' | 'not_scheduled' | 'no_candidates' | 'redraw_used' | 'sole_suggestion';
+	  };
 
 export function scheduleNight(
 	db: DB,
@@ -172,4 +186,157 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 		myResponse: myResponseRow?.response ?? null,
 		responses
 	};
+}
+
+/**
+ * The people who can take a turn, with how many of their films the group has
+ * WATCHED inside the window.
+ *
+ * Membership is joined, not assumed: a suggestion whose author has left the
+ * group, or is the former-member placeholder, or is a wildcard (`suggested_by
+ * IS NULL`), stays in the pool as history and cannot win. The draw draws
+ * people, and those are not people who can take a turn.
+ */
+export function candidatesFor(db: DB, groupId: string): Candidate[] {
+	// The window is the last N nights this group actually WATCHED. Drawn and
+	// cancelled nights are absent by construction, which is what stops a
+	// cancelled night or a re-draw from costing somebody their turn (PRD §6).
+	const watchedNightIds = db
+		.select({ suggestionId: movieNights.suggestionId })
+		.from(movieNights)
+		.where(and(eq(movieNights.groupId, groupId), eq(movieNights.status, 'watched')))
+		.orderBy(desc(movieNights.scheduledAt))
+		.limit(FAIRNESS_WINDOW_NIGHTS)
+		.all()
+		.map((r) => r.suggestionId)
+		.filter((id): id is string => id !== null);
+
+	const watchedBy = new Map<string, number>();
+	if (watchedNightIds.length > 0) {
+		for (const row of db
+			.select({ userId: suggestions.suggestedBy })
+			.from(suggestions)
+			.where(inArray(suggestions.id, watchedNightIds))
+			.all()) {
+			if (row.userId) watchedBy.set(row.userId, (watchedBy.get(row.userId) ?? 0) + 1);
+		}
+	}
+
+	const open = db
+		.select({ suggestionId: suggestions.id, userId: suggestions.suggestedBy })
+		.from(suggestions)
+		.innerJoin(
+			memberships,
+			and(eq(memberships.userId, suggestions.suggestedBy), eq(memberships.groupId, groupId))
+		)
+		.where(
+			and(
+				eq(suggestions.groupId, groupId),
+				eq(suggestions.status, 'open'),
+				isNull(memberships.leftAt)
+			)
+		)
+		.all();
+
+	const byUser = new Map<string, string[]>();
+	for (const row of open) {
+		if (!row.userId) continue;
+		byUser.set(row.userId, [...(byUser.get(row.userId) ?? []), row.suggestionId]);
+	}
+
+	return [...byUser].map(([userId, suggestionIds]) => ({
+		userId,
+		suggestionIds,
+		watchedInWindow: watchedBy.get(userId) ?? 0
+	}));
+}
+
+/**
+ * Synchronous on purpose. Everything from the status check to the write happens
+ * inside one transaction with no `await` anywhere in it, because two owners
+ * pressing Draw at the same moment must produce one result. This project has
+ * fixed read-yield-write on a stale read four times; if a future change wants to
+ * await in here, that is the signal to stop rather than to make this async.
+ */
+export function drawForNight(
+	db: DB,
+	nightId: string,
+	ownerId: string,
+	reason?: string
+): DrawOutcome {
+	const night = db
+		.select({ groupId: movieNights.groupId, status: movieNights.status })
+		.from(movieNights)
+		.where(eq(movieNights.id, nightId))
+		.get();
+	if (!night) return { ok: false, reason: 'not_found' };
+	const { settings } = requireOwner(db, ownerId, night.groupId);
+
+	const candidates = candidatesFor(db, night.groupId);
+	if (candidates.length === 0) return { ok: false, reason: 'no_candidates' };
+
+	const seed = newSeed();
+	const picked = drawFrom(candidates, settings.drawMode, seed);
+	if (!picked) return { ok: false, reason: 'no_candidates' };
+
+	return db.transaction(() => {
+		// Test-and-set, not read-then-write: the UPDATE's own WHERE is the guard,
+		// so a second caller that got this far finds nothing to update.
+		const claimed = db
+			.update(movieNights)
+			.set({
+				status: 'drawn',
+				suggestionId: picked.suggestionId,
+				drawnAt: new Date(),
+				drawSeed: String(seed)
+			})
+			.where(and(eq(movieNights.id, nightId), eq(movieNights.status, 'scheduled')))
+			.run();
+		if (claimed.changes === 0) return { ok: false, reason: 'not_scheduled' } as const;
+
+		db.update(suggestions)
+			.set({ status: 'drawn' })
+			.where(eq(suggestions.id, picked.suggestionId))
+			.run();
+
+		const entry: DrawLogEntry = {
+			at: new Date().toISOString(),
+			seed,
+			mode: settings.drawMode,
+			candidates: picked.candidates,
+			pickedUserId: picked.userId,
+			pickedSuggestionId: picked.suggestionId,
+			...(reason ? { reason } : {})
+		};
+		appendDrawLog(db, nightId, entry);
+
+		const title =
+			db
+				.select({ title: movies.title })
+				.from(suggestions)
+				.innerJoin(movies, eq(movies.id, suggestions.movieId))
+				.where(eq(suggestions.id, picked.suggestionId))
+				.get()?.title ?? '';
+
+		return {
+			ok: true,
+			suggestionId: picked.suggestionId,
+			title,
+			onlyCandidate: candidates.length === 1 && candidates[0].suggestionIds.length === 1
+		} as const;
+	});
+}
+
+/** Appends. Never overwrites — a re-draw must leave the first result readable. */
+function appendDrawLog(db: DB, nightId: string, entry: DrawLogEntry): void {
+	const existing =
+		(db
+			.select({ log: movieNights.drawLog })
+			.from(movieNights)
+			.where(eq(movieNights.id, nightId))
+			.get()?.log as DrawLogEntry[] | null) ?? [];
+	db.update(movieNights)
+		.set({ drawLog: [...existing, entry] })
+		.where(eq(movieNights.id, nightId))
+		.run();
 }
