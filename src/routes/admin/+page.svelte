@@ -26,7 +26,7 @@
 		<h2 class="card-title text-lg">{t(data.locale, 'admin.members')}</h2>
 		<p class="text-sm text-base-content/70">{t(data.locale, 'admin.recover_hint')}</p>
 
-		<!-- One form around the whole table. Each row's submit button carries the
+		<!-- One form around the whole list. Each row's submit button carries the
 		     account it acts on as name/value, which is plain HTML and needs no
 		     JavaScript and no password field per row. -->
 		<form method="POST" action="?/recover" class="flex flex-col gap-3">
@@ -42,35 +42,24 @@
 				/>
 			</Field>
 
-			<div class="overflow-x-auto">
-				<table class="table table-sm">
-					<thead>
-						<tr>
-							<th>{t(data.locale, 'auth.username')}</th>
-							<th>{t(data.locale, 'auth.display_name')}</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.members as member (member.id)}
-							<tr>
-								<td class="font-mono">{member.username}</td>
-								<td>{member.displayName}</td>
-								<td class="text-right">
-									<button
-										class="btn btn-outline btn-sm min-h-11"
-										name="userId"
-										value={member.id}
-										aria-label={`${t(data.locale, 'admin.recover')} — ${member.username}`}
-									>
-										{t(data.locale, 'admin.recover')}
-									</button>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<ul class="divide-y divide-base-300">
+				{#each data.members as member (member.id)}
+					<li class="flex flex-wrap items-center justify-between gap-2 py-3">
+						<div class="min-w-0">
+							<div class="break-words">{member.displayName}</div>
+							<div class="font-mono text-xs text-base-content/70">{member.username}</div>
+						</div>
+						<button
+							class="btn btn-outline btn-sm min-h-11"
+							name="userId"
+							value={member.id}
+							aria-label={`${t(data.locale, 'admin.recover')} — ${member.username}`}
+						>
+							{t(data.locale, 'admin.recover')}
+						</button>
+					</li>
+				{/each}
+			</ul>
 		</form>
 	</div>
 </section>

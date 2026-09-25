@@ -13,10 +13,10 @@
 {:else}
 	<ul class="mb-8 grid gap-3 sm:grid-cols-2">
 		{#each data.groups as group (group.id)}
-			<li>
+			<li class="min-w-0">
 				<a
 					href="/groups/{group.id}"
-					class="card flex min-h-11 flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
+					class="card flex min-h-11 w-full flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
 				>
 					<span class="text-3xl" aria-hidden="true">{group.emoji ?? '🎬'}</span>
 					<span class="min-w-0 flex-1 truncate font-semibold">{group.name}</span>

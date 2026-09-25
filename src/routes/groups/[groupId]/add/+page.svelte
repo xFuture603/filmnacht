@@ -40,7 +40,7 @@
 						<ul class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 							{#each form.results as result (result.tmdbId)}
 								<li class="flex min-w-0 flex-col gap-2">
-									<Poster src={result.posterUrl} title={result.title} />
+									<Poster src={result.posterUrl} />
 									<div class="min-w-0">
 										<p class="line-clamp-2 font-medium break-words">{result.title}</p>
 										<p class="text-sm text-base-content/70">{result.year ?? ''}</p>

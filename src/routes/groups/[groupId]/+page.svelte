@@ -36,7 +36,7 @@
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 			{#each data.pool as entry (entry.suggestionId)}
 				<li class="flex min-w-0 flex-col gap-2">
-					<Poster src={entry.posterUrl} title={entry.title} />
+					<Poster src={entry.posterUrl} />
 					<div class="min-w-0">
 						<p class="line-clamp-2 font-medium break-words">{entry.title}</p>
 						<p class="text-sm text-base-content/70">
@@ -54,7 +54,7 @@
 							<form method="POST" action="?/withdraw">
 								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
 								<button
-									class="btn btn-ghost btn-sm mt-1 min-h-11 w-full"
+									class="btn btn-ghost btn-sm mt-1 min-h-11 px-2 text-base-content/70"
 									aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
 								>
 									{t(data.locale, 'pool.withdraw')}
