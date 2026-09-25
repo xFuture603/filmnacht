@@ -97,3 +97,52 @@ describe('applyMigrations, against a populated database (Ruling R2)', () => {
 		sqlite.close();
 	});
 });
+
+/**
+ * A minimal, self-contained migrations folder — independent of the project's
+ * real schema — whose second migration inserts a row with a dangling foreign
+ * key. `applyMigrations` turns enforcement off around `migrate()`, so SQLite
+ * lets that INSERT through without complaint (a genuinely broken migration
+ * would do exactly this); the point of the folder is to hand
+ * `foreign_key_check` a real violation to catch afterwards.
+ */
+function migrationsFolderWithOrphanRow(): string {
+	const dir = mkdtempSync(join(tmpdir(), 'filmnacht-fk-violation-'));
+	dirs.push(dir);
+	mkdirSync(join(dir, 'meta'), { recursive: true });
+	writeFileSync(
+		join(dir, '0000_init.sql'),
+		'CREATE TABLE parent (id INTEGER PRIMARY KEY);\n' +
+			'--> statement-breakpoint\n' +
+			'CREATE TABLE child (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent(id));'
+	);
+	writeFileSync(join(dir, '0001_orphan.sql'), 'INSERT INTO child (id, parent_id) VALUES (1, 999);');
+	writeFileSync(
+		join(dir, 'meta', '_journal.json'),
+		JSON.stringify({
+			version: '7',
+			dialect: 'sqlite',
+			entries: [
+				{ idx: 0, version: '6', when: 1, tag: '0000_init', breakpoints: true },
+				{ idx: 1, version: '6', when: 2, tag: '0001_orphan', breakpoints: true }
+			]
+		})
+	);
+	return dir;
+}
+
+describe('applyMigrations, foreign_key_check throw branch', () => {
+	it('throws when a migration leaves a foreign key violation, and still restores foreign_keys = ON', () => {
+		const file = tempDbFile();
+		const { sqlite, db } = createDb(file);
+
+		expect(() => applyMigrations(db, migrationsFolderWithOrphanRow())).toThrow(
+			/foreign key violation/i
+		);
+
+		// The finally must have run even though applyMigrations threw.
+		expect(sqlite.pragma('foreign_keys', { simple: true })).toBe(1);
+
+		sqlite.close();
+	});
+});
