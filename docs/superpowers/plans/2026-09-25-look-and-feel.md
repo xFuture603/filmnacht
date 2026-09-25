@@ -6,7 +6,7 @@
 
 **Architecture:** Two custom daisyUI 5 themes in `app.css`; an app shell in `+layout.svelte` (top bar + dock); a handful of small presentational components in `src/lib/components/`; then every existing page rewritten to use them. No server code changes, so the server test suite is the regression net for behaviour; a headless-browser screenshot pass is the check for looks.
 
-**Tech Stack:** SvelteKit 2 / Svelte 5 runes, Tailwind 4, daisyUI 5.7, Vitest.
+**Tech Stack:** SvelteKit 2 / Svelte 5 runes, Tailwind 4, daisyUI 5 (newest release, upgraded in Task 1), Vitest.
 
 **Spec:** `docs/superpowers/specs/2026-09-25-look-and-feel-design.md`. Runs on branch `plan/05-nights-and-the-draw` between Task 5 and Task 6 of `docs/superpowers/plans/2026-09-25-nights-and-the-draw.md`.
 
@@ -57,10 +57,20 @@
 ## Task 1: Themes and browser chrome
 
 **Files:**
-- Modify: `src/app.css`, `src/app.html`, `static/manifest.webmanifest`, `src/lib/i18n/en.json`, `src/lib/i18n/de.json`
+- Modify: `package.json`, `package-lock.json`, `src/app.css`, `src/app.html`, `static/manifest.webmanifest`, `src/lib/i18n/en.json`, `src/lib/i18n/de.json`
 
 **Interfaces:**
 - Produces: themes `filmnacht-light` (default) and `filmnacht-dark` (used when the system prefers dark); i18n key `nav.main`.
+
+- [ ] **Step 0: Upgrade daisyUI to the newest release**
+
+The user asked for the newest daisyUI. At planning time that is `5.7.46` (`npm view daisyui version`). Re-check it, then run:
+
+```bash
+npm install -D daisyui@latest
+```
+
+`package.json` must keep the caret style (`"daisyui": "^5.7.46"`), and `package-lock.json` changes with it. Stop and report if `latest` is a new major (6.x): this plan's class names are daisyUI 5's.
 
 - [ ] **Step 1: Replace `src/app.css`**
 
