@@ -181,6 +181,7 @@
 	"ratings.save": "Save rating",
 	"ratings.withdraw": "Withdraw my rating",
 	"ratings.locked": "Scores are revealed, so yours is final.",
+	"ratings.your_score": "Your score",
 	"ratings.count": "{count} rated so far: {names}",
 	"ratings.none_yet": "Nobody has rated yet.",
 	"ratings.waiting": "Waiting for {names}.",

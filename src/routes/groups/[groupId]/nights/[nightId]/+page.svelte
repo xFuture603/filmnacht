@@ -83,21 +83,23 @@
 					{t(data.locale, 'ratings.opens', { when: data.ratingTimes.opens ?? '' })}
 				</p>
 			{:else}
-				{#if (data.ratings.window.state === 'open' && !data.ratings.revealed) || (data.ratings.revealed && data.ratings.mine === null)}
+				{#if data.ratings.window.state === 'open' && (!data.ratings.revealed || data.ratings.mine === null)}
 					<form method="POST" action="?/rate" class="flex flex-col gap-2">
 						<Field label={t(data.locale, 'ratings.score')}>
 							<output for="score" class="text-4xl font-bold tabular-nums">{fmt(score)}</output>
-							<input
-								id="score"
-								type="range"
-								name="score"
-								min="1"
-								max="10"
-								step="0.5"
-								bind:value={score}
-								aria-label={t(data.locale, 'ratings.score')}
-								class="range range-primary min-h-11 w-full"
-							/>
+							<div class="flex min-h-11 items-center">
+								<input
+									id="score"
+									type="range"
+									name="score"
+									min="1"
+									max="10"
+									step="0.5"
+									bind:value={score}
+									aria-label={t(data.locale, 'ratings.score')}
+									class="range range-primary w-full"
+								/>
+							</div>
 							<div class="flex justify-between text-xs text-base-content/70" aria-hidden="true">
 								<span>1</span><span>5</span><span>10</span>
 							</div>
@@ -113,11 +115,14 @@
 					</form>
 
 					{#if data.ratings.mine && !data.ratings.revealed}
-						<form method="POST" action="?/withdrawRating">
-							<button class="btn btn-ghost min-h-11">{t(data.locale, 'ratings.withdraw')}</button>
+						<form method="POST" action="?/withdrawRating" class="flex flex-col">
+							<button class="btn btn-ghost min-h-11 w-full sm:w-auto sm:self-start"
+								>{t(data.locale, 'ratings.withdraw')}</button
+							>
 						</form>
 					{/if}
 				{:else if data.ratings.revealed && data.ratings.mine}
+					<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.your_score')}</p>
 					<p class="text-4xl font-bold tabular-nums">{fmt(data.ratings.mine.score)}</p>
 					<p class="text-base-content/70">{t(data.locale, 'ratings.locked')}</p>
 				{/if}
@@ -139,7 +144,7 @@
 						</p>
 					{/if}
 
-					{#if data.isOwner}
+					{#if data.isOwner && data.ratings.count > 0}
 						<form method="POST" action="?/reveal" class="mt-2 flex flex-col gap-1">
 							<label class="flex min-h-11 cursor-pointer items-center gap-3">
 								<input type="checkbox" name="confirm" required class="checkbox" />

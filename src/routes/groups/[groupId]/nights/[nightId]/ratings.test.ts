@@ -105,6 +105,17 @@ describe('rating', () => {
 		expect(data.ratings.mine).toEqual({ score: 3, comment: null });
 	});
 
+	it('reports a closed window for a never-rater, not "open"', async () => {
+		// 8 days before "now": well past the default 3h + 7d window.
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) })
+			.where(eq(movieNights.id, nightId))
+			.run();
+		const data = await view(alan); // alan never rated this night
+		expect(data.ratings.window.state).toBe('closed');
+		expect(data.ratings.mine).toBeNull();
+	});
+
 	it('refuses to rate before the night has ended, and shows no rating card', async () => {
 		db.update(movieNights)
 			.set({ scheduledAt: new Date(Date.now() + 60 * 60 * 1000) })

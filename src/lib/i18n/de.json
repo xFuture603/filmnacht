@@ -179,6 +179,7 @@
 	"ratings.save": "Bewertung speichern",
 	"ratings.withdraw": "Meine Bewertung zurückziehen",
 	"ratings.locked": "Die Bewertungen sind aufgelöst, deine steht fest.",
+	"ratings.your_score": "Deine Punkte",
 	"ratings.count": "{count} bisher bewertet: {names}",
 	"ratings.none_yet": "Noch hat niemand bewertet.",
 	"ratings.waiting": "Es fehlen noch: {names}.",
