@@ -105,7 +105,6 @@
 	"pool.withdraw": "Withdraw",
 	"pool.withdraw_named": "Withdraw {title}",
 	"pool.count": "{used} of {max} suggestions used",
-	"pool.no_poster": "No poster",
 	"pool.drawn": "Already watched",
 	"pool.error.duplicate": "That film is already in the pool.",
 	"pool.error.cap_reached": "You have used all your suggestions. Withdraw one first.",

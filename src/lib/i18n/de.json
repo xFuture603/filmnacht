@@ -103,7 +103,6 @@
 	"pool.withdraw": "Zurückziehen",
 	"pool.withdraw_named": "{title} zurückziehen",
 	"pool.count": "{used} von {max} Vorschlägen genutzt",
-	"pool.no_poster": "Kein Poster",
 	"pool.drawn": "Schon gesehen",
 	"pool.error.duplicate": "Dieser Film ist schon im Pool.",
 	"pool.error.cap_reached": "Du hast alle deine Vorschläge genutzt. Zieh zuerst einen zurück.",

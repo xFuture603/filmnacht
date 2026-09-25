@@ -1,37 +1,50 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import Field from '$lib/components/Field.svelte';
 	let { data, form } = $props();
 </script>
 
-<h1 class="mb-4 text-2xl font-bold">{t(data.locale, 'groups.title')}</h1>
+<PageHeader title={t(data.locale, 'groups.title')} />
 
 {#if data.groups.length === 0}
-	<p class="mb-4">{t(data.locale, 'groups.empty')}</p>
+	<div class="mb-8"><EmptyState icon="groups" text={t(data.locale, 'groups.empty')} /></div>
 {:else}
-	<ul class="menu bg-base-100 mb-6 rounded-box">
+	<ul class="mb-8 grid gap-3 sm:grid-cols-2">
 		{#each data.groups as group (group.id)}
 			<li>
-				<a href="/groups/{group.id}" class="min-h-11">
-					<span aria-hidden="true">{group.emoji ?? '🎬'}</span>
-					{group.name}
+				<a
+					href="/groups/{group.id}"
+					class="card flex min-h-11 flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
+				>
+					<span class="text-3xl" aria-hidden="true">{group.emoji ?? '🎬'}</span>
+					<span class="min-w-0 flex-1 truncate font-semibold">{group.name}</span>
+					{#if group.role === 'owner'}
+						<span class="badge badge-sm">{t(data.locale, 'groups.owner')}</span>
+					{/if}
 				</a>
 			</li>
 		{/each}
 	</ul>
 {/if}
 
-{#if form?.error}
-	<div class="alert alert-error mb-4" role="alert">{t(data.locale, form.error)}</div>
-{/if}
-
-<form method="POST" action="?/create" class="flex flex-col gap-3">
-	<label class="form-control">
-		<span class="label-text">{t(data.locale, 'groups.name')}</span>
-		<input name="name" required maxlength="60" class="input input-bordered min-h-11" />
-	</label>
-	<label class="form-control">
-		<span class="label-text">{t(data.locale, 'groups.emoji')}</span>
-		<input name="emoji" maxlength="8" class="input input-bordered min-h-11 w-24" />
-	</label>
-	<button class="btn btn-primary min-h-11">{t(data.locale, 'groups.create')}</button>
-</form>
+<section class="card border border-base-300 bg-base-100 shadow-sm">
+	<div class="card-body">
+		<h2 class="card-title text-lg">{t(data.locale, 'groups.create')}</h2>
+		{#if form?.error}
+			<div class="alert alert-error alert-soft" role="alert">{t(data.locale, form.error)}</div>
+		{/if}
+		<form method="POST" action="?/create" class="flex flex-col gap-2">
+			<Field label={t(data.locale, 'groups.name')}>
+				<input name="name" required maxlength="60" class="input min-h-11 w-full" />
+			</Field>
+			<Field label={t(data.locale, 'groups.emoji')}>
+				<input name="emoji" maxlength="8" class="input min-h-11 w-24" />
+			</Field>
+			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+				>{t(data.locale, 'groups.create')}</button
+			>
+		</form>
+	</div>
+</section>
