@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { listMembers, requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import { createInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
+import { unrevealedDrawnIds } from '$lib/server/nights';
 import { countOpenSuggestions, listPool, withdrawSuggestion } from '$lib/server/suggestions';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -12,11 +13,24 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	return {
 		group,
 		members: listMembers(db, params.groupId),
-		pool: listPool(db, params.groupId, user.id),
+		pool: visiblePool(params.groupId, user.id, group.settings.resultVisible),
 		used: countOpenSuggestions(db, params.groupId, user.id),
 		max: group.settings.maxOpenSuggestions
 	};
 };
+
+/**
+ * With `resultVisible: 'on_night'` the film drawn for a night still to come is
+ * a surprise, and a pool entry badged "drawn" would give it away. It is left
+ * out of the pool until the night starts, not merely unbadged: withdrawing it
+ * would answer "already drawn" and say the same thing.
+ */
+function visiblePool(groupId: string, viewerId: string, resultVisible: 'immediately' | 'on_night') {
+	const pool = listPool(db, groupId, viewerId);
+	if (resultVisible === 'immediately') return pool;
+	const hidden = unrevealedDrawnIds(db, groupId, new Date());
+	return pool.filter((entry) => !hidden.has(entry.suggestionId));
+}
 
 export const actions: Actions = {
 	invite: async ({ locals, params, url }) => {

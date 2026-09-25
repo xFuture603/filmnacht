@@ -1,87 +1,93 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import FormCard from '$lib/components/FormCard.svelte';
+	import Field from '$lib/components/Field.svelte';
 	let { data, form } = $props();
 </script>
 
 {#if data.rateLimited}
-	<div class="alert alert-warning" role="alert">{t(data.locale, 'invite.rate_limited')}</div>
+	<div class="mx-auto w-full max-w-md">
+		<div class="alert alert-warning alert-soft" role="alert">
+			{t(data.locale, 'invite.rate_limited')}
+		</div>
+	</div>
 {:else if !data.invite}
-	<div class="alert alert-error" role="alert">{t(data.locale, 'invite.invalid')}</div>
+	<div class="mx-auto w-full max-w-md">
+		<div class="alert alert-error alert-soft" role="alert">{t(data.locale, 'invite.invalid')}</div>
+	</div>
 {:else}
-	<h1 class="mb-4 text-2xl font-bold">
-		{t(data.locale, 'invite.join_title', { group: data.invite.groupName })}
-	</h1>
+	<FormCard title={t(data.locale, 'invite.join_title', { group: data.invite.groupName })}>
+		{#if form?.error}
+			<div class="alert alert-error alert-soft" role="alert">{t(data.locale, form.error)}</div>
+		{/if}
 
-	{#if form?.error}
-		<div class="alert alert-error mb-4" role="alert">{t(data.locale, form.error)}</div>
-	{/if}
+		{#if data.user}
+			<p>{t(data.locale, 'invite.join_as', { name: data.user.displayName })}</p>
+			<form method="POST">
+				<button class="btn btn-primary min-h-11 w-full"
+					>{t(data.locale, 'invite.join_submit')}</button
+				>
+			</form>
+		{:else}
+			<form method="POST" class="flex flex-col gap-2">
+				<Field label={t(data.locale, 'auth.username')} hint={t(data.locale, 'auth.username_hint')}>
+					<input
+						name="username"
+						required
+						minlength="3"
+						maxlength="32"
+						autocomplete="username"
+						class="input min-h-11 w-full"
+					/>
+				</Field>
 
-	{#if data.user}
-		<p class="mb-4">{t(data.locale, 'invite.join_as', { name: data.user.displayName })}</p>
-		<form method="POST">
-			<button class="btn btn-primary min-h-11">{t(data.locale, 'invite.join_submit')}</button>
-		</form>
-	{:else}
-		<form method="POST" class="flex flex-col gap-3">
-			<label class="form-control">
-				<span class="label-text">{t(data.locale, 'auth.username')}</span>
-				<input
-					name="username"
-					required
-					minlength="3"
-					maxlength="32"
-					autocomplete="username"
-					class="input input-bordered min-h-11"
-				/>
-				<span class="label-text-alt">{t(data.locale, 'auth.username_hint')}</span>
-			</label>
+				<Field
+					label={t(data.locale, 'auth.display_name')}
+					hint={t(data.locale, 'auth.display_name_hint')}
+				>
+					<input
+						name="displayName"
+						required
+						maxlength="60"
+						autocomplete="nickname"
+						class="input min-h-11 w-full"
+					/>
+				</Field>
 
-			<label class="form-control">
-				<span class="label-text">{t(data.locale, 'auth.display_name')}</span>
-				<input
-					name="displayName"
-					required
-					maxlength="60"
-					autocomplete="nickname"
-					class="input input-bordered min-h-11"
-				/>
-				<span class="label-text-alt">{t(data.locale, 'auth.display_name_hint')}</span>
-			</label>
+				<Field label={t(data.locale, 'auth.password')} hint={t(data.locale, 'auth.password_hint')}>
+					<input
+						name="password"
+						type="password"
+						required
+						minlength="8"
+						maxlength="200"
+						autocomplete="new-password"
+						class="input min-h-11 w-full"
+					/>
+				</Field>
 
-			<label class="form-control">
-				<span class="label-text">{t(data.locale, 'auth.password')}</span>
-				<input
-					name="password"
-					type="password"
-					required
-					minlength="8"
-					maxlength="200"
-					autocomplete="new-password"
-					class="input input-bordered min-h-11"
-				/>
-				<span class="label-text-alt">{t(data.locale, 'auth.password_hint')}</span>
-			</label>
+				<Field label={t(data.locale, 'auth.password_repeat')}>
+					<input
+						name="passwordRepeat"
+						type="password"
+						required
+						minlength="8"
+						maxlength="200"
+						autocomplete="new-password"
+						class="input min-h-11 w-full"
+					/>
+				</Field>
 
-			<label class="form-control">
-				<span class="label-text">{t(data.locale, 'auth.password_repeat')}</span>
-				<input
-					name="passwordRepeat"
-					type="password"
-					required
-					minlength="8"
-					maxlength="200"
-					autocomplete="new-password"
-					class="input input-bordered min-h-11"
-				/>
-			</label>
+				<button class="btn btn-primary mt-2 min-h-11 w-full"
+					>{t(data.locale, 'invite.join_submit')}</button
+				>
+			</form>
 
-			<button class="btn btn-primary min-h-11">{t(data.locale, 'invite.join_submit')}</button>
-		</form>
-
-		<p class="mt-4 text-sm">
-			<a class="link" href="/login?redirectTo=/join/{data.token}">
-				{t(data.locale, 'invite.have_account')}
-			</a>
-		</p>
-	{/if}
+			<p class="text-sm">
+				<a class="link" href="/login?redirectTo=/join/{data.token}">
+					{t(data.locale, 'invite.have_account')}
+				</a>
+			</p>
+		{/if}
+	</FormCard>
 {/if}

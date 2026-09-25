@@ -1,2 +1,91 @@
 @import 'tailwindcss';
-@plugin 'daisyui';
+@plugin 'daisyui' {
+	themes: false;
+}
+
+/*
+ * Clean modern, amber accent (docs/superpowers/specs/2026-09-25-look-and-feel-design.md).
+ * Amber is a FILL: dark ink on amber is 8.1:1 (light) / 10.5:1 (dark), but amber text
+ * on white is 2.2:1 and fails WCAG AA. Never use text-primary or link-primary on a
+ * light surface.
+ */
+@plugin 'daisyui/theme' {
+	name: 'filmnacht-light';
+	default: true;
+	color-scheme: light;
+	--color-base-100: #ffffff;
+	--color-base-200: #f4f4f5;
+	--color-base-300: #e4e4e7;
+	--color-base-content: #18181b;
+	--color-primary: #f59e0b;
+	--color-primary-content: #1c1917;
+	--color-secondary: #e4e4e7;
+	--color-secondary-content: #18181b;
+	--color-accent: #f59e0b;
+	--color-accent-content: #1c1917;
+	--color-neutral: #27272a;
+	--color-neutral-content: #fafafa;
+	--color-info: #2563eb;
+	--color-info-content: #ffffff;
+	--color-success: #15803d;
+	--color-success-content: #ffffff;
+	--color-warning: #f59e0b;
+	--color-warning-content: #1c1917;
+	--color-error: #dc2626;
+	--color-error-content: #ffffff;
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 1rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+}
+
+@plugin 'daisyui/theme' {
+	name: 'filmnacht-dark';
+	prefersdark: true;
+	color-scheme: dark;
+	--color-base-100: #18181b;
+	--color-base-200: #0f0f11;
+	--color-base-300: #27272a;
+	--color-base-content: #f4f4f5;
+	--color-primary: #fbbf24;
+	--color-primary-content: #1c1917;
+	--color-secondary: #27272a;
+	--color-secondary-content: #f4f4f5;
+	--color-accent: #fbbf24;
+	--color-accent-content: #1c1917;
+	--color-neutral: #3f3f46;
+	--color-neutral-content: #fafafa;
+	--color-info: #60a5fa;
+	--color-info-content: #0f0f11;
+	--color-success: #4ade80;
+	--color-success-content: #0f0f11;
+	--color-warning: #fbbf24;
+	--color-warning-content: #1c1917;
+	--color-error: #f87171;
+	--color-error-content: #0f0f11;
+	--radius-selector: 0.5rem;
+	--radius-field: 0.5rem;
+	--radius-box: 1rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+}
+
+@layer base {
+	html {
+		font-family:
+			ui-sans-serif,
+			system-ui,
+			-apple-system,
+			'Segoe UI',
+			Roboto,
+			sans-serif;
+		-webkit-tap-highlight-color: transparent;
+	}
+}

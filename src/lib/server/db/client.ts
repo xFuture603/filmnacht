@@ -18,8 +18,38 @@ export function createDb(file: string) {
 
 export type DB = ReturnType<typeof createDb>['db'];
 
+/**
+ * drizzle's migrator wraps every pending migration in one BEGIN...COMMIT (see
+ * SQLiteSyncDialect.migrate), and SQLite silently ignores a change to `PRAGMA
+ * foreign_keys` inside an open transaction — so a rebuild migration's own
+ * `PRAGMA foreign_keys=OFF` statement is a no-op there. SQLite can't ALTER a
+ * foreign key in place, so Drizzle rebuilds the table instead (create
+ * `__new_x`, copy rows, DROP TABLE x, rename); if another table's FK still
+ * points at `x`, that DROP fails with a FOREIGN KEY constraint error even
+ * though nothing is actually wrong. Toggling the pragma here, before
+ * `migrate()` opens its transaction, is SQLite's own documented table-rebuild
+ * procedure — not a workaround.
+ *
+ * Enforcement is off for the whole migration, so `foreign_key_check`
+ * afterwards is the one thing standing between a rebuild that quietly
+ * orphaned or dropped a row and a migration that reports success. Throwing
+ * here fails loudly at migrate time instead of shipping a schema that looks
+ * fine until the first violated row is touched.
+ */
 export function applyMigrations(db: DB, folder = MIGRATIONS_FOLDER): void {
-	migrate(db, { migrationsFolder: folder });
+	const client = db.$client;
+	client.pragma('foreign_keys = OFF');
+	try {
+		migrate(db, { migrationsFolder: folder });
+		const violations = client.pragma('foreign_key_check') as unknown[];
+		if (violations.length > 0) {
+			throw new Error(
+				`Migration left ${violations.length} foreign key violation(s): ${JSON.stringify(violations)}`
+			);
+		}
+	} finally {
+		client.pragma('foreign_keys = ON');
+	}
 }
 
 type Journal = { entries: { idx: number; tag: string }[] };
