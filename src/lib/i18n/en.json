@@ -152,5 +152,9 @@
 	"night.error.no_candidates": "Nobody has suggested anything yet.",
 	"night.error.not_scheduled": "This night is not waiting for a draw.",
 	"night.error.redraw_used": "This night has already been drawn again once.",
-	"night.error.sole_suggestion": "There is only one film in the pool, so drawing again would return it. Add another suggestion first."
+	"night.error.sole_suggestion": "There is only one film in the pool, so drawing again would return it. Add another suggestion first.",
+	"night.cancel": "Cancel this night",
+	"night.mark_watched": "We watched it",
+	"night.mark_watched_hint": "Nothing marks a night watched automatically. Until somebody does, this film does not count towards anyone's turn.",
+	"night.error.not_drawn": "No film has been drawn for this night yet."
 }

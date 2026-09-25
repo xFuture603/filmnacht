@@ -327,6 +327,144 @@ export function drawForNight(
 	});
 }
 
+/**
+ * Allowed from 'scheduled' or 'drawn'; releases the drawn film, if any, back
+ * to 'open'. Refused from 'watched' or 'cancelled' — a watched night's film
+ * must never re-enter the pool, or its author would wrongly get the turn
+ * back that the fairness window already credited them for.
+ */
+export function cancelNight(db: DB, nightId: string, ownerId: string): boolean {
+	const night = db
+		.select({ groupId: movieNights.groupId, suggestionId: movieNights.suggestionId })
+		.from(movieNights)
+		.where(eq(movieNights.id, nightId))
+		.get();
+	if (!night) return false;
+	requireOwner(db, ownerId, night.groupId);
+
+	return db.transaction(() => {
+		// Test-and-set: only a night still in 'scheduled' or 'drawn' claims this.
+		const claimed = db
+			.update(movieNights)
+			.set({ status: 'cancelled' })
+			.where(and(eq(movieNights.id, nightId), inArray(movieNights.status, ['scheduled', 'drawn'])))
+			.run();
+		if (claimed.changes === 0) return false;
+
+		if (night.suggestionId) {
+			db.update(suggestions)
+				.set({ status: 'open' })
+				.where(eq(suggestions.id, night.suggestionId))
+				.run();
+		}
+		return true;
+	});
+}
+
+/** Only from 'drawn'. Manual on purpose — PRD §6 defers the automatic move to v1.0. */
+export function markWatched(db: DB, nightId: string, ownerId: string): boolean {
+	const night = db
+		.select({ groupId: movieNights.groupId })
+		.from(movieNights)
+		.where(eq(movieNights.id, nightId))
+		.get();
+	if (!night) return false;
+	requireOwner(db, ownerId, night.groupId);
+
+	return db.transaction(() => {
+		const claimed = db
+			.update(movieNights)
+			.set({ status: 'watched' })
+			.where(and(eq(movieNights.id, nightId), eq(movieNights.status, 'drawn')))
+			.run();
+		return claimed.changes > 0;
+	});
+}
+
+/** Private sentinel for redraw's all-or-nothing rollback (R3). Never escapes redraw. */
+class RedrawAbort extends Error {
+	constructor(readonly outcome: Extract<DrawOutcome, { ok: false }>) {
+		super('redraw aborted');
+	}
+}
+
+/**
+ * Permitted exactly once per night (PRD §6): more than one existing log entry
+ * means the override is spent. Keeps one implementation of "pick a film"
+ * rather than two that can drift — it releases the drawn suggestion, puts the
+ * night back to 'scheduled', and calls `drawForNight` unchanged.
+ *
+ * Everything, including the permission and status checks, runs inside one
+ * transaction. If any step after the release fails, it throws the private
+ * `RedrawAbort` sentinel, which unwinds the transaction (Drizzle rolls back on
+ * any throw) so a failed re-draw leaves the night exactly as it was: 'drawn',
+ * same film, log untouched.
+ */
+export function redraw(db: DB, nightId: string, ownerId: string, reason: string): DrawOutcome {
+	try {
+		return db.transaction(() => {
+			const night = db
+				.select({
+					groupId: movieNights.groupId,
+					status: movieNights.status,
+					suggestionId: movieNights.suggestionId,
+					drawLog: movieNights.drawLog
+				})
+				.from(movieNights)
+				.where(eq(movieNights.id, nightId))
+				.get();
+			if (!night) throw new RedrawAbort({ ok: false, reason: 'not_found' });
+
+			requireOwner(db, ownerId, night.groupId);
+
+			// Only a night with a drawn film can be re-drawn. Reusing 'not_scheduled'
+			// rather than adding a reason: it already means "not in the state this
+			// transition needs," which is exactly what this is.
+			if (night.status !== 'drawn') {
+				throw new RedrawAbort({ ok: false, reason: 'not_scheduled' });
+			}
+
+			const log = (night.drawLog as DrawLogEntry[] | null) ?? [];
+			if (log.length >= 2) {
+				throw new RedrawAbort({ ok: false, reason: 'redraw_used' });
+			}
+
+			if (night.suggestionId) {
+				db.update(suggestions)
+					.set({ status: 'open' })
+					.where(eq(suggestions.id, night.suggestionId))
+					.run();
+			}
+
+			// Test-and-set, same guard as drawForNight's own claim.
+			const claimed = db
+				.update(movieNights)
+				.set({ status: 'scheduled' })
+				.where(and(eq(movieNights.id, nightId), eq(movieNights.status, 'drawn')))
+				.run();
+			if (claimed.changes === 0) {
+				throw new RedrawAbort({ ok: false, reason: 'not_scheduled' });
+			}
+
+			// Evaluated AFTER releasing the film: a one-film pool must not appear to
+			// reroll (Review Focus 4), and releasing may be the only thing that
+			// still-eligible film had going for it (see: a departed suggester).
+			const candidates = candidatesFor(db, night.groupId);
+			const totalOpen = candidates.reduce((sum, c) => sum + c.suggestionIds.length, 0);
+			if (totalOpen <= 1) {
+				throw new RedrawAbort({ ok: false, reason: 'sole_suggestion' });
+			}
+
+			const outcome = drawForNight(db, nightId, ownerId, reason);
+			if (!outcome.ok) throw new RedrawAbort(outcome);
+			return outcome;
+		});
+	} catch (err) {
+		if (err instanceof RedrawAbort) return err.outcome;
+		throw err;
+	}
+}
+
 /** Appends. Never overwrites — a re-draw must leave the first result readable. */
 function appendDrawLog(db: DB, nightId: string, entry: DrawLogEntry): void {
 	const existing =

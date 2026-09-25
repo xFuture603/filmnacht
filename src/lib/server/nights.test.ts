@@ -9,9 +9,12 @@ import type { DrawLogEntry } from './draw';
 import {
 	LOCATION_MAX,
 	candidatesFor,
+	cancelNight,
 	drawForNight,
 	listNights,
+	markWatched,
 	nightDetail,
+	redraw,
 	respond,
 	scheduleNight
 } from './nights';
@@ -244,5 +247,207 @@ describe('drawForNight', () => {
 		const candidates = candidatesFor(db, groupId);
 		expect(candidates).toHaveLength(1);
 		expect(Number.isFinite(candidates[0].watchedInWindow)).toBe(true);
+	});
+});
+
+describe('cancelNight', () => {
+	it('releases the drawn film back into the pool', () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+
+		expect(cancelNight(db, id, ada)).toBe(true);
+		expect(nightDetail(db, id, ada)?.status).toBe('cancelled');
+		expect(listPool(db, groupId, ada).find((e) => e.title === 'Dune')?.status).toBe('open');
+	});
+
+	it('does not cost the member their turn', () => {
+		// PRD §6, in as many words: "A night that never happened must not cost a
+		// member their turn."
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		cancelNight(db, id, ada);
+
+		expect(candidatesFor(db, groupId).find((c) => c.userId === ada)?.watchedInWindow).toBe(0);
+	});
+
+	it('refuses a non-owner', () => {
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		expect(() => cancelNight(db, id, grace)).toThrow();
+	});
+
+	it('refuses a night that has already been watched, leaving the film alone', () => {
+		// A watched night's film must never be released — the fairness window's
+		// per-suggestion counting depends on it.
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		markWatched(db, id, ada);
+
+		expect(cancelNight(db, id, ada)).toBe(false);
+		expect(nightDetail(db, id, ada)?.status).toBe('watched');
+		expect(listPool(db, groupId, ada).find((e) => e.title === 'Dune')?.status).toBe('drawn');
+	});
+});
+
+describe('markWatched', () => {
+	it('moves the night to watched and starts counting the film', () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+
+		expect(markWatched(db, id, ada)).toBe(true);
+		expect(nightDetail(db, id, ada)?.status).toBe('watched');
+
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		expect(candidatesFor(db, groupId).find((c) => c.userId === ada)?.watchedInWindow).toBe(1);
+	});
+
+	it('refuses a night with no film drawn', () => {
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		expect(markWatched(db, id, ada)).toBe(false);
+		expect(nightDetail(db, id, ada)?.status).toBe('scheduled');
+	});
+});
+
+describe('redraw', () => {
+	it('releases the first film, picks again, and keeps both in the log', () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+
+		const again = redraw(db, id, ada, 'available nowhere');
+		expect(again.ok).toBe(true);
+
+		const log = db
+			.select({ log: movieNights.drawLog })
+			.from(movieNights)
+			.where(eq(movieNights.id, id))
+			.get()?.log as DrawLogEntry[];
+		expect(log).toHaveLength(2);
+		expect(log[1].reason).toBe('available nowhere');
+		// Exactly one film is drawn: the first was released.
+		expect(listPool(db, groupId, ada).filter((e) => e.status === 'drawn')).toHaveLength(1);
+	});
+
+	it('permits the override exactly once', () => {
+		for (const title of ['Dune', 'Arrival', 'Solaris']) {
+			addSuggestion(db, {
+				groupId,
+				userId: ada,
+				movie: { title },
+				settings: DEFAULT_GROUP_SETTINGS
+			});
+		}
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		expect(redraw(db, id, ada, 'first reason').ok).toBe(true);
+		expect(redraw(db, id, ada, 'second reason')).toEqual({ ok: false, reason: 'redraw_used' });
+	});
+
+	it('refuses when only one film exists rather than appearing to reroll', () => {
+		// Review Focus 4. Re-drawing a one-film pool can only return that film, and
+		// pretending otherwise is worse than saying so.
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		expect(redraw(db, id, ada, 'nope')).toEqual({ ok: false, reason: 'sole_suggestion' });
+	});
+
+	it('refuses a night that has already been watched', () => {
+		// A watched night's film must never be released, so a re-draw is refused
+		// the same as any other transition off 'watched'.
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		markWatched(db, id, ada);
+
+		expect(redraw(db, id, ada, 'nope')).toEqual({ ok: false, reason: 'not_scheduled' });
+		expect(nightDetail(db, id, ada)?.status).toBe('watched');
+	});
+
+	it('rolls back completely when the release leaves nothing to redraw into', () => {
+		// R3 (controller ruling): a re-draw that fails after changing state must
+		// undo everything it did. Grace leaves after the first draw, so once her
+		// film is released it is no longer eligible either — the redraw must fail
+		// and leave the night exactly as it was: 'drawn', same film, log of 1.
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		drawForNight(db, id, ada);
+		leaveGroup(db, grace, groupId);
+
+		expect(redraw(db, id, ada, 'no longer works')).toEqual({
+			ok: false,
+			reason: 'sole_suggestion'
+		});
+
+		const detail = nightDetail(db, id, ada);
+		expect(detail?.status).toBe('drawn');
+		expect(detail?.drawnTitle).toBe('Arrival');
+
+		const log = db
+			.select({ log: movieNights.drawLog })
+			.from(movieNights)
+			.where(eq(movieNights.id, id))
+			.get()?.log as DrawLogEntry[];
+		expect(log).toHaveLength(1);
 	});
 });
