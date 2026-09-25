@@ -26,6 +26,25 @@ export function createReset(db: DB, userId: string, now = Date.now()): string {
 }
 
 /**
+ * Retires every outstanding reset for an account without consuming one, and
+ * returns how many died.
+ *
+ * Called when the account's password changes by any other route. A reset link
+ * that outlives the password it was issued to reset can still overwrite the one
+ * its owner just chose — and the moment someone changes their password is
+ * exactly the moment a reset may have been requested on their account by
+ * somebody else. Same shape as the defect Plan 3 shipped, one credential
+ * further out: a revocation path that revokes all but one of the ways in.
+ */
+export function retireResets(db: DB, userId: string, now = Date.now()): number {
+	return db
+		.update(passwordResets)
+		.set({ usedAt: new Date(now) })
+		.where(and(eq(passwordResets.userId, userId), isNull(passwordResets.usedAt)))
+		.run().changes;
+}
+
+/**
  * Resolves the token and marks it used in one transaction, returning the user
  * id or null.
  *
@@ -51,14 +70,8 @@ export function consumeReset(db: DB, token: string, now = Date.now()): string | 
 
 		// Every outstanding token for this account, not just the one presented.
 		// Requesting a reset twice and using the first link must not leave the
-		// second live for the rest of the hour: the password is about to change,
-		// and a credential that outlives the change it authorised is exactly the
-		// shape that shipped once already here, when a password change rotated
-		// the password and left the personal login link alive.
-		db.update(passwordResets)
-			.set({ usedAt: new Date(now) })
-			.where(and(eq(passwordResets.userId, row.userId), isNull(passwordResets.usedAt)))
-			.run();
+		// second live for the rest of the hour.
+		retireResets(db, row.userId, now);
 		return row.userId;
 	});
 }

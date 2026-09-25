@@ -3,6 +3,7 @@ import { reauthenticate } from '$lib/server/auth/reauth';
 import { deleteOtherSessions, SESSION_COOKIE } from '$lib/server/auth/session';
 import { hashToken } from '$lib/server/auth/tokens';
 import { db } from '$lib/server/db';
+import { retireResets } from '$lib/server/resets';
 import { requireUser } from '$lib/server/groups';
 import {
 	EmailTakenError,
@@ -79,6 +80,11 @@ export const actions: Actions = {
 		// profile.password_changed now says in both locales.
 		setPassword(db, user.id, passwordHash);
 		regenerateLoginToken(db, user.id);
+		// Third credential. An emailed reset link outlives the password it was
+		// issued to reset unless it is retired here, and it would then overwrite
+		// the password this member just chose — while the very reason to be on
+		// this form may be a reset email they did not request.
+		retireResets(db, user.id);
 		keepOnlyThisSession(user.id, cookies);
 		return { success: 'profile.password_changed' };
 	},
