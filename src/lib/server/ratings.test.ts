@@ -202,6 +202,17 @@ describe('saveRating', () => {
 		expect(rate(grace, 9)).toEqual({ ok: false, reason: 'locked' });
 		expect(rate(alan, 4)).toEqual({ ok: true, revealed: true });
 	});
+
+	it('does not lock a double submit of the identical rating, only a changed one', () => {
+		// Grace is the sole "I'm in" member, so her own rating reveals immediately.
+		respond(db, nightId, grace, 'yes');
+		expect(rate(grace, 7, 'nice')).toEqual({ ok: true, revealed: true });
+		// A resubmit of the exact same score and comment (e.g. a double click) is not a lock violation.
+		expect(rate(grace, 7, 'nice')).toEqual({ ok: true, revealed: true });
+		// A genuinely different value is still refused.
+		expect(rate(grace, 9, 'nice')).toEqual({ ok: false, reason: 'locked' });
+		expect(rate(grace, 7, 'different')).toEqual({ ok: false, reason: 'locked' });
+	});
 });
 
 describe('withdrawRating', () => {

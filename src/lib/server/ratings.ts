@@ -76,7 +76,7 @@ function isRevealed(night: NightRow, settings: GroupSettings, now: Date): boolea
 
 function myRating(db: DB, nightId: string, userId: string) {
 	return db
-		.select({ id: ratings.id })
+		.select({ id: ratings.id, scoreX2: ratings.scoreX2, comment: ratings.comment })
 		.from(ratings)
 		.where(and(eq(ratings.movieNightId, nightId), eq(ratings.userId, userId)))
 		.get();
@@ -150,7 +150,14 @@ export function saveRating(
 		// must act on.
 		const revealedAt = nightRow(db, input.nightId)?.revealedAt ?? null;
 		const existing = myRating(db, input.nightId, input.userId);
-		if (existing && revealedAt !== null) return { ok: false, reason: 'locked' } as const;
+		if (existing && revealedAt !== null) {
+			// A resubmit of the exact same score and comment (e.g. a double click)
+			// is not a lock violation: nothing would actually change.
+			if (existing.scoreX2 === input.scoreX2 && existing.comment === comment) {
+				return { ok: true, revealed: true } as const;
+			}
+			return { ok: false, reason: 'locked' } as const;
+		}
 
 		// One rating per (night, member), enforced here rather than by a unique
 		// index (R2): the former-member placeholder is one row shared by every
@@ -287,7 +294,7 @@ export function ratingView(
 		.from(ratings)
 		.leftJoin(users, eq(users.id, ratings.userId))
 		.where(eq(ratings.movieNightId, nightId))
-		.orderBy(ratings.createdAt)
+		.orderBy(ratings.createdAt, ratings.id)
 		.all();
 	const nameOf = (r: (typeof rows)[number]) =>
 		r.username === FORMER_MEMBER_USERNAME ? formerLabel : (r.displayName ?? formerLabel);
