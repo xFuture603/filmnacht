@@ -1,3 +1,4 @@
+import { t } from '$lib/i18n';
 import { db } from '$lib/server/db';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import {
@@ -11,6 +12,7 @@ import {
 	respond,
 	type DrawOutcome
 } from '$lib/server/nights';
+import { parseScore, ratingView, revealNow, saveRating, withdrawRating } from '$lib/server/ratings';
 import { getTimezone } from '$lib/server/settings';
 import { formatWhen } from '$lib/server/time';
 import { error, fail } from '@sveltejs/kit';
@@ -65,10 +67,16 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	// A cancelled night keeps its suggestionId, but its film was released: show none.
 	const hasFilm = drawnTitle !== null && (night.status === 'drawn' || night.status === 'watched');
 
+	const now = new Date();
+	const ratings = ratingView(db, params.nightId, user.id, now, t(locals.locale, 'ratings.former'));
+	if (!ratings) error(404, 'Not found');
+	const timezone = getTimezone(db);
+	const w = ratings.window;
+
 	return {
 		group,
 		isOwner: group.role === 'owner',
-		night: { ...rest, when: formatWhen(night.scheduledAt, getTimezone(db), locals.locale) },
+		night: { ...rest, when: formatWhen(night.scheduledAt, timezone, locals.locale) },
 		film:
 			visible && hasFilm
 				? { title: drawnTitle, by: drawnBy, byFormer: drawnByFormer, onlyCandidate }
@@ -76,7 +84,12 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		filmHidden: !visible && hasFilm,
 		// PRD §6: Draw is disabled, with the reason, when nothing can be drawn.
 		canDraw: candidatesFor(db, params.groupId).length > 0,
-		reasonMax: REASON_MAX
+		reasonMax: REASON_MAX,
+		ratings,
+		ratingTimes: {
+			opens: w.state === 'before' ? formatWhen(w.opensAt, timezone, locals.locale) : null,
+			closed: w.state === 'closed' ? formatWhen(w.closedAt, timezone, locals.locale) : null
+		}
 	};
 };
 
@@ -128,5 +141,48 @@ export const actions: Actions = {
 			return fail(400, { error: 'night.error.not_drawn' });
 		}
 		return { watched: true };
+	},
+
+	rate: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
+		requireMember(db, user.id, params.groupId);
+		nightIn(params.groupId, params.nightId, user.id);
+		const form = await request.formData();
+		const scoreX2 = parseScore(form.get('score'));
+		if (scoreX2 === null) return fail(400, { error: 'ratings.error.score' });
+		const outcome = saveRating(db, {
+			nightId: params.nightId,
+			userId: user.id,
+			scoreX2,
+			comment: String(form.get('comment') ?? ''),
+			now: new Date()
+		});
+		if (!outcome.ok) {
+			if (outcome.reason === 'not_found') error(404, 'Not found');
+			return fail(400, { error: `ratings.error.${outcome.reason}` });
+		}
+		return { rated: true, revealed: outcome.revealed };
+	},
+
+	withdrawRating: ({ locals, params }) => {
+		const user = requireUser(locals);
+		requireMember(db, user.id, params.groupId);
+		nightIn(params.groupId, params.nightId, user.id);
+		const outcome = withdrawRating(db, {
+			nightId: params.nightId,
+			userId: user.id,
+			now: new Date()
+		});
+		if (outcome !== 'ok') return fail(400, { error: `ratings.error.${outcome}` });
+		return { withdrawn: true };
+	},
+
+	reveal: async ({ request, locals, params }) => {
+		const user = ownerOf(locals, params);
+		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		const outcome = revealNow(db, { nightId: params.nightId, ownerId: user.id, now: new Date() });
+		if (outcome === 'not_found') error(404, 'Not found');
+		if (outcome !== 'ok') return fail(400, { error: `ratings.error.${outcome}` });
+		return { revealed: true };
 	}
 };

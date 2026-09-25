@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import { LOCATION_MAX, listNights, scheduleNight } from '$lib/server/nights';
+import { averagesFor } from '$lib/server/ratings';
 import { getTimezone } from '$lib/server/settings';
 import { formatWhen, wallTimeToUtc } from '$lib/server/time';
 import { fail, redirect } from '@sveltejs/kit';
@@ -12,10 +13,12 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	const group = requireMember(db, user.id, params.groupId);
 	const timezone = getTimezone(db);
 	const now = Date.now();
+	const averages = averagesFor(db, params.groupId, group.settings, new Date());
 	// listNights is latest-first; what is coming reads better soonest-first.
 	const nights = listNights(db, params.groupId).map((night) => ({
 		...night,
-		when: formatWhen(night.scheduledAt, timezone, locals.locale)
+		when: formatWhen(night.scheduledAt, timezone, locals.locale),
+		average: averages.get(night.id) ?? null
 	}));
 	return {
 		group,

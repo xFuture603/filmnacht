@@ -8,6 +8,14 @@
 
 	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
 	const answers = ['yes', 'maybe', 'no'] as const;
+
+	let score = $state<number>(data.ratings.mine?.score ?? 5);
+	const fmt = (n: number) =>
+		new Intl.NumberFormat(data.locale === 'de' ? 'de-DE' : 'en-GB', {
+			minimumFractionDigits: 1,
+			maximumFractionDigits: 1
+		}).format(Number(n));
+	const signed = (n: number) => (n > 0 ? '+' : '') + fmt(n);
 </script>
 
 <a class="btn btn-ghost btn-sm mb-2 min-h-11 px-2" href="/groups/{data.group.groupId}/nights">
@@ -64,6 +72,137 @@
 		{/if}
 	</div>
 </section>
+
+{#if data.ratings.window.state !== 'not_ratable'}
+	<section class={card}>
+		<div class="card-body">
+			<h2 class="card-title text-lg">{t(data.locale, 'ratings.title')}</h2>
+
+			{#if data.ratings.window.state === 'before'}
+				<p class="text-base-content/70">
+					{t(data.locale, 'ratings.opens', { when: data.ratingTimes.opens ?? '' })}
+				</p>
+			{:else}
+				{#if (data.ratings.window.state === 'open' && !data.ratings.revealed) || (data.ratings.revealed && data.ratings.mine === null)}
+					<form method="POST" action="?/rate" class="flex flex-col gap-2">
+						<Field label={t(data.locale, 'ratings.score')}>
+							<output for="score" class="text-4xl font-bold tabular-nums">{fmt(score)}</output>
+							<input
+								id="score"
+								type="range"
+								name="score"
+								min="1"
+								max="10"
+								step="0.5"
+								bind:value={score}
+								class="range range-primary w-full"
+							/>
+							<div class="flex justify-between text-xs text-base-content/70" aria-hidden="true">
+								<span>1</span><span>5</span><span>10</span>
+							</div>
+						</Field>
+						<Field label={t(data.locale, 'ratings.comment')}>
+							<textarea name="comment" maxlength="500" rows="2" class="textarea w-full"
+								>{data.ratings.mine?.comment ?? ''}</textarea
+							>
+						</Field>
+						<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start">
+							{t(data.locale, 'ratings.save')}
+						</button>
+					</form>
+
+					{#if data.ratings.mine && !data.ratings.revealed}
+						<form method="POST" action="?/withdrawRating">
+							<button class="btn btn-ghost min-h-11">{t(data.locale, 'ratings.withdraw')}</button>
+						</form>
+					{/if}
+				{:else if data.ratings.revealed && data.ratings.mine}
+					<p class="text-4xl font-bold tabular-nums">{fmt(data.ratings.mine.score)}</p>
+					<p class="text-base-content/70">{t(data.locale, 'ratings.locked')}</p>
+				{/if}
+
+				{#if !data.ratings.revealed && data.ratings.window.state === 'open'}
+					{#if data.ratings.count === 0}
+						<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.none_yet')}</p>
+					{:else}
+						<p class="text-sm text-base-content/70">
+							{t(data.locale, 'ratings.count', {
+								count: data.ratings.count,
+								names: data.ratings.rated.join(', ')
+							})}
+						</p>
+					{/if}
+					{#if data.ratings.waitingFor.length > 0}
+						<p class="text-sm text-base-content/70">
+							{t(data.locale, 'ratings.waiting', { names: data.ratings.waitingFor.join(', ') })}
+						</p>
+					{/if}
+
+					{#if data.isOwner}
+						<form method="POST" action="?/reveal" class="mt-2 flex flex-col gap-1">
+							<label class="flex min-h-11 cursor-pointer items-center gap-3">
+								<input type="checkbox" name="confirm" required class="checkbox" />
+								<span>{t(data.locale, 'ratings.confirm_reveal')}</span>
+							</label>
+							<button class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
+								>{t(data.locale, 'ratings.reveal')}</button
+							>
+						</form>
+					{/if}
+				{/if}
+
+				{#if data.ratings.results}
+					{@const results = data.ratings.results}
+					<div class="mt-2">
+						<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.average')}</p>
+						<p class="text-4xl font-bold tabular-nums">{fmt(results.average)}</p>
+					</div>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.lowest')}</p>
+							<p class="tabular-nums">
+								{fmt(results.lowest.score)} · {results.lowest.names.join(', ')}
+							</p>
+						</div>
+						<div>
+							<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.highest')}</p>
+							<p class="tabular-nums">
+								{fmt(results.highest.score)} · {results.highest.names.join(', ')}
+							</p>
+						</div>
+					</div>
+					{#if results.tmdb}
+						<p class="text-sm text-base-content/70">
+							{t(data.locale, 'ratings.tmdb', {
+								delta: signed(results.tmdb.delta),
+								tmdb: fmt(results.tmdb.rating)
+							})}
+						</p>
+					{/if}
+					<ul class="divide-y divide-base-300">
+						{#each results.ratings as r (r.name + r.score)}
+							<li class="flex flex-col gap-1 py-2">
+								<div class="flex items-center justify-between gap-2">
+									<span class="min-w-0 truncate">{r.name}</span>
+									<span class="tabular-nums">{fmt(r.score)}</span>
+								</div>
+								{#if r.comment}
+									<p class="text-sm break-words text-base-content/70">{r.comment}</p>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				{#if data.ratings.window.state === 'closed'}
+					<p class="text-sm text-base-content/70">
+						{t(data.locale, 'ratings.closed', { when: data.ratingTimes.closed ?? '' })}
+					</p>
+				{/if}
+			{/if}
+		</div>
+	</section>
+{/if}
 
 {#if data.night.status === 'scheduled' || data.night.status === 'drawn'}
 	<section class={card}>
