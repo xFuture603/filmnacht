@@ -54,6 +54,14 @@
 		{:else}
 			<p class="text-base-content/70">{t(data.locale, `nights.status.${data.night.status}`)}</p>
 		{/if}
+		{#if data.night.redrawn}
+			<p class="text-sm break-words text-base-content/70">
+				{t(data.locale, 'night.redrawn', {
+					name: data.night.redrawn.byName,
+					reason: data.night.redrawn.reason
+				})}
+			</p>
+		{/if}
 	</div>
 </section>
 
@@ -98,13 +106,25 @@
 			<h2 class="card-title text-lg">{t(data.locale, 'night.owner')}</h2>
 
 			{#if data.night.status === 'scheduled'}
-				<form method="POST" action="?/draw">
-					<button class="btn btn-primary min-h-11 w-full sm:w-auto">
+				<form method="POST" action="?/draw" class="flex flex-col gap-1">
+					<button
+						class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
+						disabled={!data.canDraw}
+					>
 						<Icon name="dice" class="size-5" />{t(data.locale, 'night.draw')}
 					</button>
+					{#if !data.canDraw}
+						<p class="text-sm text-base-content/70">
+							{t(data.locale, 'night.error.no_candidates')}
+						</p>
+					{/if}
 				</form>
 			{:else}
 				<form method="POST" action="?/markWatched" class="flex flex-col gap-1">
+					<label class="flex min-h-11 cursor-pointer items-center gap-3">
+						<input type="checkbox" name="confirm" required class="checkbox" />
+						<span>{t(data.locale, 'night.confirm_watched')}</span>
+					</label>
 					<button class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
 						>{t(data.locale, 'night.mark_watched')}</button
 					>
@@ -131,8 +151,12 @@
 				{/if}
 			{/if}
 
-			<form method="POST" action="?/cancel" class="mt-2">
-				<button class="btn btn-ghost min-h-11 w-full text-error sm:w-auto"
+			<form method="POST" action="?/cancel" class="mt-2 flex flex-col gap-1">
+				<label class="flex min-h-11 cursor-pointer items-center gap-3">
+					<input type="checkbox" name="confirm" required class="checkbox" />
+					<span>{t(data.locale, 'night.confirm_cancel')}</span>
+				</label>
+				<button class="btn btn-ghost min-h-11 w-full text-error sm:w-auto sm:self-start"
 					>{t(data.locale, 'night.cancel')}</button
 				>
 			</form>

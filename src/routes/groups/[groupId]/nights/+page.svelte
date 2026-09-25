@@ -52,7 +52,10 @@
 				<div class="alert alert-error alert-soft" role="alert">{t(data.locale, form.error)}</div>
 			{/if}
 			<form method="POST" action="?/schedule" class="flex flex-col gap-2">
-				<Field label={t(data.locale, 'nights.when')}>
+				<Field
+					label={t(data.locale, 'nights.when')}
+					hint={t(data.locale, 'nights.when_hint', { zone: data.timezone })}
+				>
 					<input
 						type="datetime-local"
 						name="when"

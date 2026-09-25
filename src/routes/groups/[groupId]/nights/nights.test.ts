@@ -86,5 +86,21 @@ describe('the list', () => {
 		expect(data.upcoming).toHaveLength(1);
 		expect(data.upcoming[0].when).toContain('20:00');
 		expect(data.isOwner).toBe(false);
+		expect(data.timezone).toBe('Europe/Berlin');
+	});
+
+	it('gives somebody outside the group a 404', async () => {
+		const mallory = createUser(db, {
+			username: 'mallory',
+			displayName: 'Mallory',
+			passwordHash: 'x'
+		}).id;
+		let status: number | undefined;
+		try {
+			await load({ params: { groupId }, locals: locals(mallory) } as never);
+		} catch (e) {
+			status = (e as { status: number }).status;
+		}
+		expect(status).toBe(404);
 	});
 });

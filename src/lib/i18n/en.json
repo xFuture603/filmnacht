@@ -146,10 +146,10 @@
 	"night.draw": "Draw a film",
 	"night.redraw": "Draw again",
 	"night.redraw_reason": "Why are you drawing again?",
-	"night.drawn_one": "Only one film was suggested, so {title} it is — no dice were rolled.",
+	"night.drawn_one": "Only one film could be drawn, so {title} it is — no dice were rolled.",
 	"night.drawn": "{title}, suggested by {name}.",
 	"night.drawn_former": "{title}, suggested by a member who has since left.",
-	"night.error.no_candidates": "Nobody has suggested anything yet.",
+	"night.error.no_candidates": "Nobody has a film that can be drawn right now.",
 	"night.error.not_scheduled": "This night is not waiting for a draw.",
 	"night.error.redraw_used": "This night has already been drawn again once.",
 	"night.error.sole_suggestion": "There is only one film in the pool, so drawing again would return it. Add another suggestion first.",
@@ -169,5 +169,10 @@
 	"night.redraw_hint": "One re-draw per night. Both results stay on record.",
 	"night.error.reason": "Say briefly why you are drawing again.",
 	"night.error.cannot_cancel": "This night can no longer be cancelled.",
-	"night.error.response": "That is not an answer this page offers."
+	"night.error.response": "That is not an answer this page offers.",
+	"night.redrawn": "Re-drawn by {name}. Reason: {reason}",
+	"night.confirm_cancel": "Yes, cancel this night",
+	"night.confirm_watched": "Yes, we watched it",
+	"night.error.confirm": "Tick the box to confirm.",
+	"nights.when_hint": "In {zone} time."
 }

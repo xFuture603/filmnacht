@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import {
+	candidatesFor,
 	cancelNight,
 	drawForNight,
 	isResultVisible,
@@ -47,6 +48,11 @@ function refused(outcome: Extract<DrawOutcome, { ok: false }>, notScheduledKey: 
 	return fail(400, { error: key });
 }
 
+/** Cancel and Mark watched cannot be undone, so each needs its box ticked (R14). */
+async function confirmed(request: Request) {
+	return (await request.formData()).get('confirm') === 'on';
+}
+
 export const load: PageServerLoad = ({ locals, params }) => {
 	const user = requireUser(locals);
 	const group = requireMember(db, user.id, params.groupId);
@@ -56,16 +62,20 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	// `data` is readable in the page source, and the group was promised a surprise.
 	const visible = isResultVisible(group.settings, night.scheduledAt, new Date());
 	const { drawnTitle, drawnBy, drawnByFormer, onlyCandidate, ...rest } = night;
+	// A cancelled night keeps its suggestionId, but its film was released: show none.
+	const hasFilm = drawnTitle !== null && (night.status === 'drawn' || night.status === 'watched');
 
 	return {
 		group,
 		isOwner: group.role === 'owner',
 		night: { ...rest, when: formatWhen(night.scheduledAt, getTimezone(db), locals.locale) },
 		film:
-			visible && drawnTitle !== null
+			visible && hasFilm
 				? { title: drawnTitle, by: drawnBy, byFormer: drawnByFormer, onlyCandidate }
 				: null,
-		filmHidden: !visible && drawnTitle !== null,
+		filmHidden: !visible && hasFilm,
+		// PRD §6: Draw is disabled, with the reason, when nothing can be drawn.
+		canDraw: candidatesFor(db, params.groupId).length > 0,
 		reasonMax: REASON_MAX
 	};
 };
@@ -100,16 +110,20 @@ export const actions: Actions = {
 		return { drawn: true };
 	},
 
-	cancel: ({ locals, params }) => {
+	cancel: async ({ request, locals, params }) => {
 		const user = ownerOf(locals, params);
+		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		// Nothing awaits after this line.
 		if (!cancelNight(db, params.nightId, user.id)) {
 			return fail(400, { error: 'night.error.cannot_cancel' });
 		}
 		return { cancelled: true };
 	},
 
-	markWatched: ({ locals, params }) => {
+	markWatched: async ({ request, locals, params }) => {
 		const user = ownerOf(locals, params);
+		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		// Nothing awaits after this line.
 		if (!markWatched(db, params.nightId, user.id)) {
 			return fail(400, { error: 'night.error.not_drawn' });
 		}

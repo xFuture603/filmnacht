@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { DEFAULT_GROUP_SETTINGS, groups, movieNights } from '$lib/server/db/schema';
 import { addMember, createGroup } from '$lib/server/groups';
-import { drawForNight, nightDetail, scheduleNight } from '$lib/server/nights';
+import { cancelNight, drawForNight, nightDetail, scheduleNight } from '$lib/server/nights';
 import { addSuggestion } from '$lib/server/suggestions';
 import { createUser } from '$lib/server/users';
 
@@ -168,7 +168,7 @@ describe('who may act on a night', () => {
 	});
 
 	it('lets the owner mark the night watched', async () => {
-		expect(await post('markWatched', ada)).toEqual({ watched: true });
+		expect(await post('markWatched', ada, { confirm: 'on' })).toEqual({ watched: true });
 		expect(nightDetail(db, nightId, ada)?.status).toBe('watched');
 	});
 
@@ -180,5 +180,38 @@ describe('who may act on a night', () => {
 	it('says plainly why a one-film pool cannot be drawn again', async () => {
 		const result = await post('redraw', ada, { reason: 'seen it' });
 		expect(result).toMatchObject({ status: 400, data: { error: 'night.error.sole_suggestion' } });
+	});
+
+	it('refuses to cancel or mark watched without the confirming tick', async () => {
+		// R14: both are irreversible, so one stray tap must not do either.
+		for (const action of ['cancel', 'markWatched'] as const) {
+			expect(await post(action, ada)).toMatchObject({
+				status: 400,
+				data: { error: 'night.error.confirm' }
+			});
+		}
+		expect(nightDetail(db, nightId, ada)?.status).toBe('drawn');
+		expect(await post('cancel', ada, { confirm: 'on' })).toEqual({ cancelled: true });
+	});
+});
+
+describe('the night page', () => {
+	it('shows no film for a cancelled night', async () => {
+		cancelNight(db, nightId, ada);
+		const data = await view(grace);
+		expect(data.film).toBeNull();
+		expect(data.filmHidden).toBe(false);
+	});
+
+	it('disables Draw when nobody has a film that can be drawn', async () => {
+		const empty = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		expect((await view(ada, { groupId, nightId: empty })).canDraw).toBe(false);
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		expect((await view(ada, { groupId, nightId: empty })).canDraw).toBe(true);
 	});
 });

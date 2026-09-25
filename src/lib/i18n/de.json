@@ -144,10 +144,10 @@
 	"night.draw": "Film ziehen",
 	"night.redraw": "Neu ziehen",
 	"night.redraw_reason": "Warum wird neu gezogen?",
-	"night.drawn_one": "Es wurde nur ein Film vorgeschlagen, also wird es {title} — gewürfelt wurde nicht.",
+	"night.drawn_one": "Nur ein Film kam infrage, also wird es {title} — gewürfelt wurde nicht.",
 	"night.drawn": "{title}, vorgeschlagen von {name}.",
 	"night.drawn_former": "{title}, vorgeschlagen von einem Mitglied, das die Gruppe verlassen hat.",
-	"night.error.no_candidates": "Es hat noch niemand etwas vorgeschlagen.",
+	"night.error.no_candidates": "Gerade hat niemand einen Film, der gezogen werden kann.",
 	"night.error.not_scheduled": "Für diese Filmnacht steht keine Ziehung an.",
 	"night.error.redraw_used": "Für diese Filmnacht wurde schon einmal neu gezogen.",
 	"night.error.sole_suggestion": "Es liegt nur ein Film im Pool, neu ziehen würde ihn wieder liefern. Schlag zuerst einen weiteren vor.",
@@ -167,5 +167,10 @@
 	"night.redraw_hint": "Pro Filmnacht darf einmal neu gezogen werden. Beide Ergebnisse bleiben festgehalten.",
 	"night.error.reason": "Sag kurz, warum neu gezogen wird.",
 	"night.error.cannot_cancel": "Diese Filmnacht kann nicht mehr abgesagt werden.",
-	"night.error.response": "Diese Antwort gibt es hier nicht."
+	"night.error.response": "Diese Antwort gibt es hier nicht.",
+	"night.redrawn": "Neu gezogen von {name}. Grund: {reason}",
+	"night.confirm_cancel": "Ja, Filmnacht absagen",
+	"night.confirm_watched": "Ja, wir haben ihn gesehen",
+	"night.error.confirm": "Setz den Haken zur Bestätigung.",
+	"nights.when_hint": "Uhrzeit in {zone}."
 }

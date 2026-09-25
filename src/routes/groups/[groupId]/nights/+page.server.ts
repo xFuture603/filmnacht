@@ -22,7 +22,8 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		isOwner: group.role === 'owner',
 		upcoming: nights.filter((n) => n.scheduledAt.getTime() >= now).reverse(),
 		past: nights.filter((n) => n.scheduledAt.getTime() < now),
-		locationMax: LOCATION_MAX
+		locationMax: LOCATION_MAX,
+		timezone
 	};
 };
 
