@@ -12,7 +12,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	return {
 		group,
 		members: listMembers(db, params.groupId),
-		pool: listPool(db, params.groupId, user.id, group.settings),
+		pool: listPool(db, params.groupId, user.id),
 		used: countOpenSuggestions(db, params.groupId, user.id),
 		max: group.settings.maxOpenSuggestions
 	};

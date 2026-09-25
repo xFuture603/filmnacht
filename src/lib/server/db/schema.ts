@@ -17,7 +17,6 @@ export type GroupSettings = {
 	resultVisible: 'immediately' | 'on_night';
 	nightEndsAfterMinutes: number;
 	ratingWindowDays: number;
-	repeatDrawnFilms: boolean;
 };
 
 export const DEFAULT_GROUP_SETTINGS: GroupSettings = {
@@ -25,8 +24,7 @@ export const DEFAULT_GROUP_SETTINGS: GroupSettings = {
 	drawMode: 'fairness',
 	resultVisible: 'immediately',
 	nightEndsAfterMinutes: 180,
-	ratingWindowDays: 7,
-	repeatDrawnFilms: false
+	ratingWindowDays: 7
 };
 
 export const users = sqliteTable('users', {

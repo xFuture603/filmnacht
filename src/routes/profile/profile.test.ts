@@ -276,48 +276,48 @@ describe('changePassword', () => {
 	});
 });
 
-	it('retires an outstanding reset link when the password changes', async () => {
-		// The third credential. Found by the whole-branch pass: setPassword and
-		// regenerateLoginToken and the session sweep were all here, and a reset
-		// link sitting in a mailbox was not — so it outlived the password it was
-		// issued to reset and could overwrite the one Ada just chose. And the
-		// moment someone is on this form may be precisely because a reset they did
-		// not ask for landed in their inbox.
-		const token = createReset(db, ada.id);
-		await post('changePassword', {
-			currentPassword: PASSWORD,
-			newPassword: NEW_PASSWORD,
-			passwordRepeat: NEW_PASSWORD
-		});
-		expect(consumeReset(db, token)).toBeNull();
+it('retires an outstanding reset link when the password changes', async () => {
+	// The third credential. Found by the whole-branch pass: setPassword and
+	// regenerateLoginToken and the session sweep were all here, and a reset
+	// link sitting in a mailbox was not — so it outlived the password it was
+	// issued to reset and could overwrite the one Ada just chose. And the
+	// moment someone is on this form may be precisely because a reset they did
+	// not ask for landed in their inbox.
+	const token = createReset(db, ada.id);
+	await post('changePassword', {
+		currentPassword: PASSWORD,
+		newPassword: NEW_PASSWORD,
+		passwordRepeat: NEW_PASSWORD
 	});
+	expect(consumeReset(db, token)).toBeNull();
+});
 
-	it('leaves another member’s outstanding reset link alone', async () => {
-		// What survives matters as much as what dies: retiring every reset row in
-		// the table would pass the test above while locking the whole group out of
-		// recovery.
-		const mine = createReset(db, ada.id);
-		const hers = createReset(db, grace.id);
-		await post('changePassword', {
-			currentPassword: PASSWORD,
-			newPassword: NEW_PASSWORD,
-			passwordRepeat: NEW_PASSWORD
-		});
-		expect(consumeReset(db, mine)).toBeNull();
-		expect(consumeReset(db, hers)).toBe(grace.id);
+it('leaves another member’s outstanding reset link alone', async () => {
+	// What survives matters as much as what dies: retiring every reset row in
+	// the table would pass the test above while locking the whole group out of
+	// recovery.
+	const mine = createReset(db, ada.id);
+	const hers = createReset(db, grace.id);
+	await post('changePassword', {
+		currentPassword: PASSWORD,
+		newPassword: NEW_PASSWORD,
+		passwordRepeat: NEW_PASSWORD
 	});
+	expect(consumeReset(db, mine)).toBeNull();
+	expect(consumeReset(db, hers)).toBe(grace.id);
+});
 
-	it('retires nothing when the current password is wrong', async () => {
-		// A refused change must not cost the member their recovery link — that
-		// would turn a wrong guess into a denial of service on recovery.
-		const token = createReset(db, ada.id);
-		await post('changePassword', {
-			currentPassword: 'not her password',
-			newPassword: NEW_PASSWORD,
-			passwordRepeat: NEW_PASSWORD
-		});
-		expect(consumeReset(db, token)).toBe(ada.id);
+it('retires nothing when the current password is wrong', async () => {
+	// A refused change must not cost the member their recovery link — that
+	// would turn a wrong guess into a denial of service on recovery.
+	const token = createReset(db, ada.id);
+	await post('changePassword', {
+		currentPassword: 'not her password',
+		newPassword: NEW_PASSWORD,
+		passwordRepeat: NEW_PASSWORD
 	});
+	expect(consumeReset(db, token)).toBe(ada.id);
+});
 
 describe('changeDisplayName', () => {
 	it('updates the name the group sees', async () => {

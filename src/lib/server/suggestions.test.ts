@@ -48,7 +48,7 @@ describe('addSuggestion', () => {
 	it('adds a film to the pool', () => {
 		const result = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		expect(result.ok).toBe(true);
-		expect(listPool(db, groupId, ada, settings)).toHaveLength(1);
+		expect(listPool(db, groupId, ada)).toHaveLength(1);
 	});
 
 	it('refuses a duplicate without saying who added it first', () => {
@@ -136,7 +136,7 @@ describe('addSuggestion', () => {
 		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
 		const second = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		expect(second.ok).toBe(true);
-		expect(listPool(db, groupId, ada, settings).map((e) => e.title)).toEqual(['Dune']);
+		expect(listPool(db, groupId, ada).map((e) => e.title)).toEqual(['Dune']);
 	});
 
 	it('lets a different member claim a film the original suggester withdrew, attributing it to them', () => {
@@ -144,8 +144,8 @@ describe('addSuggestion', () => {
 		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
 		const second = addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
 		expect(second.ok).toBe(true);
-		expect(listPool(db, groupId, grace, settings).find((e) => e.title === 'Dune')?.mine).toBe(true);
-		expect(listPool(db, groupId, ada, settings).find((e) => e.title === 'Dune')?.mine).toBe(false);
+		expect(listPool(db, groupId, grace).find((e) => e.title === 'Dune')?.mine).toBe(true);
+		expect(listPool(db, groupId, ada).find((e) => e.title === 'Dune')?.mine).toBe(false);
 	});
 
 	it("counts a revived suggestion against the reviver's cap, not the original suggester's", () => {
@@ -222,14 +222,14 @@ describe('withdrawSuggestion', () => {
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (added as { suggestionId: string }).suggestionId;
 		expect(withdrawSuggestion(db, ada, id)).toBe('ok');
-		expect(listPool(db, groupId, ada, settings)).toHaveLength(0);
+		expect(listPool(db, groupId, ada)).toHaveLength(0);
 	});
 
 	it("refuses to withdraw someone else's suggestion", () => {
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (added as { suggestionId: string }).suggestionId;
 		expect(withdrawSuggestion(db, grace, id)).toBe('not_found');
-		expect(listPool(db, groupId, ada, settings)).toHaveLength(1);
+		expect(listPool(db, groupId, ada)).toHaveLength(1);
 	});
 
 	it('refuses to withdraw a film that has already been drawn', () => {
@@ -244,13 +244,13 @@ describe('listPool', () => {
 	it('marks only your own suggestions as yours', () => {
 		addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		addSuggestion(db, { groupId, userId: grace, movie: arrival, settings });
-		const asAda = listPool(db, groupId, ada, settings);
+		const asAda = listPool(db, groupId, ada);
 		expect(asAda.filter((entry) => entry.mine).map((entry) => entry.title)).toEqual(['Dune']);
 	});
 
 	it("never carries another member's identity in the payload", () => {
 		addSuggestion(db, { groupId, userId: grace, movie: arrival, settings });
-		const asAda = listPool(db, groupId, ada, settings);
+		const asAda = listPool(db, groupId, ada);
 		expect(JSON.stringify(asAda)).not.toContain(grace);
 		expect(Object.keys(asAda[0])).not.toContain('suggestedBy');
 	});
@@ -258,14 +258,18 @@ describe('listPool', () => {
 	it('hides withdrawn suggestions from everyone', () => {
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		withdrawSuggestion(db, ada, (added as { suggestionId: string }).suggestionId);
-		expect(listPool(db, groupId, grace, settings)).toHaveLength(0);
+		expect(listPool(db, groupId, grace)).toHaveLength(0);
 	});
 
-	it('drops a drawn film from the pool by default', () => {
+	it('keeps a drawn film in the pool, marked as drawn', () => {
+		// The group's history stays on screen. The badge is how a member tells it
+		// apart from something still in the running; it is never drawn again.
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (added as { suggestionId: string }).suggestionId;
 		db.update(suggestions).set({ status: 'drawn' }).where(eq(suggestions.id, id)).run();
-		expect(listPool(db, groupId, ada, settings)).toHaveLength(0);
+		const pool = listPool(db, groupId, ada);
+		expect(pool).toHaveLength(1);
+		expect(pool[0].status).toBe('drawn');
 	});
 
 	it('orders the pool by title, not by when a film was added', () => {
@@ -273,15 +277,18 @@ describe('listPool', () => {
 		// result matching title order cannot be an accident of row order.
 		addSuggestion(db, { groupId, userId: ada, movie: { title: 'Zebra' }, settings });
 		addSuggestion(db, { groupId, userId: grace, movie: { title: 'Apple' }, settings });
-		expect(listPool(db, groupId, ada, settings).map((e) => e.title)).toEqual(['Apple', 'Zebra']);
+		expect(listPool(db, groupId, ada).map((e) => e.title)).toEqual(['Apple', 'Zebra']);
 	});
 
-	it('keeps a drawn film in the pool when the group allows repeats', () => {
-		const repeats = { ...settings, repeatDrawnFilms: true };
-		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings: repeats });
+	it('leaves a withdrawn film out of the pool', () => {
+		// `withdrawn` is a member retracting a suggestion, not something the group
+		// watched, so it is the one status the pool still hides. Replaces a test for
+		// the old repeatDrawnFilms flag, which only toggled the visibility asserted
+		// above and never made a watched film drawable.
+		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (added as { suggestionId: string }).suggestionId;
-		db.update(suggestions).set({ status: 'drawn' }).where(eq(suggestions.id, id)).run();
-		expect(listPool(db, groupId, ada, repeats)).toHaveLength(1);
+		db.update(suggestions).set({ status: 'withdrawn' }).where(eq(suggestions.id, id)).run();
+		expect(listPool(db, groupId, ada)).toHaveLength(0);
 	});
 });
 

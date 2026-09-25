@@ -147,15 +147,15 @@ export function withdrawSuggestion(
 	});
 }
 
-export function listPool(
-	db: DB,
-	groupId: string,
-	viewerId: string,
-	settings: GroupSettings
-): PoolEntry[] {
-	const visible = settings.repeatDrawnFilms
-		? or(eq(suggestions.status, 'open'), eq(suggestions.status, 'drawn'))
-		: eq(suggestions.status, 'open');
+export function listPool(db: DB, groupId: string, viewerId: string): PoolEntry[] {
+	// Drawn films stay on show as the group's history and are never drawn again.
+	// There was a `repeatDrawnFilms` setting here that only ever controlled this
+	// visibility and never made a watched film drawable, so a group with it on saw
+	// entries labelled "already watched" that could not be picked. It appeared
+	// nowhere in the PRD; dropped rather than given a second meaning.
+	// `withdrawn` is still excluded — that is a member retracting a suggestion,
+	// not something the group watched.
+	const visible = or(eq(suggestions.status, 'open'), eq(suggestions.status, 'drawn'));
 
 	return db
 		.select({

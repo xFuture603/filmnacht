@@ -87,10 +87,6 @@
 		<input name="year" inputmode="numeric" maxlength="4" class="input input-bordered min-h-11" />
 	</label>
 	<label class="form-control">
-		<span class="label-text">{t(data.locale, 'add.poster')}</span>
-		<input name="posterUrl" type="url" class="input input-bordered min-h-11" />
-	</label>
-	<label class="form-control">
 		<span class="label-text">{t(data.locale, 'add.note')}</span>
 		<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea textarea-bordered"
 		></textarea>

@@ -24,12 +24,15 @@ export const actions: Actions = {
 		// addSuggestion cannot be raced by a second tab.
 		const rawYear = String(form.get('year') ?? '').trim();
 		const year = /^\d{4}$/.test(rawYear) ? Number(rawYear) : null;
-		const posterUrl = String(form.get('posterUrl') ?? '').trim() || null;
 
 		const result = addSuggestion(db, {
 			groupId: params.groupId,
 			userId: user.id,
-			movie: { title: String(form.get('title') ?? ''), year, posterUrl },
+			// No poster for a hand-added film. Rendering a member-supplied URL would
+			// have the viewer's browser fetch from a third-party host, against PRD
+			// §12's promise that outgoing connections go to TMDB only. A TMDB-adopted
+			// film still carries its poster, which is TMDB's own host.
+			movie: { title: String(form.get('title') ?? ''), year, posterUrl: null },
 			note: String(form.get('note') ?? ''),
 			settings: group.settings
 		});
