@@ -17,24 +17,28 @@ function tempDbFile(): string {
 }
 
 /**
- * A migrations folder that stops at 0001 — the project as it shipped before
- * this task, and the state any real deployment upgrading past it is coming
+ * A migrations folder that stops at `lastIdx` — the project as it shipped at
+ * that point, and the state any real deployment upgrading past it is coming
  * from. Built from the real journal and .sql files rather than hand-written,
  * so it can't drift from what's actually shipped.
  */
-function migrationsFolderThrough0001(): string {
+function migrationsFolderThrough(lastIdx: number): string {
 	const dir = mkdtempSync(join(tmpdir(), 'filmnacht-migrations-'));
 	dirs.push(dir);
 	mkdirSync(join(dir, 'meta'), { recursive: true });
 	const journal = JSON.parse(
 		readFileSync(join(MIGRATIONS_FOLDER, 'meta', '_journal.json'), 'utf8')
 	) as { entries: { idx: number; tag: string }[] };
-	journal.entries = journal.entries.filter((entry) => entry.idx <= 1);
+	journal.entries = journal.entries.filter((entry) => entry.idx <= lastIdx);
 	writeFileSync(join(dir, 'meta', '_journal.json'), JSON.stringify(journal, null, 2));
 	for (const entry of journal.entries) {
 		copyFileSync(join(MIGRATIONS_FOLDER, `${entry.tag}.sql`), join(dir, `${entry.tag}.sql`));
 	}
 	return dir;
+}
+
+function migrationsFolderThrough0001(): string {
+	return migrationsFolderThrough(1);
 }
 
 describe('applyMigrations, against a populated database (Ruling R2)', () => {
@@ -144,5 +148,36 @@ describe('applyMigrations, foreign_key_check throw branch', () => {
 		expect(sqlite.pragma('foreign_keys', { simple: true })).toBe(1);
 
 		sqlite.close();
+	});
+});
+
+describe('migration 0003 (ratings), against a populated database', () => {
+	it('keeps every rating and night, adds revealed_at, and restricts deleting a rater', () => {
+		const file = tempDbFile();
+		const { sqlite, db } = createDb(file);
+		applyMigrations(db, migrationsFolderThrough(2));
+		sqlite.exec(`
+			INSERT INTO users (id, username, display_name, password_hash, login_token_hash, is_admin, created_at)
+				VALUES ('u1', 'ada', 'Ada', 'x', 'h1', 0, 0),
+				       ('u2', 'grace', 'Grace', 'x', 'h2', 0, 0);
+			-- Grace owns the group, so the only row referencing Ada is her rating:
+			-- the DELETE below can only be refused by the ratings foreign key.
+			INSERT INTO groups (id, name, owner_id, settings, created_at)
+				VALUES ('g1', 'G', 'u2', '{}', 0);
+			INSERT INTO movie_nights (id, group_id, scheduled_at, status, created_at)
+				VALUES ('n1', 'g1', 0, 'watched', 0);
+			INSERT INTO ratings (id, movie_night_id, user_id, score_x2, comment, created_at)
+				VALUES ('r1', 'n1', 'u1', 15, 'good', 0);
+		`);
+
+		applyMigrations(db);
+
+		expect(sqlite.prepare('SELECT score_x2, comment FROM ratings').all()).toEqual([
+			{ score_x2: 15, comment: 'good' }
+		]);
+		expect(sqlite.prepare('SELECT revealed_at FROM movie_nights').get()).toEqual({
+			revealed_at: null
+		});
+		expect(() => sqlite.prepare("DELETE FROM users WHERE id = 'u1'").run()).toThrow(/FOREIGN KEY/);
 	});
 });

@@ -218,6 +218,12 @@ export const movieNights = sqliteTable('movie_nights', {
 	drawSeed: text('draw_seed'),
 	/** Append-only: a re-draw adds an entry, it never overwrites one (PRD §6). */
 	drawLog: text('draw_log', { mode: 'json' }).$type<unknown[]>(),
+	/**
+	 * When the scores were revealed (PRD §7): by the last "I'm in" member's
+	 * rating or by the owner. Set once, never cleared — a reveal cannot
+	 * un-happen. A closed rating window also counts as revealed, derived on read.
+	 */
+	revealedAt: integer('revealed_at', { mode: 'timestamp' }),
 	status: text('status', { enum: ['scheduled', 'drawn', 'watched', 'cancelled'] })
 		.notNull()
 		.default('scheduled'),
@@ -247,7 +253,12 @@ export const ratings = sqliteTable(
 		movieNightId: text('movie_night_id')
 			.notNull()
 			.references(() => movieNights.id, { onDelete: 'cascade' }),
-		userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+		/**
+		 * `restrict`, like suggestions.suggested_by: a departed member's ratings
+		 * belong to the "former member" placeholder (PRD §4, §12). Deleting an
+		 * account without reassignToFormerMember first must fail loudly.
+		 */
+		userId: text('user_id').references(() => users.id, { onDelete: 'restrict' }),
 		/** 2–20: the 1–10 half-step score doubled. Never a float (PRD §7). */
 		scoreX2: integer('score_x2').notNull(),
 		comment: text('comment'),
