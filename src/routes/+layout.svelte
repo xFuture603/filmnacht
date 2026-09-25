@@ -1,38 +1,74 @@
 <script lang="ts">
 	import '../app.css';
-	import { locales, t } from '$lib/i18n';
+	import { t } from '$lib/i18n';
+	import Icon, { type IconName } from '$lib/components/Icon.svelte';
+	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
 
 	let { data, children } = $props();
+
+	const sections = $derived(
+		[
+			{ href: '/groups', label: t(data.locale, 'nav.groups'), icon: 'groups' as IconName },
+			{ href: '/profile', label: t(data.locale, 'nav.profile'), icon: 'profile' as IconName },
+			...(data.user?.isAdmin
+				? [{ href: '/admin', label: t(data.locale, 'nav.admin'), icon: 'admin' as IconName }]
+				: [])
+		].map((s) => ({
+			...s,
+			current: data.pathname === s.href || data.pathname.startsWith(`${s.href}/`)
+		}))
+	);
 </script>
 
-<div class="min-h-screen bg-base-200">
-	<nav class="navbar bg-base-100 shadow-sm">
-		<a class="btn btn-ghost min-h-11 text-xl" href="/">{t(data.locale, 'app.name')}</a>
+<div class="min-h-dvh bg-base-200">
+	<header
+		class="navbar sticky top-0 z-10 min-h-14 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur"
+	>
+		<a class="flex min-h-11 items-center gap-2 text-lg font-semibold" href="/">
+			<span aria-hidden="true">🎬</span>{t(data.locale, 'app.name')}
+		</a>
 		<div class="flex-1"></div>
 		{#if data.user}
-			<a class="btn btn-ghost min-h-11" href="/groups">{t(data.locale, 'nav.groups')}</a>
-			<a class="btn btn-ghost min-h-11" href="/profile">{t(data.locale, 'nav.profile')}</a>
-			{#if data.user.isAdmin}
-				<a class="btn btn-ghost min-h-11" href="/admin">{t(data.locale, 'nav.admin')}</a>
-			{/if}
-		{/if}
-		<form method="POST" action="/locale" class="ml-2">
-			<input type="hidden" name="redirectTo" value={data.pathname} />
-			<select
-				name="locale"
-				class="select min-h-11"
-				aria-label={t(data.locale, 'nav.language')}
-				onchange={(e) => e.currentTarget.form?.requestSubmit()}
-			>
-				{#each locales as locale (locale)}
-					<option value={locale} selected={locale === data.locale}>{locale.toUpperCase()}</option>
+			<nav class="hidden gap-1 md:flex" aria-label={t(data.locale, 'nav.main')}>
+				{#each sections as s (s.href)}
+					<a
+						class={['btn btn-ghost min-h-11', s.current && 'btn-active']}
+						href={s.href}
+						aria-current={s.current ? 'page' : undefined}>{s.label}</a
+					>
 				{/each}
-			</select>
-			<noscript><button class="btn min-h-11">{t(data.locale, 'common.save')}</button></noscript>
-		</form>
-	</nav>
+			</nav>
+		{/if}
+		<!-- Signed in: on phones the language select lives on /profile, so the bar
+		     stays uncluttered. Signed out: there is no profile, so it stays here. -->
+		<LocaleSelect
+			locale={data.locale}
+			pathname={data.pathname}
+			class={['ml-2', data.user && 'hidden md:block'].filter(Boolean).join(' ')}
+		/>
+	</header>
 
-	<main class="mx-auto max-w-3xl p-4">
+	<main
+		class={[
+			'mx-auto max-w-3xl px-4 py-6',
+			data.user && 'pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6'
+		]}
+	>
 		{@render children()}
 	</main>
+
+	{#if data.user}
+		<nav class="dock md:hidden" aria-label={t(data.locale, 'nav.main')}>
+			{#each sections as s (s.href)}
+				<a
+					href={s.href}
+					class={['min-h-11', s.current && 'dock-active font-semibold']}
+					aria-current={s.current ? 'page' : undefined}
+				>
+					<Icon name={s.icon} class="size-6" />
+					<span class="dock-label">{s.label}</span>
+				</a>
+			{/each}
+		</nav>
+	{/if}
 </div>
