@@ -52,6 +52,8 @@ export type NightDetail = NightSummary & {
 	onlyCandidate: boolean;
 	/** The one permitted re-draw has been used (§6). */
 	redrawUsed: boolean;
+	/** Who re-drew and why, from the log. Names no film, so it survives on_night. */
+	redrawn: { byName: string; reason: string } | null;
 	myResponse: 'yes' | 'no' | 'maybe' | null;
 	responses: Array<{ displayName: string; response: 'yes' | 'no' | 'maybe' }>;
 };
@@ -204,6 +206,14 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 	const { drawLog, drawnByUsername, ...rest } = night;
 	const log = (drawLog as DrawLogEntry[] | null) ?? [];
 	const latest = log.at(-1);
+	const redrawEntry = log.findLast((e) => e.reason);
+	const redrawnBy = redrawEntry
+		? db
+				.select({ displayName: users.displayName })
+				.from(users)
+				.where(eq(users.id, redrawEntry.by))
+				.get()?.displayName
+		: undefined;
 	return {
 		...rest,
 		drawnByFormer: drawnByUsername === FORMER_MEMBER_USERNAME,
@@ -212,6 +222,7 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 			latest.candidates.length === 1 &&
 			latest.candidates[0].suggestions === 1,
 		redrawUsed: log.length >= 2,
+		redrawn: redrawEntry?.reason ? { byName: redrawnBy ?? '', reason: redrawEntry.reason } : null,
 		myResponse: myResponseRow?.response ?? null,
 		responses
 	};
@@ -265,6 +276,8 @@ export function candidatesFor(db: DB, groupId: string): Candidate[] {
 				isNull(memberships.leftAt)
 			)
 		)
+		// A fixed order, so a logged seed replays stage 2 to the same film.
+		.orderBy(suggestions.id)
 		.all();
 
 	const byUser = new Map<string, string[]>();
@@ -281,17 +294,24 @@ export function candidatesFor(db: DB, groupId: string): Candidate[] {
 }
 
 /**
- * Synchronous on purpose. Everything from the status check to the write happens
- * inside one transaction with no `await` anywhere in it, because two owners
- * pressing Draw at the same moment must produce one result. This project has
- * fixed read-yield-write on a stale read four times; if a future change wants to
- * await in here, that is the signal to stop rather than to make this async.
+ * Synchronous on purpose. The candidate reads and `drawFrom` run before the
+ * transaction; only the claim-and-write is inside it. That is safe because
+ * nothing here awaits and better-sqlite3 is one connection: no other request
+ * can run between the reads and the claim, and the claim's own WHERE refuses a
+ * night that is no longer 'scheduled', so two owners pressing Draw at the same
+ * moment produce one result. This project has fixed read-yield-write on a stale
+ * read four times; if a future change wants to await in here, that is the
+ * signal to stop rather than to make this async.
+ *
+ * `excludeSuggestionId` is the film a re-draw just released (R12): it goes back
+ * to the pool for later nights, but not into this night's second draw.
  */
 export function drawForNight(
 	db: DB,
 	nightId: string,
 	ownerId: string,
-	reason?: string
+	reason?: string,
+	excludeSuggestionId?: string | null
 ): DrawOutcome {
 	const night = db
 		.select({ groupId: movieNights.groupId, status: movieNights.status })
@@ -301,7 +321,12 @@ export function drawForNight(
 	if (!night) return { ok: false, reason: 'not_found' };
 	const { settings } = requireOwner(db, ownerId, night.groupId);
 
-	const candidates = candidatesFor(db, night.groupId);
+	const candidates = candidatesFor(db, night.groupId)
+		.map((c) => ({
+			...c,
+			suggestionIds: c.suggestionIds.filter((id) => id !== excludeSuggestionId)
+		}))
+		.filter((c) => c.suggestionIds.length > 0);
 	if (candidates.length === 0) return { ok: false, reason: 'no_candidates' };
 
 	const seed = newSeed();
@@ -331,6 +356,7 @@ export function drawForNight(
 		const entry: DrawLogEntry = {
 			at: new Date().toISOString(),
 			seed,
+			by: ownerId,
 			mode: settings.drawMode,
 			candidates: picked.candidates,
 			pickedUserId: picked.userId,
@@ -475,16 +501,17 @@ export function redraw(db: DB, nightId: string, ownerId: string, reason: string)
 				throw new RedrawAbort({ ok: false, reason: 'not_scheduled' });
 			}
 
-			// Evaluated AFTER releasing the film: a one-film pool must not appear to
-			// reroll (Review Focus 4), and releasing may be the only thing that
-			// still-eligible film had going for it (see: a departed suggester).
-			const candidates = candidatesFor(db, night.groupId);
-			const totalOpen = candidates.reduce((sum, c) => sum + c.suggestionIds.length, 0);
-			if (totalOpen <= 1) {
+			// Evaluated AFTER releasing the film, and without it: the re-draw never
+			// returns the film it just released (R12), so with no OTHER open film
+			// there is nothing to draw (Review Focus 4).
+			const others = candidatesFor(db, night.groupId)
+				.flatMap((c) => c.suggestionIds)
+				.filter((id) => id !== night.suggestionId);
+			if (others.length === 0) {
 				throw new RedrawAbort({ ok: false, reason: 'sole_suggestion' });
 			}
 
-			const outcome = drawForNight(db, nightId, ownerId, reason);
+			const outcome = drawForNight(db, nightId, ownerId, reason, night.suggestionId);
 			if (!outcome.ok) throw new RedrawAbort(outcome);
 			return outcome;
 		});
@@ -518,13 +545,15 @@ export function isResultVisible(settings: GroupSettings, scheduledAt: Date, now:
 	return settings.resultVisible === 'immediately' || now.getTime() >= scheduledAt.getTime();
 }
 
-/** Suggestions drawn for a night that has not started yet. */
+/** Suggestions drawn for a night that has not started yet — watched early included. */
 export function unrevealedDrawnIds(db: DB, groupId: string, now: Date): Set<string> {
 	return new Set(
 		db
 			.select({ suggestionId: movieNights.suggestionId, scheduledAt: movieNights.scheduledAt })
 			.from(movieNights)
-			.where(and(eq(movieNights.groupId, groupId), eq(movieNights.status, 'drawn')))
+			.where(
+				and(eq(movieNights.groupId, groupId), inArray(movieNights.status, ['drawn', 'watched']))
+			)
 			.all()
 			.filter((n) => n.suggestionId !== null && n.scheduledAt.getTime() > now.getTime())
 			.map((n) => n.suggestionId as string)

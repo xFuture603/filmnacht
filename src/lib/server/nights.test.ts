@@ -453,6 +453,62 @@ describe('redraw', () => {
 			.get()?.log as DrawLogEntry[];
 		expect(log).toHaveLength(1);
 	});
+	it('never re-draws the film it just released', () => {
+		// R12. Two films, equal weights: without the exclusion the re-draw returns
+		// the released film half the time, so thirty rounds all but guarantee it.
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		for (let i = 0; i < 30; i++) {
+			const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+			const first = drawForNight(db, id, ada);
+			const again = redraw(db, id, ada, 'seen it');
+			if (!first.ok || !again.ok) throw new Error('draw failed');
+			expect(again.suggestionId).not.toBe(first.suggestionId);
+			// Cancelling releases the film and costs nobody a turn: a clean next round.
+			cancelNight(db, id, ada);
+		}
+	});
+
+	it('records who drew each time and leaves the first result intact', () => {
+		// R13.
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		const first = drawForNight(db, id, ada);
+		if (!first.ok) throw new Error('draw failed');
+		expect(nightDetail(db, id, grace)?.redrawn).toBeNull();
+
+		redraw(db, id, ada, 'seen it');
+		const log = db
+			.select({ log: movieNights.drawLog })
+			.from(movieNights)
+			.where(eq(movieNights.id, id))
+			.get()?.log as DrawLogEntry[];
+		expect(log.map((e) => e.by)).toEqual([ada, ada]);
+		expect(log[0].pickedSuggestionId).toBe(first.suggestionId);
+		expect(log[0].reason).toBeUndefined();
+		expect(nightDetail(db, id, grace)?.redrawn).toEqual({ byName: 'Ada', reason: 'seen it' });
+	});
 });
 
 describe('what the night page is told about the draw', () => {
@@ -523,5 +579,20 @@ describe('unrevealedDrawnIds', () => {
 
 		expect([...unrevealedDrawnIds(db, groupId, new Date())]).toEqual([drawn.suggestionId]);
 		expect(unrevealedDrawnIds(db, groupId, new Date(LATER.getTime() + 1000)).size).toBe(0);
+	});
+
+	it('keeps a film hidden when its night is marked watched before it starts', () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const future = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		const drawn = drawForNight(db, future, ada);
+		if (!drawn.ok) throw new Error('draw failed');
+		markWatched(db, future, ada);
+
+		expect([...unrevealedDrawnIds(db, groupId, new Date())]).toEqual([drawn.suggestionId]);
 	});
 });
