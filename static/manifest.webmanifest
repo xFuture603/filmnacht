@@ -1,10 +1,10 @@
 {
-	"name": "filmnacht",
-	"short_name": "filmnacht",
+	"name": "Filmnacht",
+	"short_name": "Filmnacht",
 	"start_url": "/",
 	"display": "standalone",
-	"background_color": "#1d232a",
-	"theme_color": "#1d232a",
+	"background_color": "#18181b",
+	"theme_color": "#18181b",
 	"icons": [
 		{
 			"src": "/favicon.svg",

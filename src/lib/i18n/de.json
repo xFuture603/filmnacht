@@ -1,9 +1,10 @@
 {
-	"app.name": "filmnacht",
+	"app.name": "Filmnacht",
 	"nav.groups": "Gruppen",
 	"nav.profile": "Profil",
 	"nav.admin": "Verwaltung",
 	"nav.language": "Sprache",
+	"nav.main": "Hauptnavigation",
 	"common.save": "Speichern",
 	"common.cancel": "Abbrechen",
 	"common.copy": "Kopieren",
