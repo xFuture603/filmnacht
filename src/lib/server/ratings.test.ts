@@ -263,6 +263,14 @@ describe('ratingView', () => {
 		expect(results?.ratings).toContainEqual({ name: 'Grace', score: 6, comment: null });
 	});
 
+	it('never lets a departed member who never rated block the reveal', () => {
+		respond(db, nightId, grace, 'yes');
+		respond(db, nightId, alan, 'yes');
+		leaveGroup(db, grace, groupId);
+		expect(rate(alan, 8)).toEqual({ ok: true, revealed: true });
+		expect(ratingView(db, nightId, ada, DURING, 'Former member')?.waitingFor).toEqual([]);
+	});
+
 	it('returns nothing for somebody outside the group', () => {
 		const mallory = person('mallory');
 		expect(ratingView(db, nightId, mallory, DURING, 'Former member')).toBeNull();
