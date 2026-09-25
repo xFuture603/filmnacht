@@ -60,3 +60,21 @@ export function formatWhen(at: Date, timeZone: string, locale: Locale): string {
 		timeStyle: 'short'
 	}).format(at);
 }
+
+/** The instance's wall clock at `at`: calendar date "YYYY-MM-DD" and time "HH:MM". */
+export function wallParts(at: Date, timeZone: string): { date: string; time: string } {
+	const p = Object.fromEntries(
+		new Intl.DateTimeFormat('en-GB', {
+			timeZone,
+			hourCycle: 'h23',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit'
+		})
+			.formatToParts(at)
+			.map((part) => [part.type, part.value])
+	);
+	return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
+}
