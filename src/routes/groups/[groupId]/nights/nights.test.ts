@@ -50,7 +50,7 @@ beforeEach(() => {
 
 describe('scheduling from the form', () => {
 	it('reads the wall-clock time in the instance timezone, not the server’s', async () => {
-		const result = await schedule(ada, { when: '2030-07-01T20:00', location: 'Sofa' });
+		const result = await schedule(ada, { day: '2030-07-01', time: '20:00', location: 'Sofa' });
 		expect(result).toMatchObject({ status: 303 });
 		const [night] = listNights(db, groupId);
 		// 20:00 in Berlin in July is 18:00 UTC.
@@ -59,26 +59,46 @@ describe('scheduling from the form', () => {
 	});
 
 	it('refuses a moment that has passed, and one that is not a time', async () => {
-		expect(await schedule(ada, { when: '2001-01-01T20:00' })).toMatchObject({
+		expect(await schedule(ada, { day: '2001-01-01', time: '20:00' })).toMatchObject({
 			status: 400,
 			data: { error: 'nights.error.past' }
 		});
-		expect(await schedule(ada, { when: 'tomorrow' })).toMatchObject({
+		expect(await schedule(ada, { day: 'tomorrow', time: '20:00' })).toMatchObject({
 			status: 400,
 			data: { error: 'nights.error.when' }
 		});
 		expect(listNights(db, groupId)).toHaveLength(0);
 	});
 
+	it('lets the other date and time win over the chips', async () => {
+		await schedule(ada, {
+			day: '2030-07-01',
+			time: '20:00',
+			other_day: '2030-12-24',
+			other_time: '18:15'
+		});
+		// 18:15 in Berlin in December is 17:15 UTC.
+		expect(listNights(db, groupId)[0].scheduledAt.toISOString()).toBe('2030-12-24T17:15:00.000Z');
+	});
+
+	it('asks for a day when none was picked', async () => {
+		expect(await schedule(ada, { time: '20:00' })).toMatchObject({
+			status: 400,
+			data: { error: 'nights.error.day' }
+		});
+	});
+
 	it('refuses a member who does not own the group', async () => {
-		expect(await schedule(grace, { when: '2030-07-01T20:00' })).toMatchObject({ status: 403 });
+		expect(await schedule(grace, { day: '2030-07-01', time: '20:00' })).toMatchObject({
+			status: 403
+		});
 		expect(listNights(db, groupId)).toHaveLength(0);
 	});
 });
 
 describe('the list', () => {
 	it('shows members the group’s nights, formatted in the instance timezone', async () => {
-		await schedule(ada, { when: '2030-07-01T20:00' });
+		await schedule(ada, { day: '2030-07-01', time: '20:00' });
 		const data = (await load({ params: { groupId }, locals: locals(grace) } as never)) as Exclude<
 			Awaited<ReturnType<typeof load>>,
 			void
@@ -86,6 +106,10 @@ describe('the list', () => {
 		expect(data.upcoming).toHaveLength(1);
 		expect(data.upcoming[0].when).toContain('20:00');
 		expect(data.isOwner).toBe(false);
+		// The last night was 1 July 2030, a Monday at 20:00: the form suggests
+		// the same time and place next time.
+		expect(data.defaults).toMatchObject({ time: '20:00' });
+		expect(data.days).toHaveLength(14);
 		expect(data.timezone).toBe('Europe/Berlin');
 	});
 
