@@ -9,7 +9,7 @@
 	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
 	const answers = ['yes', 'maybe', 'no'] as const;
 
-	let score = $state<number>(data.ratings.mine?.score ?? 5);
+	let score = $derived(data.ratings.mine?.score ?? 5);
 	const fmt = (n: number) =>
 		new Intl.NumberFormat(data.locale === 'de' ? 'de-DE' : 'en-GB', {
 			minimumFractionDigits: 1,
@@ -95,7 +95,8 @@
 								max="10"
 								step="0.5"
 								bind:value={score}
-								class="range range-primary w-full"
+								aria-label={t(data.locale, 'ratings.score')}
+								class="range range-primary min-h-11 w-full"
 							/>
 							<div class="flex justify-between text-xs text-base-content/70" aria-hidden="true">
 								<span>1</span><span>5</span><span>10</span>
@@ -180,7 +181,7 @@
 						</p>
 					{/if}
 					<ul class="divide-y divide-base-300">
-						{#each results.ratings as r (r.name + r.score)}
+						{#each results.ratings as r, i (i)}
 							<li class="flex flex-col gap-1 py-2">
 								<div class="flex items-center justify-between gap-2">
 									<span class="min-w-0 truncate">{r.name}</span>
