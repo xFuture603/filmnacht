@@ -124,5 +124,21 @@
 	"add.note": "Warum dieser Film? (optional)",
 	"add.note_hint": "Wird der Gruppe erst nach der Ziehung gezeigt, höchstens 200 Zeichen.",
 	"add.submit": "Zum Pool hinzufügen",
-	"add.back": "Zurück zur Gruppe"
+	"add.back": "Zurück zur Gruppe",
+	"nights.title": "Filmnächte",
+	"nights.schedule": "Filmnacht planen",
+	"nights.when": "Datum und Uhrzeit",
+	"nights.location": "Ort (optional)",
+	"nights.none": "Noch keine Filmnacht geplant.",
+	"nights.status.scheduled": "Geplant",
+	"nights.status.drawn": "Film gezogen",
+	"nights.status.watched": "Gesehen",
+	"nights.status.cancelled": "Abgesagt",
+	"nights.rsvp.yes": "Ich bin dabei",
+	"nights.rsvp.no": "Kann nicht",
+	"nights.rsvp.maybe": "Vielleicht",
+	"nights.error.when": "Damit kann diese Instanz kein Datum und keine Uhrzeit bilden.",
+	"nights.error.past": "Dieser Zeitpunkt ist schon vorbei.",
+	"nights.error.location": "Dieser Ort ist zu lang.",
+	"nights.error.not_owner": "Nur die Gruppenleitung kann das tun."
 }

@@ -126,5 +126,21 @@
 	"add.note": "Why this film? (optional)",
 	"add.note_hint": "Shown to the group only after the draw, max 200 characters.",
 	"add.submit": "Add to the pool",
-	"add.back": "Back to the group"
+	"add.back": "Back to the group",
+	"nights.title": "Movie nights",
+	"nights.schedule": "Schedule a night",
+	"nights.when": "Date and time",
+	"nights.location": "Location (optional)",
+	"nights.none": "No nights scheduled yet.",
+	"nights.status.scheduled": "Scheduled",
+	"nights.status.drawn": "Film drawn",
+	"nights.status.watched": "Watched",
+	"nights.status.cancelled": "Cancelled",
+	"nights.rsvp.yes": "I'm in",
+	"nights.rsvp.no": "Can't make it",
+	"nights.rsvp.maybe": "Maybe",
+	"nights.error.when": "That is not a date and time this instance can use.",
+	"nights.error.past": "That moment has already passed.",
+	"nights.error.location": "That location is too long.",
+	"nights.error.not_owner": "Only the group's owner can do that."
 }
