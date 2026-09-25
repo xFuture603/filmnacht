@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4caa6a63-4c87-46ff-bda6-92d6f40c8249",
+  "id": "93130055-416f-436f-b83c-4b02bd8b182e",
   "prevId": "2d80a8e3-1f74-41a0-8803-4e1ec6f04bbd",
   "tables": {
     "attendance": {
@@ -704,16 +704,7 @@
           "autoincrement": false
         }
       },
-      "indexes": {
-        "ratings_night_user": {
-          "name": "ratings_night_user",
-          "columns": [
-            "movie_night_id",
-            "user_id"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "ratings_movie_night_id_movie_nights_id_fk": {
           "name": "ratings_movie_night_id_movie_nights_id_fk",

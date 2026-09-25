@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { DEFAULT_GROUP_SETTINGS, movieNights, movies, ratings } from '$lib/server/db/schema';
 import { addMember, createGroup, leaveGroup } from '$lib/server/groups';
-import { drawForNight, respond, scheduleNight } from '$lib/server/nights';
+import { candidatesFor, drawForNight, respond, scheduleNight } from '$lib/server/nights';
 import { addSuggestion } from '$lib/server/suggestions';
 import { createUser } from '$lib/server/users';
 import {
@@ -147,6 +147,28 @@ describe('saveRating', () => {
 		).toBe('watched');
 	});
 
+	it('makes the fairness window start counting the film, like markWatched does', () => {
+		// Grace suggested the drawn film (beforeEach), so rating it is what should
+		// mark it watched and start counting toward her fairness window — the same
+		// property nights.test.ts proves for markWatched itself.
+		rate(grace, 7);
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		expect(candidatesFor(db, groupId).find((c) => c.userId === grace)?.watchedInWindow).toBe(1);
+	});
+
+	it('leaves exactly one row per member no matter how many times they save (R2)', () => {
+		// Enforced in code now, not by a unique index (R2) — see schema.ts.
+		rate(grace, 7);
+		rate(grace, 8.5, 'better on reflection');
+		rate(grace, 9);
+		expect(db.select().from(ratings).where(eq(ratings.userId, grace)).all()).toHaveLength(1);
+	});
+
 	it('reveals when the last "I\'m in" member rates, and not before', () => {
 		respond(db, nightId, grace, 'yes');
 		respond(db, nightId, alan, 'yes');
@@ -207,6 +229,12 @@ describe('revealNow', () => {
 		expect(revealNow(db, { nightId, ownerId: ada, now: new Date(OPENS.getTime() - 1000) })).toBe(
 			'window'
 		);
+	});
+
+	it('treats a closed window as already revealed, and does not stamp it', () => {
+		rate(grace, 7);
+		expect(revealNow(db, { nightId, ownerId: ada, now: CLOSES })).toBe('already');
+		expect(db.select({ at: movieNights.revealedAt }).from(movieNights).get()?.at).toBeNull();
 	});
 });
 

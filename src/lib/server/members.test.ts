@@ -139,4 +139,40 @@ describe('the former-member placeholder', () => {
 
 		expect(() => db.delete(users).where(eq(users.id, grace)).run()).not.toThrow();
 	});
+
+	it('reassigns two departed members who rated the same night without colliding (R2)', () => {
+		// The unique index that used to sit on (movie_night_id, user_id) made this
+		// impossible: both ratings end up owned by the one placeholder row, so the
+		// second reassignment collided with the first on that same night.
+		const grace = createUser(db, {
+			username: 'grace',
+			displayName: 'Grace',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		const alan = createUser(db, {
+			username: 'alan',
+			displayName: 'Alan',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		const nightId = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date(),
+			location: null
+		});
+		db.insert(ratings).values({ movieNightId: nightId, userId: grace, scoreX2: 16 }).run();
+		db.insert(ratings).values({ movieNightId: nightId, userId: alan, scoreX2: 12 }).run();
+
+		expect(reassignToFormerMember(db, grace)).toEqual({ suggestions: 0, ratings: 1 });
+		expect(reassignToFormerMember(db, alan)).toEqual({ suggestions: 0, ratings: 1 });
+
+		const placeholder = formerMemberId(db);
+		const rows = db
+			.select({ userId: ratings.userId })
+			.from(ratings)
+			.where(eq(ratings.movieNightId, nightId))
+			.all();
+		expect(rows).toHaveLength(2);
+		expect(rows.every((r) => r.userId === placeholder)).toBe(true);
+	});
 });

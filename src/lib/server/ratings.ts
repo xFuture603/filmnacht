@@ -145,22 +145,34 @@ export function saveRating(
 	if (comment && comment.length > COMMENT_MAX) return { ok: false, reason: 'comment' };
 
 	return db.transaction(() => {
+		// Re-read inside the transaction: this, not the pre-transaction `night`
+		// above, is the revealed_at the lock check and the reveal decision below
+		// must act on.
+		const revealedAt = nightRow(db, input.nightId)?.revealedAt ?? null;
 		const existing = myRating(db, input.nightId, input.userId);
-		if (existing && night.revealedAt !== null) return { ok: false, reason: 'locked' } as const;
+		if (existing && revealedAt !== null) return { ok: false, reason: 'locked' } as const;
 
-		db.insert(ratings)
-			.values({
-				id: crypto.randomUUID(),
-				movieNightId: input.nightId,
-				userId: input.userId,
-				scoreX2: input.scoreX2,
-				comment
-			})
-			.onConflictDoUpdate({
-				target: [ratings.movieNightId, ratings.userId],
-				set: { scoreX2: input.scoreX2, comment }
-			})
-			.run();
+		// One rating per (night, member), enforced here rather than by a unique
+		// index (R2): the former-member placeholder is one row shared by every
+		// departed rater, so an index on (movie_night_id, user_id) would make a
+		// second departed rater's reassignment collide with the first's on a
+		// night they both rated.
+		if (existing) {
+			db.update(ratings)
+				.set({ scoreX2: input.scoreX2, comment })
+				.where(eq(ratings.id, existing.id))
+				.run();
+		} else {
+			db.insert(ratings)
+				.values({
+					id: crypto.randomUUID(),
+					movieNightId: input.nightId,
+					userId: input.userId,
+					scoreX2: input.scoreX2,
+					comment
+				})
+				.run();
+		}
 
 		// People rating the film is proof it was watched: the fairness window
 		// must count it even if nobody pressed "We watched it". Same test-and-set
@@ -170,7 +182,7 @@ export function saveRating(
 			.where(and(eq(movieNights.id, input.nightId), eq(movieNights.status, 'drawn')))
 			.run();
 
-		if (night.revealedAt === null) {
+		if (revealedAt === null) {
 			const { yes, missing } = waitingIds(db, input.nightId, night.groupId);
 			// With nobody "in", the first rating would otherwise reveal itself.
 			if (yes > 0 && missing.length === 0) stampReveal(db, input.nightId, input.now);
@@ -193,7 +205,9 @@ export function withdrawRating(
 	if (ratingWindow(night, settings, input.now).state !== 'open') return 'window';
 	return db.transaction(() => {
 		if (!myRating(db, input.nightId, input.userId)) return 'not_found' as const;
-		if (night.revealedAt !== null) return 'locked' as const;
+		// Re-read inside the transaction, not the pre-transaction `night` above.
+		const revealedAt = nightRow(db, input.nightId)?.revealedAt ?? null;
+		if (revealedAt !== null) return 'locked' as const;
 		db.delete(ratings)
 			.where(and(eq(ratings.movieNightId, input.nightId), eq(ratings.userId, input.userId)))
 			.run();
@@ -217,6 +231,10 @@ export function revealNow(
 			.where(eq(ratings.movieNightId, input.nightId))
 			.get();
 		if (!any) return 'no_ratings' as const;
+		// A closed window is already revealed (isRevealed treats it as such
+		// regardless of the stored timestamp) — stamping it now would record a
+		// revealed_at long after the reveal actually happened.
+		if (window === 'closed') return 'already' as const;
 		return stampReveal(db, input.nightId, input.now) ? ('ok' as const) : ('already' as const);
 	});
 }

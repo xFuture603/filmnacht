@@ -245,27 +245,34 @@ export const attendance = sqliteTable(
 	(table) => [unique('attendance_night_user').on(table.movieNightId, table.userId)]
 );
 
-/** Hangs off the night, not the movie, so the same film can be rated again in two years. */
-export const ratings = sqliteTable(
-	'ratings',
-	{
-		id: uuid(),
-		movieNightId: text('movie_night_id')
-			.notNull()
-			.references(() => movieNights.id, { onDelete: 'cascade' }),
-		/**
-		 * `restrict`, like suggestions.suggested_by: a departed member's ratings
-		 * belong to the "former member" placeholder (PRD §4, §12). Deleting an
-		 * account without reassignToFormerMember first must fail loudly.
-		 */
-		userId: text('user_id').references(() => users.id, { onDelete: 'restrict' }),
-		/** 2–20: the 1–10 half-step score doubled. Never a float (PRD §7). */
-		scoreX2: integer('score_x2').notNull(),
-		comment: text('comment'),
-		createdAt: createdAt()
-	},
-	(table) => [unique('ratings_night_user').on(table.movieNightId, table.userId)]
-);
+/**
+ * Hangs off the night, not the movie, so the same film can be rated again in
+ * two years.
+ *
+ * No unique index on (movie_night_id, user_id): the former-member placeholder
+ * (PRD §4, §12) is one row shared by every departed rater, so a second
+ * departure reassigning that night's rating would collide with the first's
+ * under such an index (R2). One rating per member is enforced in code
+ * instead, by `saveRating` (src/lib/server/ratings.ts), which selects the
+ * viewer's existing row inside its transaction and updates it rather than
+ * inserting a second one.
+ */
+export const ratings = sqliteTable('ratings', {
+	id: uuid(),
+	movieNightId: text('movie_night_id')
+		.notNull()
+		.references(() => movieNights.id, { onDelete: 'cascade' }),
+	/**
+	 * `restrict`, like suggestions.suggested_by: a departed member's ratings
+	 * belong to the "former member" placeholder (PRD §4, §12). Deleting an
+	 * account without reassignToFormerMember first must fail loudly.
+	 */
+	userId: text('user_id').references(() => users.id, { onDelete: 'restrict' }),
+	/** 2–20: the 1–10 half-step score doubled. Never a float (PRD §7). */
+	scoreX2: integer('score_x2').notNull(),
+	comment: text('comment'),
+	createdAt: createdAt()
+});
 
 /** Instance-level configuration the admin edits in the UI, timezone first (PRD §10). */
 export const settings = sqliteTable('settings', {

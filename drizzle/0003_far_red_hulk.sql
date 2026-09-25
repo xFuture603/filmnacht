@@ -14,5 +14,4 @@ INSERT INTO `__new_ratings`("id", "movie_night_id", "user_id", "score_x2", "comm
 DROP TABLE `ratings`;--> statement-breakpoint
 ALTER TABLE `__new_ratings` RENAME TO `ratings`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
-CREATE UNIQUE INDEX `ratings_night_user` ON `ratings` (`movie_night_id`,`user_id`);--> statement-breakpoint
 ALTER TABLE `movie_nights` ADD `revealed_at` integer;
