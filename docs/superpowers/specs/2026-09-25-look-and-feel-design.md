@@ -42,7 +42,7 @@ Inside a group, a tab strip (daisyUI `tabs tabs-box`) under the group header swi
 
 ## Shared components (`src/lib/components/`)
 
-Only what at least two pages use:
+Only what at least two pages use (the plan adds `Field`, `LocaleSelect` and `GroupTabs` by the same rule):
 
 | Component | Props | Used by |
 | --- | --- | --- |
