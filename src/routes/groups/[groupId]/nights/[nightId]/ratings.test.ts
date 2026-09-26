@@ -157,7 +157,11 @@ describe('rating', () => {
 		await post('rate', grace, { score: '8' });
 		await post('reveal', ada, { confirm: 'on' });
 		const { load: listLoad } = await import('../+page.server');
-		const list = (await listLoad({ params: { groupId }, locals: locals(grace) } as never)) as {
+		const list = (await listLoad({
+			params: { groupId },
+			locals: locals(grace),
+			url: new URL('http://x/')
+		} as never)) as {
 			past: Array<{ id: string; average: number | null }>;
 		};
 		expect(list.past.find((n) => n.id === nightId)?.average).toBe(8);

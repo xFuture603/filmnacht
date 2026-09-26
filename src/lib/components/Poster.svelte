@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from './Icon.svelte';
+	import { Film } from '@lucide/svelte';
 	let { src }: { src: string | null } = $props();
 </script>
 
@@ -19,6 +19,6 @@
 		class="flex aspect-[2/3] w-full items-center justify-center rounded-box bg-gradient-to-br from-base-300 to-base-200"
 		aria-hidden="true"
 	>
-		<Icon name="film" class="size-10 text-base-content/25" />
+		<Film class="size-10 text-base-content/25" strokeWidth={1.5} />
 	</div>
 {/if}

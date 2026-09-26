@@ -16,11 +16,7 @@ export const actions: Actions = {
 		// Same rule as a display name: non-empty, trimmed, max 60.
 		const name = validateDisplayName(form.get('name'));
 		if (!name) return fail(400, { error: 'groups.error.name' });
-		const emoji =
-			String(form.get('emoji') ?? '')
-				.trim()
-				.slice(0, 8) || null;
-		const id = createGroup(db, { name, emoji, ownerId: user.id });
+		const id = createGroup(db, { name, ownerId: user.id });
 		redirect(303, `/groups/${id}`);
 	}
 };

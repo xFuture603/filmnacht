@@ -4,11 +4,11 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import { Film, Plus, Users } from '@lucide/svelte';
 	let { data, form } = $props();
 </script>
 
-<PageHeader title={data.group.name} emoji={data.group.emoji ?? '🎬'} />
+<PageHeader title={data.group.name} icon={Users} />
 <GroupTabs
 	groupId={data.group.groupId}
 	groupName={data.group.name}
@@ -26,12 +26,12 @@
 			{t(data.locale, 'pool.count', { used: data.used, max: data.max })}
 		</p>
 		<a class="btn btn-primary min-h-11" href="/groups/{data.group.groupId}/add">
-			<Icon name="plus" class="size-5" />{t(data.locale, 'pool.add')}
+			<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
 		</a>
 	</div>
 
 	{#if data.pool.length === 0}
-		<EmptyState icon="film" text={t(data.locale, 'pool.empty')} />
+		<EmptyState icon={Film} text={t(data.locale, 'pool.empty')} />
 	{:else}
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 			{#each data.pool as entry (entry.suggestionId)}
