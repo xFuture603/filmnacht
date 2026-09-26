@@ -1,17 +1,17 @@
 <script lang="ts">
 	import '../app.css';
 	import { t } from '$lib/i18n';
-	import Icon, { type IconName } from '$lib/components/Icon.svelte';
+	import { Clapperboard, CircleUser, ShieldCheck, Users } from '@lucide/svelte';
 	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
 
 	let { data, children } = $props();
 
 	const sections = $derived(
 		[
-			{ href: '/groups', label: t(data.locale, 'nav.groups'), icon: 'groups' as IconName },
-			{ href: '/profile', label: t(data.locale, 'nav.profile'), icon: 'profile' as IconName },
+			{ href: '/groups', label: t(data.locale, 'nav.groups'), icon: Users },
+			{ href: '/profile', label: t(data.locale, 'nav.profile'), icon: CircleUser },
 			...(data.user?.isAdmin
-				? [{ href: '/admin', label: t(data.locale, 'nav.admin'), icon: 'admin' as IconName }]
+				? [{ href: '/admin', label: t(data.locale, 'nav.admin'), icon: ShieldCheck }]
 				: [])
 		].map((s) => ({
 			...s,
@@ -25,7 +25,11 @@
 		class="navbar sticky top-0 z-10 min-h-14 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur"
 	>
 		<a class="flex min-h-11 items-center gap-2 text-lg font-semibold" href="/">
-			<span aria-hidden="true">🎬</span>{t(data.locale, 'app.name')}
+			<!-- The one amber mark in the chrome: a fill with dark ink, never amber on white. -->
+			<span class="grid size-8 place-items-center rounded-field bg-primary text-primary-content">
+				<Clapperboard class="size-4" strokeWidth={2.25} />
+			</span>
+			{t(data.locale, 'app.name')}
 		</a>
 		<div class="flex-1"></div>
 		{#if data.user}
@@ -34,8 +38,10 @@
 					<a
 						class={['btn btn-ghost min-h-11', s.current && 'btn-active']}
 						href={s.href}
-						aria-current={s.current ? 'page' : undefined}>{s.label}</a
+						aria-current={s.current ? 'page' : undefined}
 					>
+						<s.icon class="size-4" />{s.label}
+					</a>
 				{/each}
 			</nav>
 		{/if}
@@ -65,7 +71,7 @@
 					class={['min-h-11', s.current && 'dock-active font-semibold']}
 					aria-current={s.current ? 'page' : undefined}
 				>
-					<Icon name={s.icon} class="size-6" />
+					<s.icon class="size-5" strokeWidth={s.current ? 2.25 : 1.75} />
 					<span class="dock-label">{s.label}</span>
 				</a>
 			{/each}

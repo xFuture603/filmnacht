@@ -5,6 +5,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import NightStatus from '$lib/components/NightStatus.svelte';
+	import { CalendarDays, Clock, MapPin, Star, Users } from '@lucide/svelte';
 	let { data, form } = $props();
 
 	const fmt = (n: number) =>
@@ -14,7 +15,7 @@
 		}).format(n);
 </script>
 
-<PageHeader title={data.group.name} emoji="👥" />
+<PageHeader title={data.group.name} icon={Users} />
 <GroupTabs
 	groupId={data.group.groupId}
 	groupName={data.group.name}
@@ -34,7 +35,9 @@
 						<span class="font-semibold">{night.when}</span>
 						<span class="flex items-center gap-2">
 							{#if night.average !== null}
-								<span class="badge badge-sm badge-outline tabular-nums">
+								<span class="badge badge-sm badge-outline gap-1 tabular-nums">
+									<Star class="size-3" />
+									<span class="sr-only">{t(data.locale, 'ratings.average')}</span>
 									{t(data.locale, 'ratings.average_short', { average: fmt(night.average) })}
 								</span>
 							{/if}
@@ -42,7 +45,11 @@
 						</span>
 					</div>
 					{#if night.location}
-						<span class="text-sm break-words text-base-content/70">📍 {night.location}</span>
+						<span class="flex items-center gap-1 text-sm text-base-content/70">
+							<MapPin class="size-4 shrink-0" /><span class="min-w-0 break-words"
+								>{night.location}</span
+							>
+						</span>
 					{/if}
 					<span class="text-sm text-base-content/70">
 						{t(data.locale, 'nights.counts', {
@@ -98,7 +105,8 @@
 							/>
 						{/each}
 					</div>
-					<p class="text-xs text-base-content/70">
+					<p class="flex items-center gap-1 text-xs text-base-content/70">
+						<Clock class="size-3.5 shrink-0" />
 						{t(data.locale, 'nights.when_hint', { zone: data.timezone })}
 					</p>
 				</fieldset>
@@ -148,7 +156,7 @@
 {/if}
 
 {#if data.upcoming.length === 0 && data.past.length === 0}
-	<EmptyState icon="calendar" text={t(data.locale, 'nights.none')} />
+	<EmptyState icon={CalendarDays} text={t(data.locale, 'nights.none')} />
 {/if}
 
 {#if data.upcoming.length > 0}

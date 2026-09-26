@@ -197,7 +197,7 @@
 	"ratings.highest": "Höchste",
 	"ratings.tmdb": "{delta} gegenüber TMDB ({tmdb})",
 	"ratings.former": "Ehemaliges Mitglied",
-	"ratings.average_short": "★ {average}",
+	"ratings.average_short": "{average}",
 	"ratings.error.window": "Für diese Filmnacht kann gerade nicht bewertet werden.",
 	"ratings.error.locked": "Die Bewertungen sind aufgelöst, deine lässt sich nicht mehr ändern.",
 	"ratings.error.score": "Wähl eine Punktzahl von 1 bis 10.",

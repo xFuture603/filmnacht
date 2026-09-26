@@ -199,7 +199,7 @@
 	"ratings.highest": "Highest",
 	"ratings.tmdb": "{delta} against TMDB ({tmdb})",
 	"ratings.former": "Former member",
-	"ratings.average_short": "★ {average}",
+	"ratings.average_short": "{average}",
 	"ratings.error.window": "Rating is not open for this night.",
 	"ratings.error.locked": "Scores are revealed, so yours can no longer change.",
 	"ratings.error.score": "Pick a score from 1 to 10.",

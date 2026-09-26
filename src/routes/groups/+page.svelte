@@ -3,26 +3,32 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Field from '$lib/components/Field.svelte';
+	import { ChevronRight, Users } from '@lucide/svelte';
 	let { data, form } = $props();
 </script>
 
 <PageHeader title={t(data.locale, 'groups.title')} />
 
 {#if data.groups.length === 0}
-	<div class="mb-8"><EmptyState icon="groups" text={t(data.locale, 'groups.empty')} /></div>
+	<div class="mb-8"><EmptyState icon={Users} text={t(data.locale, 'groups.empty')} /></div>
 {:else}
-	<ul class="mb-8 grid gap-3 sm:grid-cols-2">
+	<ul class="mb-8 grid gap-3">
 		{#each data.groups as group (group.id)}
 			<li class="min-w-0">
 				<a
 					href="/groups/{group.id}"
 					class="card flex min-h-11 w-full flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
 				>
-					<span class="text-3xl" aria-hidden="true">👥</span>
-					<span class="min-w-0 flex-1 truncate font-semibold">{group.name}</span>
+					<span
+						class="grid size-11 shrink-0 place-items-center rounded-field bg-base-200 text-base-content"
+					>
+						<Users class="size-5" />
+					</span>
+					<span class="line-clamp-2 min-w-0 flex-1 font-semibold break-words">{group.name}</span>
 					{#if group.role === 'owner'}
 						<span class="badge badge-sm">{t(data.locale, 'groups.owner')}</span>
 					{/if}
+					<ChevronRight class="size-4 shrink-0 text-base-content/40" />
 				</a>
 			</li>
 		{/each}
