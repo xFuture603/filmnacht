@@ -2,13 +2,13 @@ import { db } from '$lib/server/db';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import { LOCATION_MAX, listNights, scheduleNight } from '$lib/server/nights';
 import { averagesFor } from '$lib/server/ratings';
-import { dayOptions, pickWhen, scheduleDefaults, timeOptions } from '$lib/server/schedule';
+import { pickWhen, scheduleDefaults, todayIn } from '$lib/schedule';
 import { getTimezone } from '$lib/server/settings';
-import { formatWhen, wallTimeToUtc } from '$lib/server/time';
+import { formatWhen, wallTimeToUtc } from '$lib/time';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = ({ locals, params }) => {
+export const load: PageServerLoad = ({ locals, params, url }) => {
 	const user = requireUser(locals);
 	// Membership before anything about the group's nights is read (PRD §12).
 	const group = requireMember(db, user.id, params.groupId);
@@ -19,6 +19,10 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	const all = listNights(db, params.groupId);
 	// The latest night is the best guess for the next one: same weekday, time, place.
 	const defaults = scheduleDefaults(all[0] ?? null, timezone, new Date(now));
+	const today = todayIn(new Date(now), timezone);
+	const requested = /^\d{4}-(0[1-9]|1[0-2])$/.test(url.searchParams.get('month') ?? '')
+		? url.searchParams.get('month')
+		: null;
 	const nights = all.map((night) => ({
 		...night,
 		when: formatWhen(night.scheduledAt, timezone, locals.locale),
@@ -32,8 +36,13 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		locationMax: LOCATION_MAX,
 		timezone,
 		defaults,
-		days: dayOptions(new Date(now), timezone, locals.locale),
-		times: timeOptions(all[0] ? defaults.time : null)
+		today,
+		// The calendar opens on ?month= (so ‹ › work without JavaScript), else on
+		// the suggested day's month; never on a month that is already over.
+		month:
+			requested && requested >= today.slice(0, 7) ? requested : (defaults.day ?? today).slice(0, 7),
+		// Only a group that has met has a usual time worth offering as a slot.
+		usualTime: all[0] ? defaults.time : null
 	};
 };
 
@@ -47,7 +56,6 @@ export const actions: Actions = {
 		const picked = {
 			day: field('day'),
 			time: field('time'),
-			otherDay: field('other_day'),
 			otherTime: field('other_time')
 		};
 		const location = field('location');
@@ -55,7 +63,7 @@ export const actions: Actions = {
 
 		// The chips and the date/time fields carry no zone. They mean the
 		// instance's wall clock, not the server's and not the browser's (PRD §6, §12).
-		if (!picked.day && !picked.otherDay) return fail(400, { error: 'nights.error.day', ...echo });
+		if (!picked.day) return fail(400, { error: 'nights.error.day', ...echo });
 		const scheduledAt = wallTimeToUtc(pickWhen(picked), getTimezone(db));
 		if (!scheduledAt) return fail(400, { error: 'nights.error.when', ...echo });
 		if (scheduledAt.getTime() < Date.now()) {

@@ -70,13 +70,8 @@ describe('scheduling from the form', () => {
 		expect(listNights(db, groupId)).toHaveLength(0);
 	});
 
-	it('lets the other date and time win over the chips', async () => {
-		await schedule(ada, {
-			day: '2030-07-01',
-			time: '20:00',
-			other_day: '2030-12-24',
-			other_time: '18:15'
-		});
+	it('lets the other time win over the slot', async () => {
+		await schedule(ada, { day: '2030-12-24', time: '20:00', other_time: '18:15' });
 		// 18:15 in Berlin in December is 17:15 UTC.
 		expect(listNights(db, groupId)[0].scheduledAt.toISOString()).toBe('2030-12-24T17:15:00.000Z');
 	});
@@ -96,20 +91,42 @@ describe('scheduling from the form', () => {
 	});
 });
 
+describe('the calendar month', () => {
+	function month(value: string) {
+		return load({
+			params: { groupId },
+			locals: locals(ada),
+			url: new URL(`http://x/?month=${value}`)
+		} as never) as Promise<{ month: string; today: string }>;
+	}
+
+	it('opens the month asked for', async () => {
+		expect((await month('2031-03')).month).toBe('2031-03');
+	});
+
+	it('never opens a month before this one, nor a malformed one', async () => {
+		const { today } = await month('2001-01');
+		expect((await month('2001-01')).month).toBe(today.slice(0, 7));
+		expect((await month('garbage')).month).toBe(today.slice(0, 7));
+	});
+});
+
 describe('the list', () => {
 	it('shows members the group’s nights, formatted in the instance timezone', async () => {
 		await schedule(ada, { day: '2030-07-01', time: '20:00' });
-		const data = (await load({ params: { groupId }, locals: locals(grace) } as never)) as Exclude<
-			Awaited<ReturnType<typeof load>>,
-			void
-		>;
+		const data = (await load({
+			params: { groupId },
+			locals: locals(grace),
+			url: new URL('http://x/')
+		} as never)) as Exclude<Awaited<ReturnType<typeof load>>, void>;
 		expect(data.upcoming).toHaveLength(1);
 		expect(data.upcoming[0].when).toContain('20:00');
 		expect(data.isOwner).toBe(false);
 		// The last night was 1 July 2030, a Monday at 20:00: the form suggests
 		// the same time and place next time.
 		expect(data.defaults).toMatchObject({ time: '20:00' });
-		expect(data.days).toHaveLength(14);
+		// The calendar opens on the suggested day's month.
+		expect(data.month).toBe(data.defaults.day?.slice(0, 7));
 		expect(data.timezone).toBe('Europe/Berlin');
 	});
 
@@ -121,7 +138,11 @@ describe('the list', () => {
 		}).id;
 		let status: number | undefined;
 		try {
-			await load({ params: { groupId }, locals: locals(mallory) } as never);
+			await load({
+				params: { groupId },
+				locals: locals(mallory),
+				url: new URL('http://x/')
+			} as never);
 		} catch (e) {
 			status = (e as { status: number }).status;
 		}

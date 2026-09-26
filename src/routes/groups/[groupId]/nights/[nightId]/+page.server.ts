@@ -14,7 +14,7 @@ import {
 } from '$lib/server/nights';
 import { parseScore, ratingView, revealNow, saveRating, withdrawRating } from '$lib/server/ratings';
 import { getTimezone } from '$lib/server/settings';
-import { formatWhen } from '$lib/server/time';
+import { formatWhen } from '$lib/time';
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
