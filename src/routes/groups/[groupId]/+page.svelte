@@ -8,7 +8,7 @@
 	let { data, form } = $props();
 </script>
 
-<PageHeader title={data.group.name} emoji={data.group.emoji ?? '🎬'} />
+<PageHeader title={data.group.name} emoji="👥" />
 <GroupTabs
 	groupId={data.group.groupId}
 	groupName={data.group.name}

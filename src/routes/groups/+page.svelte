@@ -18,7 +18,7 @@
 					href="/groups/{group.id}"
 					class="card flex min-h-11 w-full flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
 				>
-					<span class="text-3xl" aria-hidden="true">{group.emoji ?? '🎬'}</span>
+					<span class="text-3xl" aria-hidden="true">👥</span>
 					<span class="min-w-0 flex-1 truncate font-semibold">{group.name}</span>
 					{#if group.role === 'owner'}
 						<span class="badge badge-sm">{t(data.locale, 'groups.owner')}</span>
