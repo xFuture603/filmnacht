@@ -74,9 +74,6 @@
 			<Field label={t(data.locale, 'add.film_title')}>
 				<input name="title" required maxlength="200" class="input min-h-11 w-full" />
 			</Field>
-			<Field label={t(data.locale, 'add.year')}>
-				<input name="year" inputmode="numeric" maxlength="4" class="input min-h-11 w-32" />
-			</Field>
 			<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
 				<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"></textarea>
 			</Field>
