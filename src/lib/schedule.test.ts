@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
 	monthGrid,
 	monthTitle,
-	pickWhen,
 	scheduleDefaults,
 	shiftMonth,
 	timeSlots,
@@ -149,21 +148,5 @@ describe('scheduleDefaults', () => {
 			day: '2026-10-30',
 			time: '20:00'
 		});
-	});
-});
-
-describe('pickWhen', () => {
-	it('combines the chosen day and time', () => {
-		expect(pickWhen({ day: '2026-10-02', time: '20:00', otherTime: '' })).toBe('2026-10-02T20:00');
-	});
-
-	it('lets the other time win over the slots', () => {
-		expect(pickWhen({ day: '2026-10-02', time: '20:00', otherTime: '19:45' })).toBe(
-			'2026-10-02T19:45'
-		);
-	});
-
-	it('returns something wallTimeToUtc will refuse when a part is missing', () => {
-		expect(pickWhen({ day: '', time: '20:00', otherTime: '' })).toBe('T20:00');
 	});
 });

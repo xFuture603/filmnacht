@@ -120,15 +120,6 @@ export function scheduleDefaults(
 	return { day, time: usual.time, location: last.location ?? '' };
 }
 
-/**
- * The calendar posts `day` and the slots post `time`; the "other time" field,
- * when filled, wins over the slot. The result is a wall-clock string for
- * wallTimeToUtc, which refuses anything incomplete.
- */
-export function pickWhen(fields: { day: string; time: string; otherTime: string }): string {
-	return `${fields.day}T${fields.otherTime || fields.time}`;
-}
-
 /** "Friday 2 October 2026": the accessible name of a calendar day. */
 export function dayLabel(date: string, locale: Locale): string {
 	return new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'en-GB', {

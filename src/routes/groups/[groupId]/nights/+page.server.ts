@@ -2,7 +2,7 @@ import { db } from '$lib/server/db';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import { LOCATION_MAX, listNights, scheduleNight } from '$lib/server/nights';
 import { averagesFor } from '$lib/server/ratings';
-import { pickWhen, scheduleDefaults, todayIn } from '$lib/schedule';
+import { scheduleDefaults, todayIn } from '$lib/schedule';
 import { getTimezone } from '$lib/server/settings';
 import { formatWhen, wallTimeToUtc } from '$lib/time';
 import { fail, redirect } from '@sveltejs/kit';
@@ -53,18 +53,14 @@ export const actions: Actions = {
 		const form = await request.formData();
 		// Nothing below awaits: the checks and the insert run as one step.
 		const field = (name: string) => String(form.get(name) ?? '').trim();
-		const picked = {
-			day: field('day'),
-			time: field('time'),
-			otherTime: field('other_time')
-		};
+		const picked = { day: field('day'), time: field('time') };
 		const location = field('location');
 		const echo = { ...picked, location };
 
-		// The chips and the date/time fields carry no zone. They mean the
-		// instance's wall clock, not the server's and not the browser's (PRD §6, §12).
+		// The calendar and the slots carry no zone. They mean the instance's wall
+		// clock, not the server's and not the browser's (PRD §6, §12).
 		if (!picked.day) return fail(400, { error: 'nights.error.day', ...echo });
-		const scheduledAt = wallTimeToUtc(pickWhen(picked), getTimezone(db));
+		const scheduledAt = wallTimeToUtc(`${picked.day}T${picked.time}`, getTimezone(db));
 		if (!scheduledAt) return fail(400, { error: 'nights.error.when', ...echo });
 		if (scheduledAt.getTime() < Date.now()) {
 			return fail(400, { error: 'nights.error.past', ...echo });

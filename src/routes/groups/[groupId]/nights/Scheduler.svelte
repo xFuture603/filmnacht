@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight, Clock } from '@lucide/svelte';
+	import { ChevronLeft, ChevronRight } from '@lucide/svelte';
 	import Field from '$lib/components/Field.svelte';
 	import { t, type Locale } from '$lib/i18n';
 	import {
@@ -28,7 +28,7 @@
 		defaults: { day: string | null; time: string; location: string };
 		usualTime: string | null;
 		locationMax: number;
-		echo: { day?: string; time?: string; otherTime?: string; location?: string } | undefined;
+		echo: { day?: string; time?: string; location?: string } | undefined;
 	} = $props();
 
 	// Overridable deriveds: they follow the server's data (a failed submit
@@ -142,18 +142,6 @@
 			{/each}
 		</div>
 	{/if}
-	<p class="flex items-center gap-1 text-xs text-base-content/70">
-		<Clock class="size-3.5 shrink-0" />
-		{t(locale, 'nights.when_hint', { zone: timezone })}
-	</p>
-	<Field label={t(locale, 'nights.other_time')}>
-		<input
-			type="time"
-			name="other_time"
-			value={echo?.otherTime ?? ''}
-			class="input min-h-11 w-full sm:w-40"
-		/>
-	</Field>
 </fieldset>
 
 <Field label={t(locale, 'nights.where')}>

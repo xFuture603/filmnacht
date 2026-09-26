@@ -70,12 +70,6 @@ describe('scheduling from the form', () => {
 		expect(listNights(db, groupId)).toHaveLength(0);
 	});
 
-	it('lets the other time win over the slot', async () => {
-		await schedule(ada, { day: '2030-12-24', time: '20:00', other_time: '18:15' });
-		// 18:15 in Berlin in December is 17:15 UTC.
-		expect(listNights(db, groupId)[0].scheduledAt.toISOString()).toBe('2030-12-24T17:15:00.000Z');
-	});
-
 	it('asks for a day when none was picked', async () => {
 		expect(await schedule(ada, { time: '20:00' })).toMatchObject({
 			status: 400,
