@@ -26,3 +26,7 @@ vite.config.ts.timestamp-*
 data/
 .superpowers/
 drizzle/*.bak
+
+# Editor settings and working documents (kept locally, not published)
+.vscode/
+docs/
