@@ -4,7 +4,7 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { Film, Plus, Users } from '@lucide/svelte';
+	import { Film, Plus, Users, X } from '@lucide/svelte';
 	let { data, form } = $props();
 </script>
 
@@ -39,31 +39,35 @@
 					<div class="relative">
 						<Poster src={entry.posterUrl} />
 						{#if entry.mine}
-							<span class="badge badge-sm badge-primary absolute top-2 right-2 shadow-sm">
+							<span class="badge badge-sm badge-primary absolute top-2 left-2 shadow-sm">
 								{t(data.locale, 'pool.yours')}
 							</span>
 						{/if}
+						{#if entry.mine && entry.status === 'open'}
+							<!-- A 44px tap area around a 32px red dot: easy to hit, small on the poster. -->
+							<form method="POST" action="?/withdraw" class="absolute top-0 right-0">
+								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
+								<button
+									class="group grid size-11 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-error"
+									aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
+									title={t(data.locale, 'pool.withdraw')}
+								>
+									<span
+										class="grid size-8 place-items-center rounded-full bg-error text-error-content shadow-md transition group-hover:scale-110"
+									>
+										<X class="size-4" strokeWidth={2.5} />
+									</span>
+								</button>
+							</form>
+						{/if}
 					</div>
-					<!-- flex-1 + mt-auto below: cards in a row are equally tall (grid
-					     stretch), so Withdraw lines up however long the titles are. -->
-					<div class="flex min-w-0 flex-1 flex-col items-start">
+					<div class="flex min-w-0 flex-col items-start">
 						<p class="line-clamp-2 font-medium break-words">{entry.title}</p>
 						<p class="text-sm text-base-content/70">
 							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
 						</p>
 						{#if entry.status === 'drawn'}
 							<span class="mt-1 badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
-						{/if}
-						{#if entry.mine && entry.status === 'open'}
-							<form method="POST" action="?/withdraw" class="mt-auto pt-1">
-								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
-								<button
-									class="btn btn-ghost btn-sm min-h-11 px-2 text-base-content/70"
-									aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
-								>
-									{t(data.locale, 'pool.withdraw')}
-								</button>
-							</form>
 						{/if}
 					</div>
 				</li>
