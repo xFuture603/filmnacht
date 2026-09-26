@@ -36,20 +36,22 @@
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 			{#each data.pool as entry (entry.suggestionId)}
 				<li class="flex min-w-0 flex-col gap-2">
-					<Poster src={entry.posterUrl} />
+					<div class="relative">
+						<Poster src={entry.posterUrl} />
+						{#if entry.mine}
+							<span class="badge badge-sm badge-primary absolute top-2 right-2 shadow-sm">
+								{t(data.locale, 'pool.yours')}
+							</span>
+						{/if}
+					</div>
 					<div class="min-w-0">
 						<p class="line-clamp-2 font-medium break-words">{entry.title}</p>
 						<p class="text-sm text-base-content/70">
 							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
 						</p>
-						<div class="mt-1 flex flex-wrap gap-1">
-							{#if entry.status === 'drawn'}
-								<span class="badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
-							{/if}
-							{#if entry.mine}
-								<span class="badge badge-sm badge-primary">{t(data.locale, 'pool.yours')}</span>
-							{/if}
-						</div>
+						{#if entry.status === 'drawn'}
+							<span class="mt-1 badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
+						{/if}
 						{#if entry.mine && entry.status === 'open'}
 							<form method="POST" action="?/withdraw">
 								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
