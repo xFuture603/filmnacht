@@ -44,7 +44,9 @@
 							</span>
 						{/if}
 					</div>
-					<div class="min-w-0">
+					<!-- flex-1 + mt-auto below: cards in a row are equally tall (grid
+					     stretch), so Withdraw lines up however long the titles are. -->
+					<div class="flex min-w-0 flex-1 flex-col items-start">
 						<p class="line-clamp-2 font-medium break-words">{entry.title}</p>
 						<p class="text-sm text-base-content/70">
 							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
@@ -53,10 +55,10 @@
 							<span class="mt-1 badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
 						{/if}
 						{#if entry.mine && entry.status === 'open'}
-							<form method="POST" action="?/withdraw">
+							<form method="POST" action="?/withdraw" class="mt-auto pt-1">
 								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
 								<button
-									class="btn btn-ghost btn-sm mt-1 min-h-11 px-2 text-base-content/70"
+									class="btn btn-ghost btn-sm min-h-11 px-2 text-base-content/70"
 									aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
 								>
 									{t(data.locale, 'pool.withdraw')}
