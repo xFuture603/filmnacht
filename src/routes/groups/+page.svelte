@@ -39,9 +39,6 @@
 			<Field label={t(data.locale, 'groups.name')}>
 				<input name="name" required maxlength="60" class="input min-h-11 w-full" />
 			</Field>
-			<Field label={t(data.locale, 'groups.emoji')}>
-				<input name="emoji" maxlength="8" class="input min-h-11 w-24" />
-			</Field>
 			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'groups.create')}</button
 			>

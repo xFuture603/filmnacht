@@ -32,7 +32,6 @@
 	"groups.title": "Your groups",
 	"groups.create": "Create a group",
 	"groups.name": "Group name",
-	"groups.emoji": "Emoji (optional)",
 	"groups.empty": "No groups yet. Create one, or open an invite link a friend sent you.",
 	"groups.members": "Members",
 	"groups.owner": "Owner",
