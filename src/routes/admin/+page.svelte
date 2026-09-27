@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Field from '$lib/components/Field.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	import { CircleCheck, CircleX, Globe, Mail, Search, Send } from '@lucide/svelte';
 	let { data, form } = $props();
 
@@ -9,6 +10,17 @@
 </script>
 
 <PageHeader title={t(data.locale, 'admin.title')} />
+
+{#key form}
+	{#if form?.timezoneSaved}
+		<Toast message={t(data.locale, 'admin.timezone_saved')} locale={data.locale} />
+	{:else if form?.mailSent}
+		<Toast
+			message={t(data.locale, 'admin.mail_sent', { email: form.mailSent })}
+			locale={data.locale}
+		/>
+	{/if}
+{/key}
 
 {#if form?.error}
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
@@ -27,11 +39,6 @@
 <section class={card}>
 	<div class="card-body">
 		<h2 class="card-title text-lg"><Globe class="size-5" />{t(data.locale, 'admin.settings')}</h2>
-		{#if form?.timezoneSaved}
-			<div class="alert alert-success alert-soft" role="alert">
-				{t(data.locale, 'admin.timezone_saved')}
-			</div>
-		{/if}
 		<form method="POST" action="?/timezone" class="flex flex-col gap-2">
 			<Field label={t(data.locale, 'admin.timezone')} hint={t(data.locale, 'admin.timezone_hint')}>
 				<select name="timezone" required class="select min-h-11 w-full sm:w-80">
@@ -89,11 +96,6 @@
 			</li>
 		</ul>
 
-		{#if form?.mailSent}
-			<div class="alert alert-success alert-soft" role="alert">
-				{t(data.locale, 'admin.mail_sent', { email: form.mailSent })}
-			</div>
-		{/if}
 		{#if form?.mailCode}
 			<div class="alert alert-error alert-soft flex-col items-start gap-1" role="alert">
 				<p class="font-medium">{t(data.locale, 'admin.mail_failed', { code: form.mailCode })}</p>

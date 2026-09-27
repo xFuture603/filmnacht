@@ -7,6 +7,7 @@
 	"nav.main": "Main navigation",
 	"common.save": "Save",
 	"common.cancel": "Cancel",
+	"common.close": "Close",
 	"common.copy": "Copy",
 	"common.copied": "Copied",
 	"test.greeting": "Hello {name}",
