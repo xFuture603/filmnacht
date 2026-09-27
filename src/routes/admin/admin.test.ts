@@ -6,9 +6,11 @@ import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { passwordResets } from '$lib/server/db/schema';
 import { resetRateLimits } from '$lib/server/rate-limit';
 import { consumeReset } from '$lib/server/resets';
+import { getTimezone } from '$lib/server/settings';
 import {
 	createUser,
 	regenerateLoginToken,
+	setEmail,
 	storedPasswordHash,
 	userByLoginToken
 } from '$lib/server/users';
@@ -20,6 +22,26 @@ let db: DB;
 vi.mock('$lib/server/db', () => ({
 	get db() {
 		return db;
+	}
+}));
+
+// No real SMTP in tests: a fake whose status and send result each test sets.
+let mailConfigured = true;
+let testMailResult: { ok: true } | { ok: false; code: string } = { ok: true };
+const testMailsTo: string[] = [];
+vi.mock('$lib/server/mail', () => ({
+	isMailConfigured: () => mailConfigured,
+	sendMail: async () => mailConfigured,
+	mailStatus: () => ({
+		configured: mailConfigured,
+		host: mailConfigured ? 'smtp.example.com' : null,
+		port: 587,
+		from: mailConfigured ? 'filmnacht@example.com' : null,
+		login: true
+	}),
+	sendTestMail: async (to: string) => {
+		testMailsTo.push(to);
+		return testMailResult;
 	}
 }));
 
@@ -248,5 +270,84 @@ describe('POST /admin?/recover', () => {
 			url: new URL('http://localhost/profile')
 		} as never);
 		expect((adasOwn as { loginUrl?: string })?.loginUrl).toMatch(/\/login\//);
+	});
+});
+
+async function act(
+	name: 'timezone' | 'testMail',
+	user: Caller,
+	fields: Record<string, string> = {}
+): Promise<Record<string, unknown>> {
+	return (await actions[name]({
+		locals: { user, locale: 'en' },
+		request: new Request('http://localhost/admin', {
+			method: 'POST',
+			body: new URLSearchParams(fields)
+		})
+	} as never)) as Record<string, unknown>;
+}
+
+describe('instance settings on /admin', () => {
+	beforeEach(() => {
+		mailConfigured = true;
+		testMailResult = { ok: true };
+		testMailsTo.length = 0;
+	});
+
+	it('shows the timezone and where mail points', () => {
+		const data = load({ locals: { user: asAdmin(), locale: 'en' } } as never) as {
+			timezone: string;
+			mail: { configured: boolean; host: string | null };
+			tmdb: boolean;
+		};
+		expect(data.timezone).toBe('UTC');
+		expect(data.mail).toMatchObject({ configured: true, host: 'smtp.example.com' });
+		expect(typeof data.tmdb).toBe('boolean');
+	});
+
+	it('lets the admin change the timezone, and only to a real one', async () => {
+		expect(await act('timezone', asAdmin(), { timezone: 'Europe/Berlin' })).toEqual({
+			timezoneSaved: true
+		});
+		expect(getTimezone(db)).toBe('Europe/Berlin');
+		expect(await act('timezone', asAdmin(), { timezone: 'Mars/Olympus_Mons' })).toMatchObject({
+			status: 400,
+			data: { error: 'setup.error.timezone' }
+		});
+		expect(getTimezone(db)).toBe('Europe/Berlin');
+	});
+
+	it('refuses a member who is not the admin', async () => {
+		expect(await statusOfThrow(() => act('timezone', asAda(), { timezone: 'Europe/Berlin' }))).toBe(
+			403
+		);
+		expect(getTimezone(db)).toBe('UTC');
+		expect(await statusOfThrow(() => act('testMail', asAda()))).toBe(403);
+		expect(testMailsTo).toEqual([]);
+	});
+
+	it('asks for an email address on the profile before sending a test', async () => {
+		expect(await act('testMail', asAdmin())).toMatchObject({
+			status: 400,
+			data: { error: 'admin.error.no_email' }
+		});
+		expect(testMailsTo).toEqual([]);
+	});
+
+	it('sends the test to the admin’s own address and says so', async () => {
+		setEmail(db, admin.id, 'admin@example.com');
+		expect(await act('testMail', asAdmin())).toEqual({ mailSent: 'admin@example.com' });
+		expect(testMailsTo).toEqual(['admin@example.com']);
+	});
+
+	it('turns a failure code into a hint the admin can act on', async () => {
+		setEmail(db, admin.id, 'admin@example.com');
+		testMailResult = { ok: false, code: 'EAUTH' };
+		expect(await act('testMail', asAdmin())).toMatchObject({
+			status: 400,
+			data: { mailCode: 'EAUTH', mailHint: 'auth' }
+		});
+		testMailResult = { ok: false, code: 'ETIMEDOUT' };
+		expect(await act('testMail', asAdmin())).toMatchObject({ data: { mailHint: 'connection' } });
 	});
 });

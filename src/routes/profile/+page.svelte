@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import Toast from '$lib/components/Toast.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
@@ -14,9 +15,9 @@
 {#if form?.error}
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
 {/if}
-{#if form?.success}
-	<div class="alert alert-success alert-soft mb-4" role="alert">{t(data.locale, form.success)}</div>
-{/if}
+{#key form}
+	{#if form?.success}<Toast message={t(data.locale, form.success)} locale={data.locale} />{/if}
+{/key}
 
 <section class={card}>
 	<div class="card-body gap-1">
