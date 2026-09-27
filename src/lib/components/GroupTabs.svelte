@@ -1,12 +1,21 @@
 <script lang="ts">
-	import { CalendarDays, Clapperboard } from '@lucide/svelte';
+	import type { Component } from 'svelte';
+	import { CalendarDays, Clapperboard, Settings } from '@lucide/svelte';
 	import { t, type Locale } from '$lib/i18n';
 	let {
 		groupId,
 		groupName,
 		active,
-		locale
-	}: { groupId: string; groupName: string; active: 'pool' | 'nights'; locale: Locale } = $props();
+		locale,
+		isOwner = false
+	}: {
+		groupId: string;
+		groupName: string;
+		active: 'pool' | 'nights' | 'settings';
+		locale: Locale;
+		isOwner?: boolean;
+	} = $props();
+	type Tab = { id: 'pool' | 'nights' | 'settings'; href: string; label: string; icon: Component };
 	const tabs = $derived([
 		{ id: 'pool', href: `/groups/${groupId}`, label: t(locale, 'pool.title'), icon: Clapperboard },
 		{
@@ -14,8 +23,19 @@
 			href: `/groups/${groupId}/nights`,
 			label: t(locale, 'nights.title'),
 			icon: CalendarDays
-		}
-	] as const);
+		},
+		// Owner-only: a member has nothing to configure here.
+		...(isOwner
+			? [
+					{
+						id: 'settings',
+						href: `/groups/${groupId}/settings`,
+						label: t(locale, 'settings.title'),
+						icon: Settings
+					} as const
+				]
+			: [])
+	] satisfies Tab[]);
 </script>
 
 <!-- Links, not ARIA tabs: each is its own page and works without JavaScript. -->
