@@ -23,24 +23,7 @@ export async function sendMail(to: string, subject: string, body: string): Promi
 	if (!isMailConfigured()) return false;
 
 	try {
-		const parsed = Number(env.SMTP_PORT ?? 587);
-		const port = Number.isInteger(parsed) && parsed > 0 && parsed < 65536 ? parsed : 587;
-		const transport = nodemailer.createTransport({
-			host: env.SMTP_HOST,
-			port,
-			// Implicit TLS on 465, STARTTLS everywhere else — the convention every
-			// provider's documentation assumes, so an operator who copies their
-			// host and port from it gets a working instance without a third knob.
-			secure: port === 465,
-			auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
-			// Without this a dead host holds the request open for the OS default,
-			// which is minutes. The caller cannot distinguish slow from broken and
-			// neither should the member waiting on the page.
-			connectionTimeout: 10_000,
-			greetingTimeout: 10_000,
-			socketTimeout: 20_000
-		});
-		await transport.sendMail({ from: env.SMTP_FROM, to, subject, text: body });
+		await transport().sendMail({ from: env.SMTP_FROM, to, subject, text: body });
 		return true;
 	} catch {
 		// Bare catch, deliberately: the error object carries the host, the user
@@ -50,5 +33,76 @@ export async function sendMail(to: string, subject: string, body: string): Promi
 		// paste into a bug report.
 		console.error('SMTP send failed. Check SMTP_HOST, SMTP_PORT and credentials.');
 		return false;
+	}
+}
+
+function smtpPort(): number {
+	const parsed = Number(env.SMTP_PORT ?? 587);
+	return Number.isInteger(parsed) && parsed > 0 && parsed < 65536 ? parsed : 587;
+}
+
+function transport() {
+	const port = smtpPort();
+	return nodemailer.createTransport({
+		host: env.SMTP_HOST,
+		port,
+		// Implicit TLS on 465, STARTTLS everywhere else — the convention every
+		// provider's documentation assumes, so an operator who copies their
+		// host and port from it gets a working instance without a third knob.
+		secure: port === 465,
+		auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
+		// Without this a dead host holds the request open for the OS default,
+		// which is minutes. The caller cannot distinguish slow from broken and
+		// neither should the member waiting on the page.
+		connectionTimeout: 10_000,
+		greetingTimeout: 10_000,
+		socketTimeout: 20_000
+	});
+}
+
+/**
+ * What the admin page may show about the mail setup: whether it works and
+ * where it points, never the login or the password. This object is
+ * serialised into the page.
+ */
+export function mailStatus(): {
+	configured: boolean;
+	host: string | null;
+	port: number;
+	from: string | null;
+	login: boolean;
+} {
+	return {
+		configured: isMailConfigured(),
+		host: env.SMTP_HOST || null,
+		port: smtpPort(),
+		from: env.SMTP_FROM || null,
+		login: Boolean(env.SMTP_USER)
+	};
+}
+
+/**
+ * The admin's "send a test email". Unlike sendMail, the admin needs to know
+ * WHY it failed, so this reports nodemailer's error code (EAUTH, ECONNECTION,
+ * ETIMEDOUT, …). Only the code: the message and `.response` can quote the
+ * server's reply, which can echo the login.
+ */
+export async function sendTestMail(
+	to: string
+): Promise<{ ok: true } | { ok: false; code: string }> {
+	if (!isMailConfigured()) return { ok: false, code: 'NOT_CONFIGURED' };
+	try {
+		await transport().sendMail({
+			from: env.SMTP_FROM,
+			to,
+			subject: 'Filmnacht test email',
+			text: 'This is a test email from your Filmnacht instance. If you can read it, sending mail works.'
+		});
+		return { ok: true };
+	} catch (err) {
+		const code = (err as { code?: unknown }).code;
+		const safe = typeof code === 'string' && /^[A-Z_]{2,32}$/.test(code) ? code : 'UNKNOWN';
+		console.error(`SMTP test failed (${safe}). Check SMTP_HOST, SMTP_PORT and credentials.`);
+		return { ok: false, code: safe };
 	}
 }

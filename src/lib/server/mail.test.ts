@@ -116,3 +116,81 @@ describe('sendMail', () => {
 		vi.doUnmock('nodemailer');
 	});
 });
+
+/** A nodemailer whose send either succeeds or throws `failure`. */
+function fakeNodemailer(failure?: Error & { code?: string }) {
+	vi.doMock('nodemailer', () => ({
+		default: {
+			createTransport: () => ({
+				sendMail: async () => {
+					if (failure) throw failure;
+					return { accepted: ['admin@example.com'] };
+				}
+			})
+		}
+	}));
+}
+
+describe('mailStatus', () => {
+	it('tells the admin what is configured, and never the credentials', async () => {
+		const { mailStatus } = await loadMail({
+			...CONFIGURED,
+			SMTP_PORT: '465',
+			SMTP_USER: 'mailer-login-name',
+			SMTP_PASS: 'hunter2-should-never-appear'
+		});
+		const status = mailStatus();
+		expect(status).toEqual({
+			configured: true,
+			host: 'smtp.example.com',
+			port: 465,
+			from: 'filmnacht@example.com',
+			login: true
+		});
+		// This object is serialised into the admin page.
+		expect(JSON.stringify(status)).not.toContain('hunter2');
+		expect(JSON.stringify(status)).not.toContain('mailer-login-name');
+	});
+
+	it('reports an unconfigured instance plainly', async () => {
+		const { mailStatus } = await loadMail({});
+		expect(mailStatus()).toMatchObject({ configured: false, host: null, from: null, login: false });
+	});
+});
+
+describe('sendTestMail', () => {
+	it('says so when the message went out', async () => {
+		fakeNodemailer();
+		const { sendTestMail } = await loadMail(CONFIGURED);
+		expect(await sendTestMail('admin@example.com')).toEqual({ ok: true });
+	});
+
+	it('names the failure by its code, never by its message', async () => {
+		// Nodemailer's messages can quote the server's reply, which can echo the
+		// login. Only the code reaches the page.
+		const failure = Object.assign(new Error('535 auth failed for hunter2-should-never-appear'), {
+			code: 'EAUTH'
+		});
+		fakeNodemailer(failure);
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { sendTestMail } = await loadMail({
+			...CONFIGURED,
+			SMTP_PASS: 'hunter2-should-never-appear'
+		});
+		const result = await sendTestMail('admin@example.com');
+		expect(result).toEqual({ ok: false, code: 'EAUTH' });
+		expect(JSON.stringify(result)).not.toContain('hunter2');
+	});
+
+	it('reports an unknown failure without inventing a code', async () => {
+		fakeNodemailer(new Error('something odd'));
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { sendTestMail } = await loadMail(CONFIGURED);
+		expect(await sendTestMail('admin@example.com')).toEqual({ ok: false, code: 'UNKNOWN' });
+	});
+
+	it('does not try when mail is not configured', async () => {
+		const { sendTestMail } = await loadMail({});
+		expect(await sendTestMail('admin@example.com')).toEqual({ ok: false, code: 'NOT_CONFIGURED' });
+	});
+});
