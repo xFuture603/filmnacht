@@ -1,5 +1,6 @@
 import { t } from '$lib/i18n';
 import { db } from '$lib/server/db';
+import { notifyDraw } from '$lib/server/draw-mail';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import {
 	candidatesFor,
@@ -110,6 +111,7 @@ export const actions: Actions = {
 		const user = ownerOf(locals, params);
 		const outcome = drawForNight(db, params.nightId, user.id);
 		if (!outcome.ok) return refused(outcome, 'night.error.not_scheduled');
+		notifyDraw(db, params.nightId);
 		return { drawn: true };
 	},
 
@@ -120,6 +122,7 @@ export const actions: Actions = {
 		if (!reason || reason.length > REASON_MAX) return fail(400, { error: 'night.error.reason' });
 		const outcome = redraw(db, params.nightId, user.id, reason);
 		if (!outcome.ok) return refused(outcome, 'night.error.not_drawn');
+		notifyDraw(db, params.nightId);
 		return { drawn: true };
 	},
 

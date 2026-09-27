@@ -1,0 +1,251 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { applyMigrations, createDb, type DB } from './db/client';
+import { DEFAULT_GROUP_SETTINGS, groups } from './db/schema';
+import { drawForNight, redraw, scheduleNight } from './nights';
+import { addMember, createGroup, leaveGroup } from './groups';
+import { setEmailLocale, setSetting } from './settings';
+import { addSuggestion } from './suggestions';
+import { createUser, setEmail } from './users';
+import { eq } from 'drizzle-orm';
+import { composeDrawMail, drawRecipients, notifyDraw } from './draw-mail';
+
+let sent: Array<{ to: string; subject: string; body: string }> = [];
+let throwing = false;
+
+// Recorder mock, same shape as the pattern in admin.test.ts / reset.test.ts.
+// A throwing variant is included on purpose: sendMail's own contract is that
+// it never rejects, but notifyDraw must survive it anyway (spec §3).
+vi.mock('./mail', () => ({
+	sendMail: (to: string, subject: string, body: string) => {
+		if (throwing) throw new Error('smtp exploded');
+		sent.push({ to, subject, body });
+		return Promise.resolve(true);
+	}
+}));
+
+describe('composeDrawMail', () => {
+	const base = {
+		locale: 'en' as const,
+		groupName: 'Filmnacht',
+		when: 'Sunday, 1 March 2030 at 19:00',
+		location: "Ada's place",
+		film: { title: 'Dune', by: 'Grace', byFormer: false },
+		surprise: false,
+		redrawn: null as { byName: string; reason: string } | null,
+		link: 'http://localhost/groups/g1/nights/n1'
+	};
+
+	it('names the group, the date, the place, the title, the suggester and the link', () => {
+		const { subject, body } = composeDrawMail(base);
+		expect(subject).toContain(base.when);
+		expect(body).toContain(base.groupName);
+		expect(body).toContain(base.when);
+		expect(body).toContain(base.location);
+		expect(body).toContain('Dune');
+		expect(body).toContain('suggested by Grace');
+		expect(body).toContain(base.link);
+	});
+
+	it('keeps the title and the suggester out of a surprise night', () => {
+		const { subject, body } = composeDrawMail({ ...base, surprise: true });
+		expect(subject).not.toContain('Dune');
+		expect(subject).not.toContain('Grace');
+		expect(body).not.toContain('Dune');
+		expect(body).not.toContain('Grace');
+		expect(body).toContain('stays a surprise');
+	});
+
+	it('names who re-drew and why', () => {
+		const { body } = composeDrawMail({
+			...base,
+			redrawn: { byName: 'Ada', reason: 'wrong mood tonight' }
+		});
+		expect(body).toContain('Re-drawn by Ada');
+		expect(body).toContain('wrong mood tonight');
+	});
+
+	it('still has no title on a re-drawn surprise night', () => {
+		const { body } = composeDrawMail({
+			...base,
+			surprise: true,
+			redrawn: { byName: 'Ada', reason: 'wrong mood tonight' }
+		});
+		expect(body).not.toContain('Dune');
+		expect(body).toContain('Re-drawn by Ada');
+	});
+
+	it('produces German text', () => {
+		const { subject, body } = composeDrawMail({ ...base, locale: 'de' });
+		expect(subject).toContain('Film gezogen');
+		expect(body).toContain('vorgeschlagen von Grace');
+	});
+
+	it('leaves no "undefined" and no empty line when there is no link', () => {
+		const { body } = composeDrawMail({ ...base, link: null });
+		expect(body).not.toContain('undefined');
+		expect(body.split('\n\n').every((line) => line.trim().length > 0)).toBe(true);
+	});
+});
+
+describe('drawRecipients', () => {
+	let db: DB;
+	let groupId: string;
+	let nightId: string;
+	let ada: string;
+	let grace: string;
+	let mallory: string;
+
+	beforeEach(() => {
+		db = createDb(':memory:').db;
+		applyMigrations(db);
+		ada = createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		grace = createUser(db, {
+			username: 'grace',
+			displayName: 'Grace',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		mallory = createUser(db, {
+			username: 'mallory',
+			displayName: 'Mallory',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		setEmail(db, ada, 'ada@example.com');
+		setEmail(db, grace, 'grace@example.com');
+		// mallory keeps no email on purpose.
+		groupId = createGroup(db, { name: 'Filmnacht', ownerId: ada });
+		addMember(db, grace, groupId);
+		addMember(db, mallory, groupId);
+		nightId = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date('2030-01-01T19:00:00Z'),
+			location: null
+		});
+	});
+
+	it('is current members with an address, and only those', () => {
+		expect(drawRecipients(db, nightId).sort()).toEqual(['ada@example.com', 'grace@example.com']);
+	});
+
+	it('excludes a departed member even though they have an address', () => {
+		leaveGroup(db, grace, groupId);
+		expect(drawRecipients(db, nightId)).toEqual(['ada@example.com']);
+	});
+});
+
+describe('notifyDraw', () => {
+	let db: DB;
+	let groupId: string;
+	let nightId: string;
+	let ada: string;
+	let grace: string;
+
+	beforeEach(() => {
+		sent = [];
+		throwing = false;
+		db = createDb(':memory:').db;
+		applyMigrations(db);
+		ada = createUser(db, {
+			username: 'ada',
+			displayName: 'Ada',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		grace = createUser(db, {
+			username: 'grace',
+			displayName: 'Grace',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		setEmail(db, ada, 'ada@example.com');
+		setEmail(db, grace, 'grace@example.com');
+		groupId = createGroup(db, { name: 'Filmnacht', ownerId: ada });
+		addMember(db, grace, groupId);
+		setSetting(db, 'timezone', 'UTC');
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		nightId = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date('2030-03-01T19:00:00Z'),
+			location: null
+		});
+		drawForNight(db, nightId, ada);
+	});
+
+	async function tick() {
+		await new Promise((resolve) => setTimeout(resolve, 0));
+	}
+
+	it('sends one mail per current member with an address, all with the same subject', async () => {
+		notifyDraw(db, nightId, 'http://localhost');
+		await tick();
+
+		expect(sent).toHaveLength(2);
+		expect(sent.map((s) => s.to).sort()).toEqual(['ada@example.com', 'grace@example.com']);
+		expect(new Set(sent.map((s) => s.subject)).size).toBe(1);
+		expect(sent[0].body).toContain('Dune');
+		expect(sent[0].body).toContain(`http://localhost/groups/${groupId}/nights/${nightId}`);
+	});
+
+	it('leaves the film and suggester out when the group keeps it a surprise', async () => {
+		db.update(groups)
+			.set({ settings: { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' } })
+			.where(eq(groups.id, groupId))
+			.run();
+
+		notifyDraw(db, nightId, 'http://localhost');
+		await tick();
+
+		for (const mail of sent) {
+			expect(mail.subject).not.toContain('Dune');
+			expect(mail.body).not.toContain('Dune');
+			expect(mail.body).not.toContain('Grace');
+		}
+	});
+
+	it('says who re-drew and why once the night has been re-drawn', async () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		redraw(db, nightId, ada, 'wrong mood tonight');
+
+		notifyDraw(db, nightId, 'http://localhost');
+		await tick();
+
+		expect(sent[0].body).toContain('Re-drawn by Ada');
+		expect(sent[0].body).toContain('wrong mood tonight');
+	});
+
+	it('uses the instance email language', async () => {
+		setEmailLocale(db, 'de');
+		notifyDraw(db, nightId, 'http://localhost');
+		await tick();
+
+		expect(sent[0].subject).toContain('Film gezogen');
+	});
+
+	it('never throws, even when every send throws', async () => {
+		throwing = true;
+		expect(() => notifyDraw(db, nightId, 'http://localhost')).not.toThrow();
+		await tick();
+		expect(sent).toHaveLength(0);
+	});
+
+	it('leaves out the link when no origin is given', async () => {
+		notifyDraw(db, nightId, null);
+		await tick();
+
+		expect(sent[0].body).not.toContain('undefined');
+		expect(sent[0].body).not.toContain('http');
+	});
+});

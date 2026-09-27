@@ -37,7 +37,13 @@ export function runDueDraws(
 		// No candidates yet → try again next minute; a manual draw in between wins the claim.
 		if (drawNight(db, id, null).ok) {
 			drawn++;
-			onDrawn(id);
+			// Isolated per night: a callback that throws (a mail failure, say) must
+			// not cost the REST of this tick's due nights their draw.
+			try {
+				onDrawn(id);
+			} catch {
+				console.error('[filmnacht] draw notification failed');
+			}
 		}
 	}
 	return drawn;

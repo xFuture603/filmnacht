@@ -124,6 +124,11 @@
 	"admin.mail_hint.unknown": "The server log has a line about it.",
 	"admin.error.no_email": "Add an email address on your profile first, then send the test.",
 	"admin.error.mail_rate": "Too many test emails. Wait a minute and try again.",
+	"admin.email_locale": "Draw email language",
+	"admin.email_locale_hint": "The language used for the film-drawn email sent to the group.",
+	"admin.email_locale_save": "Save language",
+	"admin.email_locale_saved": "Email language saved.",
+	"admin.error.email_locale": "Please choose a valid language.",
 	"pool.title": "The pool",
 	"pool.empty": "No films yet. Add the first one.",
 	"pool.yours": "Yours",
@@ -251,5 +256,15 @@
 	"settings.days": "{n} days",
 	"settings.save": "Save settings",
 	"settings.error.invalid": "That is not one of the offered values.",
-	"settings.error.no_mail": "Automatic draw needs email set up on this instance first."
+	"settings.error.no_mail": "Automatic draw needs email set up on this instance first.",
+	"mail.draw.subject": "Film drawn for {when}",
+	"mail.draw.intro": "A film has been drawn for {group}'s night on {when}.",
+	"mail.draw.where": "Place: {location}",
+	"mail.draw.film": "The film: {title}, suggested by {by}.",
+	"mail.draw.film_former": "The film: {title}, suggested by a member who has since left.",
+	"mail.draw.surprise": "The film has been drawn. It stays a surprise until the night starts.",
+	"mail.draw.redrawn": "Re-drawn by {byName}. Reason: {reason}",
+	"mail.draw.link": "Details: {link}",
+	"mail.reset.subject": "Reset your filmnacht password",
+	"mail.reset.body": "Open this link within the hour to choose a new password:\n\n{link}\n\nIf you did not ask for this, nothing has changed and you can ignore this message."
 }

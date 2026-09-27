@@ -7,6 +7,7 @@ import {
 	validateSession
 } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
+import { notifyDraw } from '$lib/server/draw-mail';
 import { startScheduler } from '$lib/server/scheduler';
 import { isSetupComplete } from '$lib/server/settings';
 import { guardRedirect } from '$lib/server/setup';
@@ -14,8 +15,7 @@ import { redirect, type Handle, type HandleServerError, type ServerInit } from '
 
 export const init: ServerInit = () => {
 	// Never during `vite build`: building only loads modules, and must not draw.
-	// Task 3 wires the email callback in; until then, nothing happens on a draw.
-	if (!building) startScheduler(db, () => {});
+	if (!building) startScheduler(db, (nightId) => notifyDraw(db, nightId));
 };
 
 /**

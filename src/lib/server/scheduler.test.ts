@@ -137,6 +137,28 @@ describe('dueForAutoDraw / runDueDraws', () => {
 		expect(runDueDraws(db, DUE)).toBe(0);
 		expect(nightDetail(db, nightId, ada)?.status).toBe('cancelled');
 	});
+
+	it('keeps drawing due nights after onDrawn throws for an earlier one (R2)', () => {
+		film(grace, 'Dune');
+		film(grace, 'Arrival');
+		const nightId2 = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: START,
+			location: null
+		});
+
+		const notified: string[] = [];
+		const onDrawn = (id: string) => {
+			if (id === nightId) throw new Error('draw notification failed');
+			notified.push(id);
+		};
+
+		expect(runDueDraws(db, DUE, onDrawn)).toBe(2);
+		expect(nightDetail(db, nightId, ada)?.status).toBe('drawn');
+		expect(nightDetail(db, nightId2, ada)?.status).toBe('drawn');
+		expect(notified).toEqual([nightId2]);
+	});
 });
 
 describe('nightDetail(...).drawnAutomatically', () => {
