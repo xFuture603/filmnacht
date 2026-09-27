@@ -43,29 +43,34 @@
 	<div class="card-body">
 		<h2 class="card-title text-lg">{t(data.locale, 'settings.title')}</h2>
 		<form method="POST" action="?/save" class="flex flex-col gap-4">
-			<Field label={t(data.locale, 'settings.auto_draw')}>
-				<label class="flex min-h-11 items-center gap-3">
+			<div class="flex flex-col gap-1">
+				<!-- Not wrapped in Field: Field's own label would sit around this one,
+				     and a label nested inside another label is skipped by the accessible-
+				     name computation — the toggle would announce as its hint text instead
+				     of "Automatic draw". One label, the setting's name as its only text,
+				     and the hint as a separate paragraph tied on with aria-describedby. -->
+				<label class="flex min-h-11 cursor-pointer items-center gap-3">
 					<input
 						type="checkbox"
 						name="autoDraw"
 						class="toggle toggle-primary"
 						checked={s.autoDraw}
 						disabled={autoDrawDisabled}
+						aria-describedby="auto-draw-hint"
 					/>
-					<span class="text-sm text-base-content/70">
-						{#if !data.mailConfigured}
-							{#if data.user?.isAdmin}
-								{t(data.locale, 'settings.auto_draw_needs_mail')}
-								<a class="link" href="/admin">{t(data.locale, 'nav.admin')}</a>
-							{:else}
-								{t(data.locale, 'settings.auto_draw_needs_mail')}
-							{/if}
-						{:else}
-							{t(data.locale, 'settings.auto_draw_hint')}
-						{/if}
-					</span>
+					{t(data.locale, 'settings.auto_draw')}
 				</label>
-			</Field>
+				<p id="auto-draw-hint" class="text-sm text-base-content/70">
+					{#if !data.mailConfigured}
+						{t(data.locale, 'settings.auto_draw_needs_mail')}
+						{#if data.user?.isAdmin}
+							<a class="link" href="/admin">{t(data.locale, 'nav.admin')}</a>
+						{/if}
+					{:else}
+						{t(data.locale, 'settings.auto_draw_hint')}
+					{/if}
+				</p>
+			</div>
 
 			<Field label={t(data.locale, 'settings.draw_before')}>
 				<select name="autoDrawHoursBefore" class="select min-h-11 w-full sm:w-64">
@@ -77,31 +82,37 @@
 				</select>
 			</Field>
 
-			<Field label={t(data.locale, 'settings.surprise')}>
-				<label class="flex min-h-11 items-center gap-3">
+			<div class="flex flex-col gap-1">
+				<label class="flex min-h-11 cursor-pointer items-center gap-3">
 					<input
 						type="checkbox"
 						name="surprise"
 						class="toggle"
 						checked={s.resultVisible === 'on_night'}
+						aria-describedby="surprise-hint"
 					/>
-					<span class="text-sm text-base-content/70"
-						>{t(data.locale, 'settings.surprise_hint')}</span
-					>
+					{t(data.locale, 'settings.surprise')}
 				</label>
-			</Field>
+				<p id="surprise-hint" class="text-sm text-base-content/70">
+					{t(data.locale, 'settings.surprise_hint')}
+				</p>
+			</div>
 
-			<Field label={t(data.locale, 'settings.fair')}>
-				<label class="flex min-h-11 items-center gap-3">
+			<div class="flex flex-col gap-1">
+				<label class="flex min-h-11 cursor-pointer items-center gap-3">
 					<input
 						type="checkbox"
 						name="fairDraw"
 						class="toggle"
 						checked={s.drawMode === 'fairness'}
+						aria-describedby="fair-draw-hint"
 					/>
-					<span class="text-sm text-base-content/70">{t(data.locale, 'settings.fair_hint')}</span>
+					{t(data.locale, 'settings.fair')}
 				</label>
-			</Field>
+				<p id="fair-draw-hint" class="text-sm text-base-content/70">
+					{t(data.locale, 'settings.fair_hint')}
+				</p>
+			</div>
 
 			<Field label={t(data.locale, 'settings.films_per_member')}>
 				<select name="maxOpenSuggestions" class="select min-h-11 w-full sm:w-64">
