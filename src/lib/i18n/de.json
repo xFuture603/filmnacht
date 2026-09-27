@@ -193,6 +193,7 @@
 	"night.error.cannot_cancel": "Diese Filmnacht kann nicht mehr abgesagt werden.",
 	"night.error.response": "Diese Antwort gibt es hier nicht.",
 	"night.redrawn": "Neu gezogen von {name}. Grund: {reason}",
+	"night.drawn_auto": "Automatisch gezogen.",
 	"night.confirm_cancel": "Ja, Filmnacht absagen",
 	"night.confirm_watched": "Ja, wir haben ihn gesehen",
 	"night.error.confirm": "Setz den Haken zur Bestätigung.",

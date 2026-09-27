@@ -1,3 +1,4 @@
+import { building } from '$app/environment';
 import { resolveLocale } from '$lib/i18n';
 import {
 	clearSessionCookie,
@@ -6,9 +7,16 @@ import {
 	validateSession
 } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
+import { startScheduler } from '$lib/server/scheduler';
 import { isSetupComplete } from '$lib/server/settings';
 import { guardRedirect } from '$lib/server/setup';
-import { redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
+import { redirect, type Handle, type HandleServerError, type ServerInit } from '@sveltejs/kit';
+
+export const init: ServerInit = () => {
+	// Never during `vite build`: building only loads modules, and must not draw.
+	// Task 3 wires the email callback in; until then, nothing happens on a draw.
+	if (!building) startScheduler(db, () => {});
+};
 
 /**
  * Replaces SvelteKit's default error logger, which prints the request URL.

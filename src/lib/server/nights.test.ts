@@ -14,6 +14,7 @@ import {
 	unrevealedDrawnIds,
 	cancelNight,
 	drawForNight,
+	drawNight,
 	listNights,
 	markWatched,
 	nightDetail,
@@ -250,6 +251,28 @@ describe('drawForNight', () => {
 		const candidates = candidatesFor(db, groupId);
 		expect(candidates).toHaveLength(1);
 		expect(Number.isFinite(candidates[0].watchedInWindow)).toBe(true);
+	});
+});
+
+describe('drawNight', () => {
+	it('draws with by: null and no owner check', () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+
+		const outcome = drawNight(db, id, null);
+
+		expect(outcome).toMatchObject({ ok: true, title: 'Dune' });
+		const log = db
+			.select({ log: movieNights.drawLog })
+			.from(movieNights)
+			.where(eq(movieNights.id, id))
+			.get()?.log as DrawLogEntry[];
+		expect(log[0].by).toBeNull();
 	});
 });
 

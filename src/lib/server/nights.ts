@@ -9,6 +9,7 @@ import {
 import type { DB } from './db/client';
 import {
 	attendance,
+	groups,
 	memberships,
 	movieNights,
 	movies,
@@ -16,6 +17,7 @@ import {
 	users,
 	type GroupSettings
 } from './db/schema';
+import { groupSettings } from './group-settings';
 import { requireMember, requireOwner } from './groups';
 import { FORMER_MEMBER_USERNAME } from './members';
 
@@ -54,6 +56,8 @@ export type NightDetail = NightSummary & {
 	redrawUsed: boolean;
 	/** Who re-drew and why, from the log. Names no film, so it survives on_night. */
 	redrawn: { byName: string; reason: string } | null;
+	/** The latest draw's log entry has `by: null`: the scheduler drew it, not the owner. */
+	drawnAutomatically: boolean;
 	myResponse: 'yes' | 'no' | 'maybe' | null;
 	responses: Array<{ displayName: string; response: 'yes' | 'no' | 'maybe' }>;
 };
@@ -211,7 +215,9 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 		? db
 				.select({ displayName: users.displayName })
 				.from(users)
-				.where(eq(users.id, redrawEntry.by))
+				// A redraw is always manual (never the scheduler), so `by` is never
+				// null here; the fallback is only for type-safety.
+				.where(eq(users.id, redrawEntry.by ?? ''))
 				.get()?.displayName
 		: undefined;
 	return {
@@ -223,6 +229,7 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 			latest.candidates[0].suggestions === 1,
 		redrawUsed: log.length >= 2,
 		redrawn: redrawEntry?.reason ? { byName: redrawnBy ?? '', reason: redrawEntry.reason } : null,
+		drawnAutomatically: latest !== undefined && latest.by === null,
 		myResponse: myResponseRow?.response ?? null,
 		responses
 	};
@@ -305,21 +312,28 @@ export function candidatesFor(db: DB, groupId: string): Candidate[] {
  *
  * `excludeSuggestionId` is the film a re-draw just released (R12): it goes back
  * to the pool for later nights, but not into this night's second draw.
+ *
+ * No authorization: `by` is recorded as given, `null` meaning the automatic
+ * scheduler rather than an owner. `drawForNight` below is the owner-checked
+ * entry point the route and `redraw` use; this one is for the scheduler.
  */
-export function drawForNight(
+export function drawNight(
 	db: DB,
 	nightId: string,
-	ownerId: string,
+	by: string | null,
 	reason?: string,
 	excludeSuggestionId?: string | null
 ): DrawOutcome {
 	const night = db
-		.select({ groupId: movieNights.groupId, status: movieNights.status })
+		.select({ groupId: movieNights.groupId })
 		.from(movieNights)
 		.where(eq(movieNights.id, nightId))
 		.get();
 	if (!night) return { ok: false, reason: 'not_found' };
-	const { settings } = requireOwner(db, ownerId, night.groupId);
+	const settings = groupSettings(
+		db.select({ settings: groups.settings }).from(groups).where(eq(groups.id, night.groupId)).get()
+			?.settings
+	);
 
 	const candidates = candidatesFor(db, night.groupId)
 		.map((c) => ({
@@ -356,7 +370,7 @@ export function drawForNight(
 		const entry: DrawLogEntry = {
 			at: new Date().toISOString(),
 			seed,
-			by: ownerId,
+			by,
 			mode: settings.drawMode,
 			candidates: picked.candidates,
 			pickedUserId: picked.userId,
@@ -380,6 +394,24 @@ export function drawForNight(
 			onlyCandidate: candidates.length === 1 && candidates[0].suggestionIds.length === 1
 		} as const;
 	});
+}
+
+/** Owner-checked entry point: looks the night up, then delegates to `drawNight`. */
+export function drawForNight(
+	db: DB,
+	nightId: string,
+	ownerId: string,
+	reason?: string,
+	excludeSuggestionId?: string | null
+): DrawOutcome {
+	const night = db
+		.select({ groupId: movieNights.groupId })
+		.from(movieNights)
+		.where(eq(movieNights.id, nightId))
+		.get();
+	if (!night) return { ok: false, reason: 'not_found' };
+	requireOwner(db, ownerId, night.groupId);
+	return drawNight(db, nightId, ownerId, reason, excludeSuggestionId);
 }
 
 /**

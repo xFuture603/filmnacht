@@ -195,6 +195,7 @@
 	"night.error.cannot_cancel": "This night can no longer be cancelled.",
 	"night.error.response": "That is not an answer this page offers.",
 	"night.redrawn": "Re-drawn by {name}. Reason: {reason}",
+	"night.drawn_auto": "Drawn automatically.",
 	"night.confirm_cancel": "Yes, cancel this night",
 	"night.confirm_watched": "Yes, we watched it",
 	"night.error.confirm": "Tick the box to confirm.",
