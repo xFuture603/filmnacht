@@ -69,7 +69,7 @@ export const actions: Actions = {
 		return { timezoneSaved: true };
 	},
 
-	/** Plan 9: the language the draw email is sent in. */
+	/** Plan 8: the language the draw email is sent in. */
 	emailLocale: async ({ locals, request }) => {
 		requireAdmin(locals);
 		const locale = String((await request.formData()).get('locale') ?? '');

@@ -115,7 +115,7 @@ describe('POST /reset', () => {
 
 	it('mails German text to a request in German', async () => {
 		// The reset email follows the REQUESTER's browser language, not any
-		// instance-wide setting — unlike the draw email (Plan 9, spec §3).
+		// instance-wide setting — unlike the draw email (Plan 8, spec §3).
 		await post({ email: 'ada@example.com' }, '1.2.3.4', 'de');
 		expect(sent).toHaveLength(1);
 		expect(sent[0].subject).toBe('Setze dein Filmnacht-Passwort zurück');

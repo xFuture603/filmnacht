@@ -24,7 +24,7 @@ export function getTimezone(db: DB): string {
 }
 
 /**
- * The language for the draw email (Plan 9). A row holding anything but
+ * The language for the draw email (Plan 8). A row holding anything but
  * exactly 'de' reads as English, the same "unknown reads as default" rule
  * `groupSettings` applies to group settings.
  */
