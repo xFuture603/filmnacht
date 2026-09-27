@@ -8,6 +8,7 @@ import type { DrawLogEntry } from './draw';
 import { groupSettings } from './group-settings';
 import { FORMER_MEMBER_USERNAME } from './members';
 import { sendMail } from './mail';
+import { isResultVisible } from './nights';
 import { getEmailLocale, getTimezone } from './settings';
 
 /**
@@ -35,11 +36,16 @@ export function composeDrawMail(input: {
 	if (surprise) {
 		lines.push(t(locale, 'mail.draw.surprise'));
 	} else if (film) {
-		lines.push(
-			film.byFormer
-				? t(locale, 'mail.draw.film_former', { title: film.title })
-				: t(locale, 'mail.draw.film', { title: film.title, by: film.by ?? '' })
-		);
+		if (film.byFormer) {
+			lines.push(t(locale, 'mail.draw.film_former', { title: film.title }));
+		} else if (film.by) {
+			lines.push(t(locale, 'mail.draw.film', { title: film.title, by: film.by }));
+		} else {
+			// A wildcard suggestion (`suggestedBy IS NULL`, PRD §6) belongs to
+			// nobody, so there is no "suggested by" clause to append — never
+			// former, never named, just the title.
+			lines.push(t(locale, 'mail.draw.film_title_only', { title: film.title }));
+		}
 	}
 
 	if (redrawn) {
@@ -78,7 +84,7 @@ export function drawRecipients(db: DB, nightId: string): string[] {
  * nights.ts) on purpose, minus the membership check and the fields the email
  * has no use for.
  */
-function drawMailInfo(db: DB, nightId: string) {
+function drawMailInfo(db: DB, nightId: string, now: Date) {
 	const row = db
 		.select({
 			groupId: movieNights.groupId,
@@ -122,9 +128,12 @@ function drawMailInfo(db: DB, nightId: string) {
 					byFormer: row.drawnByUsername === FORMER_MEMBER_USERNAME
 				}
 			: null,
-		// Surprise is decided at send time, but every draw happens before the
-		// night starts, so `on_night` is always still hidden here (spec §3).
-		surprise: groupSettings(row.groupSettings).resultVisible === 'on_night',
+		// Surprise is decided at send time, with the same rule the night page
+		// itself uses (isResultVisible, src/lib/server/nights.ts): `on_night`
+		// only hides the title until the night actually starts. Usually still
+		// true right after a draw, but not for a manual draw made after the
+		// night has already begun.
+		surprise: !isResultVisible(groupSettings(row.groupSettings), row.scheduledAt, now),
 		redrawn: redrawEntry?.reason ? { byName: redrawnBy ?? '', reason: redrawEntry.reason } : null
 	};
 }
@@ -143,7 +152,7 @@ export function notifyDraw(
 ): void {
 	setTimeout(() => {
 		try {
-			const info = drawMailInfo(db, nightId);
+			const info = drawMailInfo(db, nightId, new Date());
 			if (!info) return;
 
 			const locale = getEmailLocale(db);

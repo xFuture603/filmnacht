@@ -262,6 +262,7 @@
 	"mail.draw.where": "Place: {location}",
 	"mail.draw.film": "The film: {title}, suggested by {by}.",
 	"mail.draw.film_former": "The film: {title}, suggested by a member who has since left.",
+	"mail.draw.film_title_only": "The film: {title}.",
 	"mail.draw.surprise": "The film has been drawn. It stays a surprise until the night starts.",
 	"mail.draw.redrawn": "Re-drawn by {byName}. Reason: {reason}",
 	"mail.draw.link": "Details: {link}",

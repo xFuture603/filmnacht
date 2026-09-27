@@ -260,6 +260,7 @@
 	"mail.draw.where": "Ort: {location}",
 	"mail.draw.film": "Der Film: {title}, vorgeschlagen von {by}.",
 	"mail.draw.film_former": "Der Film: {title}, vorgeschlagen von einem ehemaligen Mitglied.",
+	"mail.draw.film_title_only": "Der Film: {title}.",
 	"mail.draw.surprise": "Der Film wurde gezogen. Er bleibt eine Überraschung, bis der Abend beginnt.",
 	"mail.draw.redrawn": "Neu gezogen von {byName}. Grund: {reason}",
 	"mail.draw.link": "Details: {link}",

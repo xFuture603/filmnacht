@@ -85,6 +85,20 @@ describe('composeDrawMail', () => {
 		expect(body).not.toContain('undefined');
 		expect(body.split('\n\n').every((line) => line.trim().length > 0)).toBe(true);
 	});
+
+	it('drops the "suggested by" clause entirely for a wildcard film', () => {
+		// suggestedBy IS NULL (PRD §6): a film belonging to nobody, so there is
+		// nobody to name — and, unlike the former-member case, nobody to name as
+		// "since left" either.
+		const { body } = composeDrawMail({
+			...base,
+			film: { title: 'Dune', by: null, byFormer: false }
+		});
+		expect(body).toContain('Dune');
+		expect(body).not.toContain('suggested by');
+		expect(body).not.toContain('null');
+		expect(body).not.toContain('undefined');
+	});
 });
 
 describe('drawRecipients', () => {
@@ -203,10 +217,48 @@ describe('notifyDraw', () => {
 		notifyDraw(db, nightId, 'http://localhost');
 		await tick();
 
+		// Asserted first and unconditionally: a `sent` that ended up empty (say,
+		// because `drawRecipients` silently broke) must fail this test rather
+		// than vacuously pass an empty loop below.
+		expect(sent).toHaveLength(2);
 		for (const mail of sent) {
 			expect(mail.subject).not.toContain('Dune');
 			expect(mail.body).not.toContain('Dune');
 			expect(mail.body).not.toContain('Grace');
+			expect(mail.body).toContain('stays a surprise');
+		}
+	});
+
+	it('reveals the film once the night has started, even with resultVisible: on_night', async () => {
+		// Same rule as isResultVisible (src/lib/server/nights.ts): once the
+		// night starts, EVERYONE sees the film regardless of the setting — a
+		// manual draw made late is not still a surprise to anybody.
+		db.update(groups)
+			.set({ settings: { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' } })
+			.where(eq(groups.id, groupId))
+			.run();
+
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const pastNightId = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date(Date.now() - 60_000),
+			location: null
+		});
+		drawForNight(db, pastNightId, ada);
+
+		notifyDraw(db, pastNightId, 'http://localhost');
+		await tick();
+
+		expect(sent).toHaveLength(2);
+		for (const mail of sent) {
+			expect(mail.body).toContain('Arrival');
+			expect(mail.body).toContain('suggested by Grace');
 		}
 	});
 
