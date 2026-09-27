@@ -194,3 +194,22 @@ describe('sendTestMail', () => {
 		expect(await sendTestMail('admin@example.com')).toEqual({ ok: false, code: 'NOT_CONFIGURED' });
 	});
 });
+
+describe('the global test guard (src/test-setup.ts)', () => {
+	// No `vi.doMock('nodemailer', …)` here, deliberately: this proves the
+	// SETUP FILE's mock is what stops the send, not one written into this
+	// test. Without it, a configured instance would try to reach
+	// smtp.example.com for real — see the RED evidence in the fix report.
+	it('still never reaches a real transport when a test forgets to mock nodemailer', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { sendMail, sendTestMail } = await loadMail(CONFIGURED);
+		await expect(sendMail('ada@example.com', 'subject', 'body')).resolves.toBe(false);
+		// UNKNOWN, specifically: the guard's rejection carries no `.code`, unlike
+		// a real network failure (ENOTFOUND, ECONNREFUSED, ETIMEDOUT, …), so this
+		// also tells apart "hit the guard" from "hit the network and failed".
+		await expect(sendTestMail('admin@example.com')).resolves.toEqual({
+			ok: false,
+			code: 'UNKNOWN'
+		});
+	});
+});
