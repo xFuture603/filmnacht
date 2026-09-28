@@ -294,10 +294,21 @@ describe('notifyDraw', () => {
 	});
 
 	it('never throws, even when every send throws', async () => {
+		// `expect(...).not.toThrow()` alone is close to a tautology here: the
+		// throw happens inside the setTimeout callback, asynchronously, so
+		// notifyDraw's own synchronous call never throws regardless of whether
+		// the callback body catches anything at all — an uncaught exception in
+		// there would just surface later as an unhandled rejection, not here.
+		// The real claim is that each send is caught in isolation and logged,
+		// so the console.error call is the one fact that actually distinguishes
+		// "survived" from "silently escaped uncaught": it only fires this way
+		// when the per-recipient catch produced two recorded failures.
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		throwing = true;
 		expect(() => notifyDraw(db, nightId, 'http://localhost')).not.toThrow();
 		await tick();
 		expect(sent).toHaveLength(0);
+		expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('2/2 failed to send'));
 	});
 
 	it('leaves out the link when no origin is given', async () => {
