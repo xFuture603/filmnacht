@@ -17,6 +17,10 @@ export type GroupSettings = {
 	resultVisible: 'immediately' | 'on_night';
 	nightEndsAfterMinutes: number;
 	ratingWindowDays: number;
+	/** Draw automatically ahead of the night, instead of waiting for the owner. */
+	autoDraw: boolean;
+	/** How many hours before the night the automatic draw fires. */
+	autoDrawHoursBefore: number;
 };
 
 export const DEFAULT_GROUP_SETTINGS: GroupSettings = {
@@ -24,7 +28,9 @@ export const DEFAULT_GROUP_SETTINGS: GroupSettings = {
 	drawMode: 'fairness',
 	resultVisible: 'immediately',
 	nightEndsAfterMinutes: 180,
-	ratingWindowDays: 7
+	ratingWindowDays: 7,
+	autoDraw: false,
+	autoDrawHoursBefore: 24
 };
 
 export const users = sqliteTable('users', {

@@ -85,6 +85,9 @@
 				})}
 			</p>
 		{/if}
+		{#if data.night.drawnAutomatically}
+			<p class="text-sm text-base-content/70">{t(data.locale, 'night.drawn_auto')}</p>
+		{/if}
 	</div>
 </section>
 

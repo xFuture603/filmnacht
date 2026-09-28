@@ -6,7 +6,7 @@ import { requireUser } from '$lib/server/groups';
 import { mailStatus, sendTestMail } from '$lib/server/mail';
 import { rateLimit } from '$lib/server/rate-limit';
 import { createReset } from '$lib/server/resets';
-import { getTimezone, setSetting } from '$lib/server/settings';
+import { getEmailLocale, getTimezone, setEmailLocale, setSetting } from '$lib/server/settings';
 import { userProfile } from '$lib/server/users';
 import { error, fail } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
@@ -42,6 +42,7 @@ export const load: PageServerLoad = ({ locals }) => {
 	return {
 		timezone: getTimezone(db),
 		timezones,
+		emailLocale: getEmailLocale(db),
 		// Where mail points and whether it works; never the login or password.
 		mail: mailStatus(),
 		tmdb: Boolean(env.TMDB_API_KEY),
@@ -66,6 +67,15 @@ export const actions: Actions = {
 		if (!timezones.includes(timezone)) return fail(400, { error: 'setup.error.timezone' });
 		setSetting(db, 'timezone', timezone);
 		return { timezoneSaved: true };
+	},
+
+	/** Plan 8: the language the draw email is sent in. */
+	emailLocale: async ({ locals, request }) => {
+		requireAdmin(locals);
+		const locale = String((await request.formData()).get('locale') ?? '');
+		if (locale !== 'en' && locale !== 'de') return fail(400, { error: 'admin.error.email_locale' });
+		setEmailLocale(db, locale);
+		return { emailLocaleSaved: true };
 	},
 
 	testMail: async ({ locals }) => {

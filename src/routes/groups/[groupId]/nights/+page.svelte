@@ -21,6 +21,7 @@
 	groupName={data.group.name}
 	active="nights"
 	locale={data.locale}
+	isOwner={data.isOwner}
 />
 
 {#snippet list(nights: typeof data.upcoming)}

@@ -1,3 +1,4 @@
+import { t } from '$lib/i18n';
 import { db } from '$lib/server/db';
 import { isMailConfigured, sendMail } from '$lib/server/mail';
 import { rateLimit } from '$lib/server/rate-limit';
@@ -21,7 +22,7 @@ export const actions: Actions = {
 	 * which of those happened, and sendMail returns false instead of throwing
 	 * precisely so that no branch is available to write by accident.
 	 */
-	default: async ({ request, getClientAddress, url }) => {
+	default: async ({ request, getClientAddress, url, locals }) => {
 		// The client-address gate is checked first and always — before the body
 		// is even read. Its property is NOT that it cannot be evicted: rate-limit.ts
 		// shares one map across every limiter and drops the oldest window by
@@ -66,6 +67,7 @@ export const actions: Actions = {
 			// minutes makes sampling slow, not impossible. And /profile's admitted
 			// email disclosure is no precedent, because that one requires being
 			// signed in — this route is open to anyone.
+			const locale = locals.locale;
 			setTimeout(() => {
 				try {
 					const token = createReset(db, userId);
@@ -75,8 +77,8 @@ export const actions: Actions = {
 					// delivery has to survive a restart.
 					void sendMail(
 						email,
-						'Reset your filmnacht password',
-						`Open this link within the hour to choose a new password:\n\n${origin}/reset/${token}\n\nIf you did not ask for this, nothing has changed and you can ignore this message.`
+						t(locale, 'mail.reset.subject'),
+						t(locale, 'mail.reset.body', { link: `${origin}/reset/${token}` })
 					).catch(() => {
 						// sendMail's contract is that it never rejects. If that ever stops
 						// being true, an unhandled rejection takes the instance down, which

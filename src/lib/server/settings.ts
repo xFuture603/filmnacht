@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import type { Locale } from '$lib/i18n';
 import type { DB } from './db/client';
 import { settings } from './db/schema';
 
@@ -20,4 +21,17 @@ export function isSetupComplete(db: DB): boolean {
 /** PRD §12: one timezone for the whole instance. */
 export function getTimezone(db: DB): string {
 	return getSetting(db, 'timezone') ?? 'UTC';
+}
+
+/**
+ * The language for the draw email (Plan 8). A row holding anything but
+ * exactly 'de' reads as English, the same "unknown reads as default" rule
+ * `groupSettings` applies to group settings.
+ */
+export function getEmailLocale(db: DB): Locale {
+	return getSetting(db, 'email_locale') === 'de' ? 'de' : 'en';
+}
+
+export function setEmailLocale(db: DB, locale: Locale): void {
+	setSetting(db, 'email_locale', locale);
 }

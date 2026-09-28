@@ -14,6 +14,7 @@
 	groupName={data.group.name}
 	active="pool"
 	locale={data.locale}
+	isOwner={data.group.role === 'owner'}
 />
 
 {#if form?.error}

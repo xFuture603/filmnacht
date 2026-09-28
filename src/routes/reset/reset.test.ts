@@ -39,14 +39,19 @@ vi.mock('$lib/server/mail', () => ({
 
 const { actions, load } = await import('./+page.server');
 
-async function post(fields: Record<string, string>, address = '1.2.3.4') {
+async function post(
+	fields: Record<string, string>,
+	address = '1.2.3.4',
+	locale: 'en' | 'de' = 'en'
+) {
 	const result = await actions.default({
 		request: new Request('http://localhost/reset', {
 			method: 'POST',
 			body: new URLSearchParams(fields)
 		}),
 		getClientAddress: () => address,
-		url: new URL('http://localhost/reset')
+		url: new URL('http://localhost/reset'),
+		locals: { user: null, locale }
 	} as never);
 	// The route mints the token and sends the mail on a timer, deliberately, so
 	// that work which only happens for a KNOWN address cannot be timed by the
@@ -108,6 +113,15 @@ describe('POST /reset', () => {
 		expect(hashToken(token!)).toBe(rows[0].tokenHash);
 	});
 
+	it('mails German text to a request in German', async () => {
+		// The reset email follows the REQUESTER's browser language, not any
+		// instance-wide setting — unlike the draw email (Plan 8, spec §3).
+		await post({ email: 'ada@example.com' }, '1.2.3.4', 'de');
+		expect(sent).toHaveLength(1);
+		expect(sent[0].subject).toBe('Setze dein Filmnacht-Passwort zurück');
+		expect(sent[0].body).toContain('Öffne diesen Link');
+	});
+
 	it('has done none of the known-address work by the time it answers', async () => {
 		// Pins the deferral without measuring a clock. The insert and the
 		// transport construction are the only work that happens for a real
@@ -124,7 +138,8 @@ describe('POST /reset', () => {
 				body: new URLSearchParams({ email: 'ada@example.com' })
 			}),
 			getClientAddress: () => '9.9.9.9',
-			url: new URL('http://localhost/reset')
+			url: new URL('http://localhost/reset'),
+			locals: { user: null, locale: 'en' }
 		} as never);
 
 		expect(await pending).toEqual({ success: 'reset.sent' });

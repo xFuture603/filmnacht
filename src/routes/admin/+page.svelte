@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
+	import { locales, t, type Locale } from '$lib/i18n';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import Toast from '$lib/components/Toast.svelte';
@@ -7,6 +7,10 @@
 	let { data, form } = $props();
 
 	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
+	// Each language's own name for itself, not translated: a German speaker
+	// looking for their language in an English-language admin page still reads
+	// "Deutsch", the same way it appears in any other app's language picker.
+	const languageNames: Record<Locale, string> = { en: 'English', de: 'Deutsch' };
 </script>
 
 <PageHeader title={t(data.locale, 'admin.title')} />
@@ -14,6 +18,8 @@
 {#key form}
 	{#if form?.timezoneSaved}
 		<Toast message={t(data.locale, 'admin.timezone_saved')} locale={data.locale} />
+	{:else if form?.emailLocaleSaved}
+		<Toast message={t(data.locale, 'admin.email_locale_saved')} locale={data.locale} />
 	{:else if form?.mailSent}
 		<Toast
 			message={t(data.locale, 'admin.mail_sent', { email: form.mailSent })}
@@ -49,6 +55,24 @@
 			</Field>
 			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.timezone_save')}</button
+			>
+		</form>
+
+		<div class="divider my-2"></div>
+
+		<form method="POST" action="?/emailLocale" class="flex flex-col gap-2">
+			<Field
+				label={t(data.locale, 'admin.email_locale')}
+				hint={t(data.locale, 'admin.email_locale_hint')}
+			>
+				<select name="locale" required class="select min-h-11 w-full sm:w-40">
+					{#each locales as l (l)}
+						<option value={l} selected={l === data.emailLocale}>{languageNames[l]}</option>
+					{/each}
+				</select>
+			</Field>
+			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+				>{t(data.locale, 'admin.email_locale_save')}</button
 			>
 		</form>
 	</div>

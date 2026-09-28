@@ -3,6 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import type { SessionUser } from './auth/session';
 import type { DB } from './db/client';
 import { groups, memberships, users, type GroupSettings } from './db/schema';
+import { groupSettings } from './group-settings';
 
 export type GroupMembership = {
 	groupId: string;
@@ -57,7 +58,10 @@ export function requireMember(db: DB, userId: string, groupId: string): GroupMem
 	// "no such group" in every language anyway — that indistinguishability is
 	// the whole point of 404-not-403.
 	if (!row) error(404, 'Not found');
-	return row;
+	// Normalised here, once, so every caller reads a row written before a
+	// setting existed — or hand-edited to something invalid — as the defaults,
+	// never as a crash (PRD-adjacent: see group-settings.ts).
+	return { ...row, settings: groupSettings(row.settings) };
 }
 
 export function addMember(db: DB, userId: string, groupId: string): void {

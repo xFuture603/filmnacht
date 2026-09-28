@@ -1,3 +1,5 @@
+import { building, dev } from '$app/environment';
+import { env } from '$env/dynamic/private';
 import { resolveLocale } from '$lib/i18n';
 import {
 	clearSessionCookie,
@@ -6,9 +8,22 @@ import {
 	validateSession
 } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
+import { notifyDraw } from '$lib/server/draw-mail';
+import { startScheduler } from '$lib/server/scheduler';
 import { isSetupComplete } from '$lib/server/settings';
 import { guardRedirect } from '$lib/server/setup';
-import { redirect, type Handle, type HandleServerError } from '@sveltejs/kit';
+import { redirect, type Handle, type HandleServerError, type ServerInit } from '@sveltejs/kit';
+
+export const init: ServerInit = () => {
+	// Never during `vite build`: building only loads modules, and must not draw.
+	// In dev, opt in explicitly: the repo's .env may hold real SMTP credentials
+	// and `npm run dev` defaults to the live data/filmnacht.db, so a dev session
+	// drawing and emailing on its own every time it starts is not something to
+	// do by default.
+	if (!building && (!dev || env.FILMNACHT_SCHEDULER === '1')) {
+		startScheduler(db, (nightId) => notifyDraw(db, nightId));
+	}
+};
 
 /**
  * Replaces SvelteKit's default error logger, which prints the request URL.

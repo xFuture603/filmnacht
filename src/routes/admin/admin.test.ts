@@ -6,7 +6,7 @@ import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { passwordResets } from '$lib/server/db/schema';
 import { resetRateLimits } from '$lib/server/rate-limit';
 import { consumeReset } from '$lib/server/resets';
-import { getTimezone } from '$lib/server/settings';
+import { getEmailLocale, getTimezone } from '$lib/server/settings';
 import {
 	createUser,
 	regenerateLoginToken,
@@ -274,7 +274,7 @@ describe('POST /admin?/recover', () => {
 });
 
 async function act(
-	name: 'timezone' | 'testMail',
+	name: 'timezone' | 'emailLocale' | 'testMail',
 	user: Caller,
 	fields: Record<string, string> = {}
 ): Promise<Record<string, unknown>> {
@@ -324,6 +324,30 @@ describe('instance settings on /admin', () => {
 		expect(getTimezone(db)).toBe('UTC');
 		expect(await statusOfThrow(() => act('testMail', asAda()))).toBe(403);
 		expect(testMailsTo).toEqual([]);
+	});
+
+	it('shows the default email language and lets the admin change it', () => {
+		const data = load({ locals: { user: asAdmin(), locale: 'en' } } as never) as {
+			emailLocale: string;
+		};
+		expect(data.emailLocale).toBe('en');
+	});
+
+	it('lets the admin set the draw email language, and only to en or de', async () => {
+		expect(await act('emailLocale', asAdmin(), { locale: 'de' })).toEqual({
+			emailLocaleSaved: true
+		});
+		expect(getEmailLocale(db)).toBe('de');
+		expect(await act('emailLocale', asAdmin(), { locale: 'fr' })).toMatchObject({
+			status: 400,
+			data: { error: 'admin.error.email_locale' }
+		});
+		expect(getEmailLocale(db)).toBe('de');
+	});
+
+	it('refuses a member who is not the admin, and changes nothing', async () => {
+		expect(await statusOfThrow(() => act('emailLocale', asAda(), { locale: 'de' }))).toBe(403);
+		expect(getEmailLocale(db)).toBe('en');
 	});
 
 	it('asks for an email address on the profile before sending a test', async () => {
