@@ -4,7 +4,7 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import Toast from '$lib/components/Toast.svelte';
-	import { Users } from '@lucide/svelte';
+	import { TriangleAlert, Users } from '@lucide/svelte';
 	let { data, form } = $props();
 
 	const s = $derived(data.settings);
@@ -34,7 +34,11 @@
 {/if}
 
 {#if s.autoDraw && !data.mailConfigured}
-	<div class="alert alert-warning alert-soft mb-4" role="alert">
+	<!-- Solid fill, not alert-soft: amber-on-white/amber-on-dark tinted text
+	     reads at ~2:1 contrast, below WCAG AA. A solid warning fill keeps
+	     amber to what the brief allows it for (a fill), with dark ink on top. -->
+	<div class="alert alert-warning mb-4" role="alert">
+		<TriangleAlert class="size-5 shrink-0" />
 		{t(data.locale, 'settings.auto_draw_silent')}
 	</div>
 {/if}
@@ -61,14 +65,17 @@
 					{t(data.locale, 'settings.auto_draw')}
 				</label>
 				<p id="auto-draw-hint" class="text-sm text-base-content/70">
-					{#if !data.mailConfigured}
+					{#if !data.mailConfigured && !s.autoDraw}
 						{t(data.locale, 'settings.auto_draw_needs_mail')}
 						{#if data.user?.isAdmin}
 							<a class="link" href="/admin">{t(data.locale, 'nav.admin')}</a>
 						{/if}
-					{:else}
+					{:else if data.mailConfigured}
 						{t(data.locale, 'settings.auto_draw_hint')}
 					{/if}
+					<!-- Mail off but autoDraw already on: the warning banner above says
+					     everything that needs saying here, so this stays empty rather
+					     than repeating it in a second voice. -->
 				</p>
 			</div>
 

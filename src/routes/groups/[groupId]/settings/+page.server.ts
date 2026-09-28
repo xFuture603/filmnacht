@@ -21,7 +21,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 export const actions: Actions = {
 	save: async ({ request, locals, params }) => {
 		const user = requireUser(locals);
-		requireOwner(db, user.id, params.groupId);
+		const group = requireOwner(db, user.id, params.groupId);
 		const form = await request.formData();
 		const checked = (name: string) => form.get(name) === 'on';
 		const number = (name: keyof typeof SETTING_CHOICES) => Number(form.get(name));
@@ -42,7 +42,11 @@ export const actions: Actions = {
 		if (!valid) return fail(400, { error: 'settings.error.invalid' });
 
 		const autoDraw = checked('autoDraw');
-		if (autoDraw && !isMailConfigured()) {
+		// Refuse only TURNING IT ON: a group that already has automatic draw on
+		// must still be editable (e.g. to change something unrelated) after mail
+		// breaks, or its owner is locked out of their own settings page by a
+		// problem they may not even control.
+		if (autoDraw && !group.settings.autoDraw && !isMailConfigured()) {
 			return fail(400, { error: 'settings.error.no_mail' });
 		}
 

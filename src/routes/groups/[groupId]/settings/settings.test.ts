@@ -126,6 +126,33 @@ describe('POST /groups/:id/settings ?/save', () => {
 		expect(requireMember(db, ada, groupId).settings).toMatchObject({ autoDraw: false });
 	});
 
+	it('lets a save through when automatic draw is already on and mail has since broken', async () => {
+		// Turn autoDraw on while mail still works.
+		await post(ada, {
+			autoDraw: 'on',
+			autoDrawHoursBefore: '24',
+			maxOpenSuggestions: '3',
+			nightEndsAfterMinutes: '180',
+			ratingWindowDays: '7'
+		});
+		mailConfigured = false;
+
+		// Saving an unrelated field must still succeed, and must not silently
+		// turn autoDraw off: the mail check only refuses TURNING IT ON.
+		const result = await post(ada, {
+			autoDraw: 'on',
+			autoDrawHoursBefore: '24',
+			maxOpenSuggestions: '5',
+			nightEndsAfterMinutes: '180',
+			ratingWindowDays: '7'
+		});
+		expect(result).toEqual({ saved: true });
+		expect(requireMember(db, ada, groupId).settings).toMatchObject({
+			autoDraw: true,
+			maxOpenSuggestions: 5
+		});
+	});
+
 	it('gives a member who is not the owner a 403, and saves nothing', async () => {
 		expect(
 			await post(grace, {

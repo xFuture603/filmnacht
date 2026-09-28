@@ -34,16 +34,17 @@ export function runDueDraws(
 ): number {
 	let drawn = 0;
 	for (const id of dueForAutoDraw(db, now)) {
-		// No candidates yet → try again next minute; a manual draw in between wins the claim.
-		if (drawNight(db, id, null).ok) {
-			drawn++;
-			// Isolated per night: a callback that throws (a mail failure, say) must
-			// not cost the REST of this tick's due nights their draw.
-			try {
+		// Isolated per night: a bad row (drawNight itself throwing, say from a
+		// hand-corrupted draw_log) or a callback that throws (a mail failure,
+		// say) must not cost the REST of this tick's due nights their draw.
+		try {
+			// No candidates yet → try again next minute; a manual draw in between wins the claim.
+			if (drawNight(db, id, null).ok) {
+				drawn++;
 				onDrawn(id);
-			} catch {
-				console.error('[filmnacht] draw notification failed');
 			}
+		} catch {
+			console.error(`[filmnacht] automatic draw failed for night ${id}`);
 		}
 	}
 	return drawn;

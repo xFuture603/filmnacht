@@ -7,7 +7,7 @@ import { groups, memberships, movieNights, movies, suggestions, users } from './
 import type { DrawLogEntry } from './draw';
 import { groupSettings } from './group-settings';
 import { FORMER_MEMBER_USERNAME } from './members';
-import { sendMail } from './mail';
+import { isMailConfigured, sendMail } from './mail';
 import { isResultVisible } from './nights';
 import { getEmailLocale, getTimezone } from './settings';
 
@@ -54,7 +54,7 @@ export function composeDrawMail(input: {
 	if (link) lines.push(t(locale, 'mail.draw.link', { link }));
 
 	return {
-		subject: t(locale, 'mail.draw.subject', { when }),
+		subject: t(locale, 'mail.draw.subject', { group: groupName, when }),
 		body: lines.join('\n\n')
 	};
 }
@@ -150,6 +150,11 @@ export function notifyDraw(
 	nightId: string,
 	origin: string | null = env.ORIGIN ?? null
 ): void {
+	// An instance with no mail set up would fail every recipient identically
+	// (sendMail's own "not configured" contract) on every single draw — not a
+	// failure worth an operator's attention, just noise. Skip the query, the
+	// compose and the timer altogether rather than log it every time.
+	if (!isMailConfigured()) return;
 	setTimeout(() => {
 		try {
 			const info = drawMailInfo(db, nightId, new Date());

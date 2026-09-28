@@ -1,4 +1,5 @@
-import { building } from '$app/environment';
+import { building, dev } from '$app/environment';
+import { env } from '$env/dynamic/private';
 import { resolveLocale } from '$lib/i18n';
 import {
 	clearSessionCookie,
@@ -15,7 +16,13 @@ import { redirect, type Handle, type HandleServerError, type ServerInit } from '
 
 export const init: ServerInit = () => {
 	// Never during `vite build`: building only loads modules, and must not draw.
-	if (!building) startScheduler(db, (nightId) => notifyDraw(db, nightId));
+	// In dev, opt in explicitly: the repo's .env may hold real SMTP credentials
+	// and `npm run dev` defaults to the live data/filmnacht.db, so a dev session
+	// drawing and emailing on its own every time it starts is not something to
+	// do by default.
+	if (!building && (!dev || env.FILMNACHT_SCHEDULER === '1')) {
+		startScheduler(db, (nightId) => notifyDraw(db, nightId));
+	}
 };
 
 /**

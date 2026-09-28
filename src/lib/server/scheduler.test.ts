@@ -138,6 +138,38 @@ describe('dueForAutoDraw / runDueDraws', () => {
 		expect(nightDetail(db, nightId, ada)?.status).toBe('cancelled');
 	});
 
+	it('keeps drawing due nights after drawNight itself throws for an earlier one', () => {
+		film(grace, 'Dune');
+		const nightId2 = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: START,
+			location: null
+		});
+
+		// A hand-corrupted draw_log (not valid JSON): drawNight only reads it
+		// once it has already claimed the night and is about to append the log
+		// entry, so this throws from deep inside drawNight itself, not from a
+		// caller-supplied callback like onDrawn.
+		db.$client
+			.prepare('UPDATE movie_nights SET draw_log = ? WHERE id = ?')
+			.run('not-json', nightId);
+
+		expect(runDueDraws(db, DUE)).toBe(1);
+		// nightId's own transaction rolled back on the throw, so it is still
+		// scheduled; nightId2 was still drawn in the same tick. Read nightId's
+		// status with raw SQL: its draw_log is still the corrupted text, and
+		// nightDetail (like every other reader) would trip over parsing it.
+		expect(
+			(
+				db.$client.prepare('SELECT status FROM movie_nights WHERE id = ?').get(nightId) as {
+					status: string;
+				}
+			).status
+		).toBe('scheduled');
+		expect(nightDetail(db, nightId2, ada)?.status).toBe('drawn');
+	});
+
 	it('keeps drawing due nights after onDrawn throws for an earlier one (R2)', () => {
 		film(grace, 'Dune');
 		film(grace, 'Arrival');

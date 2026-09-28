@@ -11,12 +11,16 @@ import { composeDrawMail, drawRecipients, notifyDraw } from './draw-mail';
 
 let sent: Array<{ to: string; subject: string; body: string }> = [];
 let throwing = false;
+let mailConfigured = true;
+let sendMailCalls = 0;
 
 // Recorder mock, same shape as the pattern in admin.test.ts / reset.test.ts.
 // A throwing variant is included on purpose: sendMail's own contract is that
 // it never rejects, but notifyDraw must survive it anyway (spec §3).
 vi.mock('./mail', () => ({
+	isMailConfigured: () => mailConfigured,
 	sendMail: (to: string, subject: string, body: string) => {
+		sendMailCalls++;
 		if (throwing) throw new Error('smtp exploded');
 		sent.push({ to, subject, body });
 		return Promise.resolve(true);
@@ -38,6 +42,7 @@ describe('composeDrawMail', () => {
 	it('names the group, the date, the place, the title, the suggester and the link', () => {
 		const { subject, body } = composeDrawMail(base);
 		expect(subject).toContain(base.when);
+		expect(subject).toContain(base.groupName);
 		expect(body).toContain(base.groupName);
 		expect(body).toContain(base.when);
 		expect(body).toContain(base.location);
@@ -161,6 +166,8 @@ describe('notifyDraw', () => {
 	beforeEach(() => {
 		sent = [];
 		throwing = false;
+		mailConfigured = true;
+		sendMailCalls = 0;
 		db = createDb(':memory:').db;
 		applyMigrations(db);
 		ada = createUser(db, {
@@ -299,5 +306,18 @@ describe('notifyDraw', () => {
 
 		expect(sent[0].body).not.toContain('undefined');
 		expect(sent[0].body).not.toContain('http');
+	});
+
+	it('does nothing, and never calls sendMail, when this instance has no mail set up', async () => {
+		// Every recipient would fail identically (sendMail's own "not
+		// configured" contract), which is not a per-draw failure worth an
+		// operator's attention — logging "N/N failed to send" on every
+		// automatic draw of an instance that never set up mail is just noise.
+		mailConfigured = false;
+		notifyDraw(db, nightId, 'http://localhost');
+		await tick();
+
+		expect(sendMailCalls).toBe(0);
+		expect(sent).toHaveLength(0);
 	});
 });
