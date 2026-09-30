@@ -1,3 +1,4 @@
+import { scryptSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
 	hashPassword,
@@ -63,12 +64,15 @@ describe('verifyPassword', () => {
 		expect(await verifyPassword('any password at all', `scrypt$${salt}$${shortKey}`)).toBe(false);
 	});
 
-	it('rejects a salt segment of the wrong length (documents the gate; see note)', async () => {
-		// Not a regression guard, for the same reason as the key-length test above:
-		// pre-fix this also returned false, since real scrypt output never matches
-		// an all-zero buffer by chance.
-		const key = Buffer.alloc(64).toString('base64url');
-		expect(await verifyPassword('any password at all', `scrypt$AAAA$${key}`)).toBe(false);
+	it('refuses a hash made with a wrong-length salt, even for the right password', async () => {
+		// The stored key really is scrypt(password, 3-byte salt) with the app's own
+		// parameters, so the comparison alone would say "match". Only the salt
+		// length gate stands between this value and a successful sign-in; drop it
+		// and this returns true.
+		const salt = Buffer.from([1, 2, 3]);
+		const key = scryptSync('the right password', salt, 64, { N: 16384, r: 8, p: 1 });
+		const stored = `scrypt$${salt.toString('base64url')}$${key.toString('base64url')}`;
+		expect(await verifyPassword('the right password', stored)).toBe(false);
 	});
 
 	it('does not let an oversized stored value dictate how much work it does', async () => {
