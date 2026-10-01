@@ -1,0 +1,15 @@
+# Allowlist: nothing enters the build context unless named here.
+# .env (real credentials), data/ (live database), docs/, .git and .claude
+# can therefore never reach an image layer.
+*
+!package.json
+!package-lock.json
+!.npmrc
+!svelte.config.js
+!vite.config.ts
+!tsconfig.json
+!src
+!static
+!drizzle
+**/*.test.ts
+**/*.bak
