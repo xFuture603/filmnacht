@@ -1,0 +1,26 @@
+# Filmnacht — one service, secure by default.
+# Put your own reverse proxy (HTTPS) in front and set ORIGIN in .env to the
+# address people use. Copy .env.example to .env first.
+services:
+  filmnacht:
+    image: ${FILMNACHT_IMAGE:-ghcr.io/xfuture603/filmnacht:latest}
+    restart: unless-stopped
+    env_file: .env
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      # Must be LOCAL disk: SQLite locking is not safe over NFS or SMB.
+      # Prefer this named volume. If you bind-mount a host folder instead,
+      # it must be owned by the container user: chown 65532:65532 ./data
+      - filmnacht-data:/data
+    ports:
+      # Only reachable from this machine — your reverse proxy connects here.
+      - '127.0.0.1:${FILMNACHT_PORT:-3000}:3000'
+
+volumes:
+  filmnacht-data:
