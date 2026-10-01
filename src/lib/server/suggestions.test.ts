@@ -272,11 +272,27 @@ describe('listPool', () => {
 		expect(pool[0].status).toBe('drawn');
 	});
 
-	it('orders the pool by title, not by when a film was added', () => {
+	it('orders the pool by title, not by when a film was added or by dedupe key', () => {
 		// Insertion order is Zebra then Apple — the reverse of title order — so a
-		// result matching title order cannot be an accident of row order.
-		addSuggestion(db, { groupId, userId: ada, movie: { title: 'Zebra' }, settings });
-		addSuggestion(db, { groupId, userId: grace, movie: { title: 'Apple' }, settings });
+		// result matching title order cannot be an accident of row order. Zebra's
+		// `tmdbId` (100) also sorts before Apple's (999) as the string dedupeKey
+		// 'tmdb:100' < 'tmdb:999' — the reverse of title order again — so a result
+		// matching title order cannot be an accident of the unique index on
+		// (groupId, dedupeKey) either. A hand-typed title's dedupeKey embeds the
+		// lowercased title itself, which would otherwise mask a missing
+		// `orderBy` in exactly this scenario.
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { tmdbId: 100, title: 'Zebra' },
+			settings
+		});
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { tmdbId: 999, title: 'Apple' },
+			settings
+		});
 		expect(listPool(db, groupId, ada).map((e) => e.title)).toEqual(['Apple', 'Zebra']);
 	});
 

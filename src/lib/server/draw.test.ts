@@ -16,13 +16,6 @@ describe('weightFor', () => {
 		expect(weightFor(1)).toBe(0.5);
 		expect(weightFor(FAIRNESS_WINDOW_NIGHTS)).toBeGreaterThan(0);
 	});
-
-	it('treats a newcomer exactly like a member skipped for the whole window', () => {
-		// PRD §6: "as far as the app can tell both have been waiting, and both
-		// should go next." A newcomer has 0 watched films in the window; so does
-		// somebody the draw has passed over ten times running.
-		expect(weightFor(0)).toBe(weightFor(0));
-	});
 });
 
 describe('drawFrom', () => {

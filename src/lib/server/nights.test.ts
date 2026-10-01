@@ -128,6 +128,9 @@ describe('nightDetail', () => {
 	});
 
 	it('returns nothing for a night that does not exist', () => {
+		// A real night must exist in the table so a WHERE clause that forgot to
+		// filter by id (and so returned the first row) would be caught here.
+		scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		expect(nightDetail(db, 'no-such-night', ada)).toBeNull();
 	});
 });
@@ -251,6 +254,31 @@ describe('drawForNight', () => {
 		const candidates = candidatesFor(db, groupId);
 		expect(candidates).toHaveLength(1);
 		expect(Number.isFinite(candidates[0].watchedInWindow)).toBe(true);
+	});
+
+	it('treats a newcomer exactly like a member skipped for the whole window', () => {
+		// PRD §6: "as far as the app can tell both have been waiting, and both
+		// should go next." Ada's one watched film is eleven nights back, outside
+		// the ten-night window; Alan joins afterwards with no history at all.
+		for (let i = 0; i <= 10; i++) {
+			openFilm(i === 0 ? ada : grace, `Film ${i}`);
+			const at = new Date(LATER.getTime() + i * 24 * 60 * 60 * 1000);
+			const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: at, location: null });
+			drawForNight(db, id, ada);
+			markWatched(db, id, ada);
+		}
+		const alan = createUser(db, {
+			username: 'alan',
+			displayName: 'Alan',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		addMember(db, alan, groupId);
+		openFilm(ada, 'Dune');
+		openFilm(alan, 'Arrival');
+
+		const weights = candidatesFor(db, groupId);
+		expect(weights.find((c) => c.userId === ada)?.watchedInWindow).toBe(0);
+		expect(weights.find((c) => c.userId === alan)?.watchedInWindow).toBe(0);
 	});
 });
 

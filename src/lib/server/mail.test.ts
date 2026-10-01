@@ -48,8 +48,25 @@ describe('isMailConfigured', () => {
 
 describe('sendMail', () => {
 	it('returns false rather than throwing when mail is not configured', async () => {
+		// The global test-setup.ts mock rejects every send regardless of config,
+		// so a plain resolves-to-false assertion would stay green even if the
+		// isMailConfigured() gate were deleted (the catch block alone still
+		// swallows the mock's rejection). Track whether a transport was ever
+		// created to prove the gate itself short-circuits before any send is
+		// attempted.
+		let created = false;
+		vi.doMock('nodemailer', () => ({
+			default: {
+				createTransport: () => {
+					created = true;
+					return { sendMail: async () => ({ accepted: ['ada@example.com'] }) };
+				}
+			}
+		}));
 		const { sendMail } = await loadMail({ ...CONFIGURED, SMTP_HOST: undefined });
 		await expect(sendMail('ada@example.com', 'subject', 'body')).resolves.toBe(false);
+		expect(created).toBe(false);
+		vi.doUnmock('nodemailer');
 	});
 
 	it('returns true when the transport accepts the message', async () => {
