@@ -128,6 +128,9 @@ describe('nightDetail', () => {
 	});
 
 	it('returns nothing for a night that does not exist', () => {
+		// A real night must exist in the table so a WHERE clause that forgot to
+		// filter by id (and so returned the first row) would be caught here.
+		scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		expect(nightDetail(db, 'no-such-night', ada)).toBeNull();
 	});
 });
