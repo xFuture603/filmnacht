@@ -14,7 +14,7 @@ jobs:
   image:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # create the GitHub release
       packages: write
       id-token: write # keyless cosign signing
     steps:
@@ -73,3 +73,12 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
+      # Last, so a release only appears once its image is pushed and signed.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A hyphen (v0.2.0-rc.1) marks a pre-release, which never becomes "Latest".
+        run: |
+          prerelease=false
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then prerelease=true; fi
+          gh release create "$GITHUB_REF_NAME" --generate-notes --prerelease="$prerelease"
