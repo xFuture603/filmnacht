@@ -148,7 +148,11 @@ export const memberships = sqliteTable(
 			.notNull()
 			.$defaultFn(() => new Date()),
 		/** Set on leaving. History stays, access does not (PRD §4). */
-		leftAt: integer('left_at', { mode: 'timestamp' })
+		leftAt: integer('left_at', { mode: 'timestamp' }),
+		/** Last visit to the Films tab. NULL means "since joining" (new-markers spec). */
+		poolSeenAt: integer('pool_seen_at', { mode: 'timestamp' }),
+		/** Last visit to the Nights tab. NULL means "since joining". */
+		nightsSeenAt: integer('nights_seen_at', { mode: 'timestamp' })
 	},
 	(table) => [unique('memberships_user_group').on(table.userId, table.groupId)]
 );

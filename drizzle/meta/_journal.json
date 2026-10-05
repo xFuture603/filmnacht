@@ -29,6 +29,13 @@
       "when": 1790360705720,
       "tag": "0003_far_red_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791232217142,
+      "tag": "0004_outgoing_squadron_sinister",
+      "breakpoints": true
     }
   ]
 }
