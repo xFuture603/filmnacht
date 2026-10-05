@@ -89,3 +89,19 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 }
+
+/*
+ * daisyUI's default hover turns an outline button into a grey filled one: the
+ * border fades into the fill, a shadow appears, and in dark mode the fill is
+ * darker than the card. Next to its siblings (the RSVP row) that reads as a
+ * hole. Keep the outline and add a light tint of its own colour instead.
+ * Unlayered, so it wins over daisyUI's layered .btn:hover.
+ */
+@media (hover: hover) {
+	.btn-outline:hover {
+		--btn-bg: color-mix(in oklab, var(--btn-color, var(--color-base-content)) 10%, transparent);
+		--btn-border: var(--btn-color, var(--color-base-content));
+		--btn-shadow: 0 0 #0000;
+		color: var(--btn-color, var(--color-base-content));
+	}
+}
