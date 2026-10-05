@@ -6,6 +6,10 @@ services:
     image: ${FILMNACHT_IMAGE:-ghcr.io/xfuture603/filmnacht:latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      # Wins over .env, so an old DATABASE_PATH copied from an earlier
+      # .env.example cannot move the database off the volume.
+      DATABASE_PATH: /data/filmnacht.db
     read_only: true
     tmpfs:
       - /tmp
