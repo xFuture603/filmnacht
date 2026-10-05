@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { addMember, createGroup } from '$lib/server/groups';
-import { listNights } from '$lib/server/nights';
+import { memberships } from '$lib/server/db/schema';
+import { listNights, scheduleNight } from '$lib/server/nights';
 import { setSetting } from '$lib/server/settings';
 import { createUser } from '$lib/server/users';
 
@@ -141,5 +142,36 @@ describe('the list', () => {
 			status = (e as { status: number }).status;
 		}
 		expect(status).toBe(404);
+	});
+});
+
+describe('new nights', () => {
+	type Data = Exclude<Awaited<ReturnType<typeof load>>, void>;
+	const nightsFor = async (userId: string) =>
+		(await load({
+			params: { groupId },
+			locals: locals(userId),
+			url: new URL('http://localhost/x')
+		} as never)) as Data;
+
+	beforeEach(() => {
+		db.update(memberships)
+			.set({ joinedAt: new Date(Date.now() - 3_600_000) })
+			.run();
+		scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date(Date.now() + 86_400_000),
+			location: null
+		});
+	});
+
+	it('badges a new night for a member once', async () => {
+		expect((await nightsFor(grace)).upcoming.map((n) => n.isNew)).toEqual([true]);
+		expect((await nightsFor(grace)).upcoming.map((n) => n.isNew)).toEqual([false]);
+	});
+
+	it('never badges a night for the owner', async () => {
+		expect((await nightsFor(ada)).upcoming.map((n) => n.isNew)).toEqual([false]);
 	});
 });

@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import { LOCATION_MAX, listNights, scheduleNight } from '$lib/server/nights';
 import { averagesFor } from '$lib/server/ratings';
+import { visit } from '$lib/server/seen';
 import { scheduleDefaults, todayIn } from '$lib/schedule';
 import { getTimezone } from '$lib/server/settings';
 import { formatWhen, wallTimeToUtc } from '$lib/time';
@@ -12,6 +13,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 	const user = requireUser(locals);
 	// Membership before anything about the group's nights is read (PRD §12).
 	const group = requireMember(db, user.id, params.groupId);
+	const { newIds, counts } = visit(db, user.id, params.groupId, 'nights');
 	const timezone = getTimezone(db);
 	const now = Date.now();
 	const averages = averagesFor(db, params.groupId, group.settings, new Date());
@@ -26,11 +28,13 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 	const nights = all.map((night) => ({
 		...night,
 		when: formatWhen(night.scheduledAt, timezone, locals.locale),
-		average: averages.get(night.id) ?? null
+		average: averages.get(night.id) ?? null,
+		isNew: newIds.has(night.id)
 	}));
 	return {
 		group,
 		isOwner: group.role === 'owner',
+		newCounts: counts,
 		upcoming: nights.filter((n) => n.scheduledAt.getTime() >= now).reverse(),
 		past: nights.filter((n) => n.scheduledAt.getTime() < now),
 		locationMax: LOCATION_MAX,

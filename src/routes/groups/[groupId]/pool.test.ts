@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
-import { DEFAULT_GROUP_SETTINGS, groups } from '$lib/server/db/schema';
+import { DEFAULT_GROUP_SETTINGS, groups, memberships } from '$lib/server/db/schema';
 import { addMember, createGroup } from '$lib/server/groups';
 import { drawForNight, scheduleNight } from '$lib/server/nights';
 import { addSuggestion, type PoolEntry } from '$lib/server/suggestions';
@@ -70,5 +70,29 @@ describe('the pool and a surprise draw', () => {
 		const pool = (await poolFor(ada)).pool;
 		expect(pool).toHaveLength(1);
 		expect(pool.every((e: PoolEntry) => e.status === 'open')).toBe(true);
+	});
+});
+
+describe('new films', () => {
+	beforeEach(() => {
+		// The beforeEach above adds the films in the same second as the joins.
+		// Move the joins back so those films count as new.
+		db.update(memberships)
+			.set({ joinedAt: new Date(Date.now() - 3_600_000) })
+			.run();
+	});
+
+	it("badges other members' open films once, never a drawn one", async () => {
+		const first = await poolFor(ada);
+		const isNew = (e: PoolEntry & { isNew: boolean }) => e.isNew;
+		expect(first.pool.filter(isNew)).toHaveLength(1);
+		expect(first.pool.find(isNew)?.status).toBe('open');
+		expect(first.newCounts.pool).toBe(0);
+		expect((await poolFor(ada)).pool.filter(isNew)).toHaveLength(0);
+	});
+
+	it('refuses a non-member before marking anything as seen', async () => {
+		const lin = createUser(db, { username: 'lin', displayName: 'Lin', passwordHash: 'x' }).id;
+		await expect(poolFor(lin)).rejects.toMatchObject({ status: 404 });
 	});
 });

@@ -3,6 +3,7 @@ import { SETTING_CHOICES } from '$lib/server/group-settings';
 import { requireOwner, requireUser } from '$lib/server/groups';
 import { groups } from '$lib/server/db/schema';
 import { isMailConfigured } from '$lib/server/mail';
+import { newCounts } from '$lib/server/seen';
 import { fail } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
@@ -14,7 +15,8 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		group,
 		settings: group.settings,
 		choices: SETTING_CHOICES,
-		mailConfigured: isMailConfigured()
+		mailConfigured: isMailConfigured(),
+		newCounts: newCounts(db, user.id, params.groupId)
 	};
 };
 

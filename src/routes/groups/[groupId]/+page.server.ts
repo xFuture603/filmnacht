@@ -3,6 +3,7 @@ import { listMembers, requireMember, requireOwner, requireUser } from '$lib/serv
 import { createInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
 import { unrevealedDrawnIds } from '$lib/server/nights';
+import { visit } from '$lib/server/seen';
 import { countOpenSuggestions, listPool, withdrawSuggestion } from '$lib/server/suggestions';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -10,10 +11,16 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = ({ locals, params }) => {
 	const user = requireUser(locals);
 	const group = requireMember(db, user.id, params.groupId);
+	// After requireMember: a non-member must not mark anything as seen.
+	const { newIds, counts } = visit(db, user.id, params.groupId, 'pool');
 	return {
 		group,
 		members: listMembers(db, params.groupId),
-		pool: visiblePool(params.groupId, user.id, group.settings.resultVisible),
+		pool: visiblePool(params.groupId, user.id, group.settings.resultVisible).map((entry) => ({
+			...entry,
+			isNew: newIds.has(entry.suggestionId)
+		})),
+		newCounts: counts,
 		used: countOpenSuggestions(db, params.groupId, user.id),
 		max: group.settings.maxOpenSuggestions
 	};

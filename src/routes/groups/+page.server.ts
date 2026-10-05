@@ -1,12 +1,18 @@
 import { db } from '$lib/server/db';
 import { createGroup, listGroupsFor, requireUser } from '$lib/server/groups';
+import { newCounts } from '$lib/server/seen';
 import { validateDisplayName } from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals }) => {
 	const user = requireUser(locals);
-	return { groups: listGroupsFor(db, user.id) };
+	// One newCounts per group: a member is in a handful of groups, not hundreds.
+	const groups = listGroupsFor(db, user.id).map((group) => {
+		const counts = newCounts(db, user.id, group.id);
+		return { ...group, newCount: counts.pool + counts.nights };
+	});
+	return { groups };
 };
 
 export const actions: Actions = {
