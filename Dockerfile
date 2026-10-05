@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build: compile the app and the native SQLite driver ----
-FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS build
+FROM node:24-trixie-slim@sha256:8ec5d7557396cfe32d21c3f9c13072355ceab22b584578ca4bb28af31120cffe AS build
 
 # Toolchain only for better-sqlite3's source fallback when no prebuilt
 # binary matches the platform. It never reaches the runtime image.
@@ -23,7 +23,7 @@ RUN npm run build \
 	&& mkdir /data
 
 # ---- runtime: distroless, non-root, no shell ----
-FROM gcr.io/distroless/nodejs24-debian12:nonroot@sha256:14d42e2511532589a7c7e01a753667a74fcc96266e137e8125006b87b0c32d0a
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9eeb7f5887d0e239e78264b06f7f11d2e14be534050481803a9e4728fcdd278e
 
 ARG VERSION=dev
 ARG REVISION=unknown
