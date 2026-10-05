@@ -167,11 +167,17 @@ describe('new nights', () => {
 	});
 
 	it('badges a new night for a member once', async () => {
-		expect((await nightsFor(grace)).upcoming.map((n) => n.isNew)).toEqual([true]);
-		expect((await nightsFor(grace)).upcoming.map((n) => n.isNew)).toEqual([false]);
+		expect((await nightsFor(grace)).upcoming.map((n: { isNew: boolean }) => n.isNew)).toEqual([
+			true
+		]);
+		expect((await nightsFor(grace)).upcoming.map((n: { isNew: boolean }) => n.isNew)).toEqual([
+			false
+		]);
 	});
 
 	it('never badges a night for the owner', async () => {
-		expect((await nightsFor(ada)).upcoming.map((n) => n.isNew)).toEqual([false]);
+		expect((await nightsFor(ada)).upcoming.map((n: { isNew: boolean }) => n.isNew)).toEqual([
+			false
+		]);
 	});
 });
