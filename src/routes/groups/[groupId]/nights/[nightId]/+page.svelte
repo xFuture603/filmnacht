@@ -32,7 +32,11 @@
 	const signed = (n: number) => (n > 0 ? '+' : '') + fmt(n);
 </script>
 
-<a class="btn btn-ghost btn-sm mb-2 min-h-11 gap-1 px-2" href="/groups/{data.group.groupId}/nights">
+<a
+	class="btn btn-ghost btn-sm mb-2 min-h-11 gap-1 px-2"
+	href="/groups/{data.group.groupId}/nights"
+	data-sveltekit-preload-data="off"
+>
 	<ChevronLeft class="size-4" />{t(data.locale, 'night.back')}
 </a>
 

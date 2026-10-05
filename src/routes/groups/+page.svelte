@@ -17,6 +17,7 @@
 			<li class="min-w-0">
 				<a
 					href="/groups/{group.id}"
+					data-sveltekit-preload-data="off"
 					class="card flex min-h-11 w-full flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
 				>
 					<span

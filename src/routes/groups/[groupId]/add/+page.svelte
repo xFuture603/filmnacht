@@ -84,6 +84,10 @@
 	</div>
 </section>
 
-<a class="btn btn-ghost min-h-11" href="/groups/{data.group.groupId}">
+<a
+	class="btn btn-ghost min-h-11"
+	href="/groups/{data.group.groupId}"
+	data-sveltekit-preload-data="off"
+>
 	{t(data.locale, 'add.back')}
 </a>

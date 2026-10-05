@@ -48,6 +48,7 @@
 		<a
 			class={['tab min-h-11 gap-2', tab.id === active && 'tab-active']}
 			href={tab.href}
+			data-sveltekit-preload-data="off"
 			aria-current={tab.id === active ? 'page' : undefined}
 		>
 			<tab.icon class="size-4 max-sm:hidden" />{tab.label}
