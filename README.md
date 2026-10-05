@@ -1,42 +1,30 @@
-# sv
+# Filmnacht
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Self-hosted movie nights for small groups, with a fair draw.
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
+## Run with Docker
 
 ```sh
-# create a new project
-npx sv create my-app
+curl -O https://raw.githubusercontent.com/xFuture603/filmnacht/main/docker-compose.yml
+curl -o .env https://raw.githubusercontent.com/xFuture603/filmnacht/main/.env.example
+# edit .env: set ORIGIN to the address people type, e.g. https://filmnacht.example.org
+docker compose up -d
 ```
 
-To recreate this project with the same configuration:
+The app listens on `127.0.0.1:3000` only. Put a reverse proxy with HTTPS in front
+of it. The first visit opens the setup page. Data lives in the `filmnacht-data`
+volume, which must be on local disk. Everything else you can set is described in
+`.env.example`.
+
+Images are published to `ghcr.io/xfuture603/filmnacht` for amd64 and arm64 and
+signed with cosign. To pin a version, set `FILMNACHT_IMAGE=ghcr.io/xfuture603/filmnacht:1.2.3`.
+
+## Develop
 
 ```sh
-# recreate this project
-npx sv@0.17.1 create --template minimal --types ts --no-install .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+cp .env.example .env
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Before pushing, run `npm run lint`, `npm run check`, `npm test` and `npm run build`.
