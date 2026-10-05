@@ -7,13 +7,15 @@
 		groupName,
 		active,
 		locale,
-		isOwner = false
+		isOwner = false,
+		counts = { pool: 0, nights: 0 }
 	}: {
 		groupId: string;
 		groupName: string;
 		active: 'pool' | 'nights' | 'settings';
 		locale: Locale;
 		isOwner?: boolean;
+		counts?: { pool: number; nights: number };
 	} = $props();
 	type Tab = { id: 'pool' | 'nights' | 'settings'; href: string; label: string; icon: Component };
 	const tabs = $derived([
@@ -49,6 +51,10 @@
 			aria-current={tab.id === active ? 'page' : undefined}
 		>
 			<tab.icon class="size-4 max-sm:hidden" />{tab.label}
+			{#if tab.id !== 'settings' && counts[tab.id] > 0}
+				<span class="badge badge-sm badge-info" aria-hidden="true">{counts[tab.id]}</span>
+				<span class="sr-only">{t(locale, 'new.count', { count: counts[tab.id] })}</span>
+			{/if}
 		</a>
 	{/each}
 </nav>

@@ -21,6 +21,7 @@
 	active="settings"
 	locale={data.locale}
 	isOwner={data.group.role === 'owner'}
+	counts={data.newCounts}
 />
 
 {#key form}

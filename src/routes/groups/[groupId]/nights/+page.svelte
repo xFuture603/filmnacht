@@ -22,6 +22,7 @@
 	active="nights"
 	locale={data.locale}
 	isOwner={data.isOwner}
+	counts={data.newCounts}
 />
 
 {#snippet list(nights: typeof data.upcoming)}
@@ -41,6 +42,9 @@
 									<span class="sr-only">{t(data.locale, 'ratings.average')}</span>
 									{t(data.locale, 'ratings.average_short', { average: fmt(night.average) })}
 								</span>
+							{/if}
+							{#if night.isNew}
+								<span class="badge badge-sm badge-info">{t(data.locale, 'new.badge')}</span>
 							{/if}
 							<NightStatus status={night.status} locale={data.locale} />
 						</span>

@@ -15,6 +15,7 @@
 	active="pool"
 	locale={data.locale}
 	isOwner={data.group.role === 'owner'}
+	counts={data.newCounts}
 />
 
 {#if form?.error}
@@ -42,6 +43,11 @@
 						{#if entry.mine}
 							<span class="badge badge-sm badge-primary absolute top-2 left-2 shadow-sm">
 								{t(data.locale, 'pool.yours')}
+							</span>
+						{/if}
+						{#if entry.isNew}
+							<span class="badge badge-sm badge-info absolute top-2 right-2 shadow-sm">
+								{t(data.locale, 'new.badge')}
 							</span>
 						{/if}
 						{#if entry.mine && entry.status === 'open'}

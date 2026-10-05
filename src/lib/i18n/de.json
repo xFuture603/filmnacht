@@ -135,6 +135,8 @@
 	"pool.withdraw_named": "{title} zurückziehen",
 	"pool.count": "{used} von {max} Vorschlägen genutzt",
 	"pool.drawn": "Schon gesehen",
+	"new.badge": "Neu",
+	"new.count": "{count} neu",
 	"pool.error.duplicate": "Dieser Film ist schon im Pool.",
 	"pool.error.cap_reached": "Du hast alle deine Vorschläge genutzt. Zieh zuerst einen zurück.",
 	"pool.error.bad_title": "Bitte gib einen Filmtitel ein.",
