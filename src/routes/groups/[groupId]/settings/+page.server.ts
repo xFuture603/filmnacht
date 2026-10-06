@@ -1,10 +1,10 @@
 import { db } from '$lib/server/db';
 import { SETTING_CHOICES } from '$lib/server/group-settings';
-import { requireOwner, requireUser } from '$lib/server/groups';
+import { deleteGroup, requireOwner, requireUser } from '$lib/server/groups';
 import { groups } from '$lib/server/db/schema';
 import { isMailConfigured } from '$lib/server/mail';
 import { newCounts } from '$lib/server/seen';
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -67,5 +67,15 @@ export const actions: Actions = {
 			.where(eq(groups.id, params.groupId))
 			.run();
 		return { saved: true };
+	},
+
+	deleteGroup: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
+		const group = requireOwner(db, user.id, params.groupId);
+		// Typing the name, not ticking a box: this one cannot be undone.
+		const name = String((await request.formData()).get('name') ?? '').trim();
+		if (name !== group.name) return fail(400, { error: 'settings.error.delete_name' });
+		deleteGroup(db, params.groupId);
+		redirect(303, '/groups');
 	}
 };

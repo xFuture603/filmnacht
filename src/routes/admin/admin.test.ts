@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword } from '$lib/server/auth/password';
 import { createSession, validateSession } from '$lib/server/auth/session';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { passwordResets } from '$lib/server/db/schema';
+import { addMember, createGroup, listGroupsFor } from '$lib/server/groups';
 import { resetRateLimits } from '$lib/server/rate-limit';
 import { consumeReset } from '$lib/server/resets';
 import { getEmailLocale, getTimezone } from '$lib/server/settings';
@@ -373,5 +374,50 @@ describe('instance settings on /admin', () => {
 		});
 		testMailResult = { ok: false, code: 'ETIMEDOUT' };
 		expect(await act('testMail', asAdmin())).toMatchObject({ data: { mailHint: 'connection' } });
+	});
+});
+
+describe('deleting a group from /admin', () => {
+	let groupId: string;
+	beforeEach(() => {
+		groupId = createGroup(db, { name: 'Filmnacht', ownerId: ada.id });
+		addMember(db, grace.id, groupId);
+	});
+
+	const remove = (user: Caller, fields: Record<string, string>) =>
+		actions.deleteGroup({
+			locals: { user, locale: 'en' },
+			request: new Request('http://localhost/admin', {
+				method: 'POST',
+				body: new URLSearchParams(fields)
+			}),
+			url: new URL('http://localhost/admin')
+		} as never);
+
+	it('lists every group with its owner and size', async () => {
+		const data = (await load({ locals: { user: asAdmin(), locale: 'en' } } as never)) as {
+			groups: unknown[];
+		};
+		expect(data.groups).toEqual([{ id: groupId, name: 'Filmnacht', owner: 'Ada', members: 2 }]);
+	});
+
+	it('deletes a group the admin does not own, once its name is typed', async () => {
+		expect(await remove(asAdmin(), { groupId, name: 'Filmnacht' })).toEqual({
+			deletedGroup: 'Filmnacht'
+		});
+		expect(listGroupsFor(db, ada.id)).toEqual([]);
+	});
+
+	it('refuses a wrong name', async () => {
+		expect(await remove(asAdmin(), { groupId, name: 'Nope' })).toMatchObject({
+			status: 400,
+			data: { error: 'settings.error.delete_name' }
+		});
+		expect(listGroupsFor(db, ada.id)).toHaveLength(1);
+	});
+
+	it('refuses anyone who is not the instance admin, the owner included', async () => {
+		expect(await statusOfThrow(() => remove(asAda(), { groupId, name: 'Filmnacht' }))).toBe(403);
+		expect(listGroupsFor(db, ada.id)).toHaveLength(1);
 	});
 });

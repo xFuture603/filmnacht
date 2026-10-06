@@ -20,6 +20,11 @@
 		<Toast message={t(data.locale, 'admin.timezone_saved')} locale={data.locale} />
 	{:else if form?.emailLocaleSaved}
 		<Toast message={t(data.locale, 'admin.email_locale_saved')} locale={data.locale} />
+	{:else if form?.deletedGroup}
+		<Toast
+			message={t(data.locale, 'admin.group_deleted', { group: form.deletedGroup })}
+			locale={data.locale}
+		/>
 	{:else if form?.mailSent}
 		<Toast
 			message={t(data.locale, 'admin.mail_sent', { email: form.mailSent })}
@@ -187,5 +192,41 @@
 				{/each}
 			</ul>
 		</form>
+	</div>
+</section>
+
+<section class="{card} mt-6">
+	<div class="card-body">
+		<h2 class="card-title text-lg">{t(data.locale, 'admin.groups')}</h2>
+		{#if data.groups.length === 0}
+			<p class="text-sm text-base-content/70">{t(data.locale, 'admin.groups_empty')}</p>
+		{:else}
+			<p class="text-sm text-base-content/70">{t(data.locale, 'settings.delete_hint')}</p>
+			<ul class="divide-y divide-base-300">
+				{#each data.groups as group (group.id)}
+					<li class="flex flex-col gap-2 py-3">
+						<div>
+							<p class="font-semibold break-words">{group.name}</p>
+							<p class="text-sm text-base-content/70">
+								{t(data.locale, 'admin.group_meta', { owner: group.owner, count: group.members })}
+							</p>
+						</div>
+						<form
+							method="POST"
+							action="?/deleteGroup"
+							class="flex flex-col gap-2 sm:flex-row sm:items-end"
+						>
+							<input type="hidden" name="groupId" value={group.id} />
+							<Field label={t(data.locale, 'settings.delete_label', { group: group.name })}>
+								<input name="name" required autocomplete="off" class="input min-h-11 w-full" />
+							</Field>
+							<button class="btn btn-outline btn-error min-h-11"
+								>{t(data.locale, 'settings.delete')}</button
+							>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		{/if}
 	</div>
 </section>

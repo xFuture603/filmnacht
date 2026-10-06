@@ -1,5 +1,11 @@
 import { db } from '$lib/server/db';
-import { listMembers, requireMember, requireOwner, requireUser } from '$lib/server/groups';
+import {
+	leaveGroup,
+	listMembers,
+	requireMember,
+	requireOwner,
+	requireUser
+} from '$lib/server/groups';
 import { createInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
 import { nextNight, unrevealedDrawnIds } from '$lib/server/nights';
@@ -8,7 +14,7 @@ import { visit } from '$lib/server/seen';
 import { getTimezone } from '$lib/server/settings';
 import { formatDay, formatWhen } from '$lib/time';
 import { countOpenSuggestions, listPool, withdrawSuggestion } from '$lib/server/suggestions';
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, params }) => {
@@ -79,5 +85,17 @@ export const actions: Actions = {
 		const outcome = withdrawSuggestion(db, user.id, String(form.get('suggestionId') ?? ''));
 		if (outcome !== 'ok') return fail(400, { error: `pool.error.${outcome}` });
 		return { withdrawn: true };
+	},
+
+	leave: async ({ request, locals, params }) => {
+		const user = requireUser(locals);
+		const group = requireMember(db, user.id, params.groupId);
+		// One owner per group and no hand-over yet: the owner deletes it instead.
+		if (group.role === 'owner') return fail(400, { error: 'groups.error.owner_leave' });
+		if ((await request.formData()).get('confirm') !== 'on') {
+			return fail(400, { error: 'groups.error.confirm' });
+		}
+		leaveGroup(db, user.id, params.groupId);
+		redirect(303, '/groups');
 	}
 };

@@ -74,6 +74,15 @@ export function addMember(db: DB, userId: string, groupId: string): void {
 		.run();
 }
 
+/**
+ * Gone for everyone, for good. The schema's cascades take its memberships,
+ * invites, films, nights, RSVPs and ratings with it in this one statement;
+ * film rows other groups may share are left alone.
+ */
+export function deleteGroup(db: DB, groupId: string): void {
+	db.delete(groups).where(eq(groups.id, groupId)).run();
+}
+
 /** Access goes, history stays — name included (PRD §4). */
 export function leaveGroup(db: DB, userId: string, groupId: string): void {
 	db.update(memberships)

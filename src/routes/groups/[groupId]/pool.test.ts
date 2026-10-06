@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { DEFAULT_GROUP_SETTINGS, groups, memberships, movieNights } from '$lib/server/db/schema';
-import { addMember, createGroup } from '$lib/server/groups';
+import { addMember, createGroup, listGroupsFor } from '$lib/server/groups';
 import { drawForNight, markWatched, scheduleNight } from '$lib/server/nights';
 import { saveRating } from '$lib/server/ratings';
 import { addSuggestion, type PoolEntry } from '$lib/server/suggestions';
@@ -19,7 +19,7 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const { load } = await import('./+page.server');
+const { load, actions } = await import('./+page.server');
 
 type Data = Exclude<Awaited<ReturnType<typeof load>>, void>;
 
@@ -161,5 +161,48 @@ describe('the rating card', () => {
 			now: new Date()
 		});
 		expect((await poolFor(grace)).toRate).toEqual([]);
+	});
+});
+
+describe('leaving the group', () => {
+	async function leave(userId: string, fields: Record<string, string>) {
+		try {
+			return await actions.leave({
+				params: { groupId },
+				locals: { user: { id: userId, displayName: 'x', isAdmin: false }, locale: 'en' },
+				request: new Request('http://localhost/x', {
+					method: 'POST',
+					body: new URLSearchParams(fields)
+				})
+			} as never);
+		} catch (e) {
+			return e as { status: number; location?: string };
+		}
+	}
+
+	it('lets a member leave, and keeps their films in the pool', async () => {
+		const before = (await poolFor(ada)).pool.length;
+		expect(await leave(grace, { confirm: 'on' })).toMatchObject({
+			status: 303,
+			location: '/groups'
+		});
+		expect(listGroupsFor(db, grace)).toEqual([]);
+		expect((await poolFor(ada)).pool.length).toBe(before);
+	});
+
+	it('refuses without the confirming tick', async () => {
+		expect(await leave(grace, {})).toMatchObject({
+			status: 400,
+			data: { error: 'groups.error.confirm' }
+		});
+		expect(listGroupsFor(db, grace)).toHaveLength(1);
+	});
+
+	it('never lets the owner leave', async () => {
+		expect(await leave(ada, { confirm: 'on' })).toMatchObject({
+			status: 400,
+			data: { error: 'groups.error.owner_leave' }
+		});
+		expect(listGroupsFor(db, ada)).toHaveLength(1);
 	});
 });

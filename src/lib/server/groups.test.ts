@@ -1,9 +1,19 @@
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from './db/client';
-import { DEFAULT_GROUP_SETTINGS } from './db/schema';
+import {
+	attendance,
+	DEFAULT_GROUP_SETTINGS,
+	invites,
+	memberships,
+	movieNights,
+	ratings,
+	suggestions
+} from './db/schema';
 import {
 	addMember,
 	createGroup,
+	deleteGroup,
 	leaveGroup,
 	listGroupsFor,
 	listMembers,
@@ -11,7 +21,11 @@ import {
 	requireOwner,
 	requireUser
 } from './groups';
-import { createUser } from './users';
+import { createInvite } from './invites';
+import { drawForNight, respond, scheduleNight } from './nights';
+import { saveRating } from './ratings';
+import { addSuggestion } from './suggestions';
+import { createUser, userProfile } from './users';
 
 let db: DB;
 let ada: string;
@@ -143,5 +157,51 @@ describe('requireOwner', () => {
 
 	it('throws 404 for a group that does not exist', () => {
 		expect(status(() => requireOwner(db, ada, 'made-up-id'))).toBe(404);
+	});
+});
+
+describe('deleteGroup', () => {
+	it('removes the group and everything in it, and nothing else', () => {
+		const doomed = createGroup(db, { name: 'Doomed', ownerId: ada });
+		const kept = createGroup(db, { name: 'Kept', ownerId: ada });
+		addMember(db, grace, doomed);
+		createInvite(db, { groupId: doomed, createdBy: ada });
+		for (const [groupId, userId] of [
+			[doomed, grace],
+			[kept, ada]
+		]) {
+			addSuggestion(db, {
+				groupId,
+				userId,
+				movie: { title: 'Dune' },
+				settings: DEFAULT_GROUP_SETTINGS
+			});
+		}
+		// A night that has ended, so it can carry an RSVP and a rating too.
+		const night = scheduleNight(db, {
+			groupId: doomed,
+			userId: ada,
+			scheduledAt: new Date(Date.now() - 5 * 3_600_000),
+			location: null
+		});
+		drawForNight(db, night, ada);
+		respond(db, night, grace, 'yes');
+		expect(
+			saveRating(db, { nightId: night, userId: grace, scoreX2: 14, comment: null, now: new Date() })
+				.ok
+		).toBe(true);
+
+		deleteGroup(db, doomed);
+
+		expect(listGroupsFor(db, ada).map((g) => g.name)).toEqual(['Kept']);
+		expect(listGroupsFor(db, grace)).toEqual([]);
+		const count = (table: SQLiteTable) => db.select().from(table).all().length;
+		expect(count(memberships)).toBe(1); // ada in Kept
+		expect(count(suggestions)).toBe(1); // Kept's Dune
+		expect(count(invites)).toBe(0);
+		expect(count(movieNights)).toBe(0);
+		expect(count(attendance)).toBe(0);
+		expect(count(ratings)).toBe(0);
+		expect(userProfile(db, grace)).not.toBeNull();
 	});
 });

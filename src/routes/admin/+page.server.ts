@@ -1,15 +1,15 @@
 import { env } from '$env/dynamic/private';
 import { reauthenticate } from '$lib/server/auth/reauth';
 import { db } from '$lib/server/db';
-import { users } from '$lib/server/db/schema';
-import { requireUser } from '$lib/server/groups';
+import { groups, memberships, users } from '$lib/server/db/schema';
+import { deleteGroup, requireUser } from '$lib/server/groups';
 import { mailStatus, sendTestMail } from '$lib/server/mail';
 import { rateLimit } from '$lib/server/rate-limit';
 import { createReset } from '$lib/server/resets';
 import { getEmailLocale, getTimezone, setEmailLocale, setSetting } from '$lib/server/settings';
 import { userProfile } from '$lib/server/users';
 import { error, fail } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
 const timezones = Intl.supportedValuesOf('timeZone');
@@ -51,6 +51,20 @@ export const load: PageServerLoad = ({ locals }) => {
 		// Three columns and no more. This object is serialised into the page, so
 		// selecting the row would put password_hash and login_token_hash into the
 		// admin's HTML source.
+		// Every group, for deleting abandoned ones: name, owner, current size.
+		groups: db
+			.select({
+				id: groups.id,
+				name: groups.name,
+				owner: users.displayName,
+				members: count(memberships.id)
+			})
+			.from(groups)
+			.innerJoin(users, eq(users.id, groups.ownerId))
+			.leftJoin(memberships, and(eq(memberships.groupId, groups.id), isNull(memberships.leftAt)))
+			.groupBy(groups.id)
+			.orderBy(groups.name)
+			.all(),
 		members: db
 			.select({ id: users.id, username: users.username, displayName: users.displayName })
 			.from(users)
@@ -127,5 +141,18 @@ export const actions: Actions = {
 		// Shown once and never stored in plaintext (PRD §10). The admin hands it
 		// over out of band.
 		return { recoveryUrl: `${url.origin}/reset/${token}`, recoveredName: target.displayName };
+	},
+
+	deleteGroup: async ({ locals, request }) => {
+		requireAdmin(locals);
+		const form = await request.formData();
+		const id = String(form.get('groupId') ?? '');
+		const group = db.select({ name: groups.name }).from(groups).where(eq(groups.id, id)).get();
+		if (!group) return fail(404, { error: 'admin.error.no_group' });
+		if (String(form.get('name') ?? '').trim() !== group.name) {
+			return fail(400, { error: 'settings.error.delete_name' });
+		}
+		deleteGroup(db, id);
+		return { deletedGroup: group.name };
 	}
 };
