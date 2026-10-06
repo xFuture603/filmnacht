@@ -172,13 +172,13 @@ describe('who may act on a night', () => {
 		expect(nightDetail(db, nightId, ada)?.status).toBe('watched');
 	});
 
-	it('requires a reason to draw again', async () => {
-		const result = await post('redraw', ada, { reason: '   ' });
-		expect(result).toMatchObject({ status: 400, data: { error: 'night.error.reason' } });
+	it('refuses to draw again without the confirming tick, and asks for no reason', async () => {
+		const result = await post('redraw', ada);
+		expect(result).toMatchObject({ status: 400, data: { error: 'night.error.confirm' } });
 	});
 
 	it('says plainly why a one-film pool cannot be drawn again', async () => {
-		const result = await post('redraw', ada, { reason: 'seen it' });
+		const result = await post('redraw', ada, { confirm: 'on' });
 		expect(result).toMatchObject({ status: 400, data: { error: 'night.error.sole_suggestion' } });
 	});
 

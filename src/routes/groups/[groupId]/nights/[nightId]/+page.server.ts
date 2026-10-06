@@ -19,7 +19,6 @@ import { formatWhen } from '$lib/time';
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-const REASON_MAX = 200;
 const RESPONSES = ['yes', 'no', 'maybe'] as const;
 
 /**
@@ -85,7 +84,6 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		filmHidden: !visible && hasFilm,
 		// PRD §6: Draw is disabled, with the reason, when nothing can be drawn.
 		canDraw: candidatesFor(db, params.groupId).length > 0,
-		reasonMax: REASON_MAX,
 		ratings,
 		ratingTimes: {
 			opens: w.state === 'before' ? formatWhen(w.opensAt, timezone, locals.locale) : null,
@@ -117,10 +115,9 @@ export const actions: Actions = {
 
 	redraw: async ({ request, locals, params }) => {
 		const user = ownerOf(locals, params);
-		const reason = String((await request.formData()).get('reason') ?? '').trim();
-		// Nothing awaits after this line: the reason check and the re-draw are one step.
-		if (!reason || reason.length > REASON_MAX) return fail(400, { error: 'night.error.reason' });
-		const outcome = redraw(db, params.nightId, user.id, reason);
+		// One re-draw per night, and it cannot be undone: a tick, not a reason.
+		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		const outcome = redraw(db, params.nightId, user.id);
 		if (!outcome.ok) return refused(outcome, 'night.error.not_drawn');
 		notifyDraw(db, params.nightId);
 		return { drawn: true };

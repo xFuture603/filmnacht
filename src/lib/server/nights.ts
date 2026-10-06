@@ -54,8 +54,6 @@ export type NightDetail = NightSummary & {
 	onlyCandidate: boolean;
 	/** The one permitted re-draw has been used (§6). */
 	redrawUsed: boolean;
-	/** Who re-drew and why, from the log. Names no film, so it survives on_night. */
-	redrawn: { byName: string; reason: string } | null;
 	/** The latest draw's log entry has `by: null`: the scheduler drew it, not the owner. */
 	drawnAutomatically: boolean;
 	myResponse: 'yes' | 'no' | 'maybe' | null;
@@ -210,16 +208,6 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 	const { drawLog, drawnByUsername, ...rest } = night;
 	const log = (drawLog as DrawLogEntry[] | null) ?? [];
 	const latest = log.at(-1);
-	const redrawEntry = log.findLast((e) => e.reason);
-	const redrawnBy = redrawEntry
-		? db
-				.select({ displayName: users.displayName })
-				.from(users)
-				// A redraw is always manual (never the scheduler), so `by` is never
-				// null here; the fallback is only for type-safety.
-				.where(eq(users.id, redrawEntry.by ?? ''))
-				.get()?.displayName
-		: undefined;
 	return {
 		...rest,
 		drawnByFormer: drawnByUsername === FORMER_MEMBER_USERNAME,
@@ -228,7 +216,6 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 			latest.candidates.length === 1 &&
 			latest.candidates[0].suggestions === 1,
 		redrawUsed: log.length >= 2,
-		redrawn: redrawEntry?.reason ? { byName: redrawnBy ?? '', reason: redrawEntry.reason } : null,
 		drawnAutomatically: latest !== undefined && latest.by === null,
 		myResponse: myResponseRow?.response ?? null,
 		responses
@@ -321,7 +308,6 @@ export function drawNight(
 	db: DB,
 	nightId: string,
 	by: string | null,
-	reason?: string,
 	excludeSuggestionId?: string | null
 ): DrawOutcome {
 	const night = db
@@ -374,8 +360,7 @@ export function drawNight(
 			mode: settings.drawMode,
 			candidates: picked.candidates,
 			pickedUserId: picked.userId,
-			pickedSuggestionId: picked.suggestionId,
-			...(reason ? { reason } : {})
+			pickedSuggestionId: picked.suggestionId
 		};
 		appendDrawLog(db, nightId, entry);
 
@@ -401,7 +386,6 @@ export function drawForNight(
 	db: DB,
 	nightId: string,
 	ownerId: string,
-	reason?: string,
 	excludeSuggestionId?: string | null
 ): DrawOutcome {
 	const night = db
@@ -411,7 +395,7 @@ export function drawForNight(
 		.get();
 	if (!night) return { ok: false, reason: 'not_found' };
 	requireOwner(db, ownerId, night.groupId);
-	return drawNight(db, nightId, ownerId, reason, excludeSuggestionId);
+	return drawNight(db, nightId, ownerId, excludeSuggestionId);
 }
 
 /**
@@ -487,7 +471,7 @@ class RedrawAbort extends Error {
  * any throw) so a failed re-draw leaves the night exactly as it was: 'drawn',
  * same film, log untouched.
  */
-export function redraw(db: DB, nightId: string, ownerId: string, reason: string): DrawOutcome {
+export function redraw(db: DB, nightId: string, ownerId: string): DrawOutcome {
 	try {
 		return db.transaction(() => {
 			const night = db
@@ -543,7 +527,7 @@ export function redraw(db: DB, nightId: string, ownerId: string, reason: string)
 				throw new RedrawAbort({ ok: false, reason: 'sole_suggestion' });
 			}
 
-			const outcome = drawForNight(db, nightId, ownerId, reason, night.suggestionId);
+			const outcome = drawForNight(db, nightId, ownerId, night.suggestionId);
 			if (!outcome.ok) throw new RedrawAbort(outcome);
 			return outcome;
 		});

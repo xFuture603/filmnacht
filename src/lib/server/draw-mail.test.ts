@@ -35,7 +35,7 @@ describe('composeDrawMail', () => {
 		location: "Ada's place",
 		film: { title: 'Dune', by: 'Grace', byFormer: false },
 		surprise: false,
-		redrawn: null as { byName: string; reason: string } | null,
+		redrawn: false,
 		link: 'http://localhost/groups/g1/nights/n1'
 	};
 
@@ -60,23 +60,23 @@ describe('composeDrawMail', () => {
 		expect(body).toContain('stays a surprise');
 	});
 
-	it('names who re-drew and why', () => {
+	it('says it is a redraw, without who or why', () => {
 		const { body } = composeDrawMail({
 			...base,
-			redrawn: { byName: 'Ada', reason: 'wrong mood tonight' }
+			redrawn: true
 		});
-		expect(body).toContain('Re-drawn by Ada');
-		expect(body).toContain('wrong mood tonight');
+		expect(body).toContain('This is a redraw');
+		expect(body).not.toContain('Reason');
 	});
 
 	it('still has no title on a re-drawn surprise night', () => {
 		const { body } = composeDrawMail({
 			...base,
 			surprise: true,
-			redrawn: { byName: 'Ada', reason: 'wrong mood tonight' }
+			redrawn: true
 		});
 		expect(body).not.toContain('Dune');
-		expect(body).toContain('Re-drawn by Ada');
+		expect(body).toContain('This is a redraw');
 	});
 
 	it('produces German text', () => {
@@ -269,20 +269,20 @@ describe('notifyDraw', () => {
 		}
 	});
 
-	it('says who re-drew and why once the night has been re-drawn', async () => {
+	it('says it is a redraw once the night has been re-drawn', async () => {
 		addSuggestion(db, {
 			groupId,
 			userId: ada,
 			movie: { title: 'Arrival' },
 			settings: DEFAULT_GROUP_SETTINGS
 		});
-		redraw(db, nightId, ada, 'wrong mood tonight');
+		redraw(db, nightId, ada);
 
 		notifyDraw(db, nightId, 'http://localhost');
 		await tick();
 
-		expect(sent[0].body).toContain('Re-drawn by Ada');
-		expect(sent[0].body).toContain('wrong mood tonight');
+		expect(sent[0].body).toContain('This is a redraw');
+		expect(sent[0].body).not.toContain('Re-drawn by');
 	});
 
 	it('uses the instance email language', async () => {

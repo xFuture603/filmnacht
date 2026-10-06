@@ -25,7 +25,7 @@ export type DrawLogEntry = {
 	candidates: Array<{ userId: string; weight: number; suggestions: number }>;
 	pickedUserId: string;
 	pickedSuggestionId: string;
-	/** Present on a re-draw: who re-ran it and why (PRD §6). */
+	/** Only on re-draws from before reasons were dropped; never written now. */
 	reason?: string;
 };
 

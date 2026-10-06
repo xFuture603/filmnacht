@@ -25,7 +25,8 @@ export function composeDrawMail(input: {
 	location: string | null;
 	film: { title: string; by: string | null; byFormer: boolean } | null;
 	surprise: boolean;
-	redrawn: { byName: string; reason: string } | null;
+	/** Members already had a mail for the first draw: say this one replaces it. */
+	redrawn: boolean;
 	link: string | null;
 }): { subject: string; body: string } {
 	const { locale, groupName, when, location, film, surprise, redrawn, link } = input;
@@ -49,7 +50,7 @@ export function composeDrawMail(input: {
 	}
 
 	if (redrawn) {
-		lines.push(t(locale, 'mail.draw.redrawn', { byName: redrawn.byName, reason: redrawn.reason }));
+		lines.push(t(locale, 'mail.draw.redrawn'));
 	}
 	if (link) lines.push(t(locale, 'mail.draw.link', { link }));
 
@@ -107,14 +108,6 @@ function drawMailInfo(db: DB, nightId: string, now: Date) {
 	if (!row) return null;
 
 	const log = (row.drawLog as DrawLogEntry[] | null) ?? [];
-	const redrawEntry = log.findLast((e) => e.reason);
-	const redrawnBy = redrawEntry
-		? db
-				.select({ displayName: users.displayName })
-				.from(users)
-				.where(eq(users.id, redrawEntry.by ?? ''))
-				.get()?.displayName
-		: undefined;
 
 	return {
 		groupId: row.groupId,
@@ -139,7 +132,7 @@ function drawMailInfo(db: DB, nightId: string, now: Date) {
 			{ status: 'drawn', scheduledAt: row.scheduledAt },
 			now
 		),
-		redrawn: redrawEntry?.reason ? { byName: redrawnBy ?? '', reason: redrawEntry.reason } : null
+		redrawn: log.length >= 2
 	};
 }
 

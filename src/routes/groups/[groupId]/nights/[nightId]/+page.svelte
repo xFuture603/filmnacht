@@ -71,6 +71,11 @@
 							name: data.film.by ?? ''
 						})}
 					{/if}
+					{#if data.night.redrawUsed}
+						<span class="badge align-middle badge-sm badge-neutral"
+							>{t(data.locale, 'night.redrawn_badge')}</span
+						>
+					{/if}
 				</p>
 			</div>
 		{:else if data.filmHidden}
@@ -80,14 +85,6 @@
 			</div>
 		{:else}
 			<p class="text-base-content/70">{t(data.locale, `nights.status.${data.night.status}`)}</p>
-		{/if}
-		{#if data.night.redrawn}
-			<p class="text-sm break-words text-base-content/70">
-				{t(data.locale, 'night.redrawn', {
-					name: data.night.redrawn.byName,
-					reason: data.night.redrawn.reason
-				})}
-			</p>
 		{/if}
 		{#if data.night.drawnAutomatically}
 			<p class="text-sm text-base-content/70">{t(data.locale, 'night.drawn_auto')}</p>
@@ -302,21 +299,15 @@
 				</form>
 
 				{#if !data.night.redrawUsed}
-					<form method="POST" action="?/redraw" class="mt-2 flex flex-col gap-2">
-						<Field
-							label={t(data.locale, 'night.redraw_reason')}
-							hint={t(data.locale, 'night.redraw_hint')}
-						>
-							<input
-								name="reason"
-								required
-								maxlength={data.reasonMax}
-								class="input min-h-11 w-full"
-							/>
-						</Field>
+					<form method="POST" action="?/redraw" class="mt-2 flex flex-col gap-1">
+						<label class="flex min-h-11 cursor-pointer items-center gap-3">
+							<input type="checkbox" name="confirm" required class="checkbox" />
+							<span>{t(data.locale, 'night.confirm_redraw')}</span>
+						</label>
 						<button class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start">
 							<RotateCcw class="size-4" />{t(data.locale, 'night.redraw')}
 						</button>
+						<p class="text-sm text-base-content/70">{t(data.locale, 'night.redraw_hint')}</p>
 					</form>
 				{/if}
 			{/if}

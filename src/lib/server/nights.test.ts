@@ -415,7 +415,7 @@ describe('redraw', () => {
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		drawForNight(db, id, ada);
 
-		const again = redraw(db, id, ada, 'available nowhere');
+		const again = redraw(db, id, ada);
 		expect(again.ok).toBe(true);
 
 		const log = db
@@ -424,7 +424,7 @@ describe('redraw', () => {
 			.where(eq(movieNights.id, id))
 			.get()?.log as DrawLogEntry[];
 		expect(log).toHaveLength(2);
-		expect(log[1].reason).toBe('available nowhere');
+		expect(log[1].reason).toBeUndefined();
 		// Exactly one film is drawn: the first was released.
 		expect(listPool(db, groupId, ada).filter((e) => e.status === 'drawn')).toHaveLength(1);
 	});
@@ -440,8 +440,8 @@ describe('redraw', () => {
 		}
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		drawForNight(db, id, ada);
-		expect(redraw(db, id, ada, 'first reason').ok).toBe(true);
-		expect(redraw(db, id, ada, 'second reason')).toEqual({ ok: false, reason: 'redraw_used' });
+		expect(redraw(db, id, ada).ok).toBe(true);
+		expect(redraw(db, id, ada)).toEqual({ ok: false, reason: 'redraw_used' });
 	});
 
 	it('refuses when only one film exists rather than appearing to reroll', () => {
@@ -455,7 +455,7 @@ describe('redraw', () => {
 		});
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		drawForNight(db, id, ada);
-		expect(redraw(db, id, ada, 'nope')).toEqual({ ok: false, reason: 'sole_suggestion' });
+		expect(redraw(db, id, ada)).toEqual({ ok: false, reason: 'sole_suggestion' });
 	});
 
 	it('refuses a night that has already been watched', () => {
@@ -477,7 +477,7 @@ describe('redraw', () => {
 		drawForNight(db, id, ada);
 		markWatched(db, id, ada);
 
-		expect(redraw(db, id, ada, 'nope')).toEqual({ ok: false, reason: 'not_scheduled' });
+		expect(redraw(db, id, ada)).toEqual({ ok: false, reason: 'not_scheduled' });
 		expect(nightDetail(db, id, ada)?.status).toBe('watched');
 	});
 
@@ -496,7 +496,7 @@ describe('redraw', () => {
 		drawForNight(db, id, ada);
 		leaveGroup(db, grace, groupId);
 
-		expect(redraw(db, id, ada, 'no longer works')).toEqual({
+		expect(redraw(db, id, ada)).toEqual({
 			ok: false,
 			reason: 'sole_suggestion'
 		});
@@ -530,7 +530,7 @@ describe('redraw', () => {
 		for (let i = 0; i < 30; i++) {
 			const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 			const first = drawForNight(db, id, ada);
-			const again = redraw(db, id, ada, 'seen it');
+			const again = redraw(db, id, ada);
 			if (!first.ok || !again.ok) throw new Error('draw failed');
 			expect(again.suggestionId).not.toBe(first.suggestionId);
 			// Cancelling releases the film and costs nobody a turn: a clean next round.
@@ -555,9 +555,9 @@ describe('redraw', () => {
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		const first = drawForNight(db, id, ada);
 		if (!first.ok) throw new Error('draw failed');
-		expect(nightDetail(db, id, grace)?.redrawn).toBeNull();
+		expect(nightDetail(db, id, grace)?.redrawUsed).toBe(false);
 
-		redraw(db, id, ada, 'seen it');
+		redraw(db, id, ada);
 		const log = db
 			.select({ log: movieNights.drawLog })
 			.from(movieNights)
@@ -566,7 +566,15 @@ describe('redraw', () => {
 		expect(log.map((e) => e.by)).toEqual([ada, ada]);
 		expect(log[0].pickedSuggestionId).toBe(first.suggestionId);
 		expect(log[0].reason).toBeUndefined();
-		expect(nightDetail(db, id, grace)?.redrawn).toEqual({ byName: 'Ada', reason: 'seen it' });
+		expect(log[1].reason).toBeUndefined();
+		expect(nightDetail(db, id, grace)?.redrawUsed).toBe(true);
+
+		// A redraw from before reasons were dropped still reads as a redraw.
+		db.update(movieNights)
+			.set({ drawLog: [log[0], { ...log[1], reason: 'seen it' }] })
+			.where(eq(movieNights.id, id))
+			.run();
+		expect(nightDetail(db, id, grace)?.redrawUsed).toBe(true);
 	});
 });
 
@@ -605,7 +613,7 @@ describe('what the night page is told about the draw', () => {
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		drawForNight(db, id, ada);
 		expect(nightDetail(db, id, ada)?.redrawUsed).toBe(false);
-		redraw(db, id, ada, 'seen it');
+		redraw(db, id, ada);
 		expect(nightDetail(db, id, ada)?.redrawUsed).toBe(true);
 	});
 });
