@@ -1,7 +1,8 @@
 <script lang="ts">
 	import '../app.css';
 	import { t } from '$lib/i18n';
-	import { CircleUser, ShieldCheck, Tv, Users } from '@lucide/svelte';
+	import { CircleUser, ShieldCheck, Users } from '@lucide/svelte';
+	import TvLogo from '$lib/components/TvLogo.svelte';
 	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
 
 	let { data, children } = $props();
@@ -27,7 +28,7 @@
 		<a class="flex min-h-11 items-center gap-2 text-lg font-semibold" href="/">
 			<!-- The one amber mark in the chrome: a fill with dark ink, never amber on white. -->
 			<span class="grid size-8 place-items-center rounded-field bg-primary text-primary-content">
-				<Tv class="size-4" strokeWidth={2.25} />
+				<TvLogo class="size-6" />
 			</span>
 			{t(data.locale, 'app.name')}
 		</a>
