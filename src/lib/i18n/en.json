@@ -63,7 +63,7 @@
 	"profile.save_display_name": "Save display name",
 	"profile.display_name_saved": "Display name updated.",
 	"profile.email": "Email address",
-	"profile.email_hint": "Optional. Used only to reset your password, and only if this instance can send mail.",
+	"profile.email_hint": "Optional. Used to reset your password and, if this instance can send mail, for the draw and rating emails. You can switch rating emails off below.",
 	"profile.save_email": "Save email address",
 	"profile.email_saved": "Email address saved.",
 	"profile.rating_mails": "Email me when there's a film to rate",

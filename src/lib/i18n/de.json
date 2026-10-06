@@ -61,7 +61,7 @@
 	"profile.save_display_name": "Anzeigename speichern",
 	"profile.display_name_saved": "Anzeigename aktualisiert.",
 	"profile.email": "E-Mail-Adresse",
-	"profile.email_hint": "Optional. Wird nur zum Zurücksetzen deines Passworts verwendet, und nur wenn diese Instanz Mail versenden kann.",
+	"profile.email_hint": "Optional. Dient zum Zurücksetzen deines Passworts und, wenn diese Instanz Mail versenden kann, für die E-Mails zu Auslosungen und Bewertungen. Bewertungs-E-Mails kannst du unten ausschalten.",
 	"profile.save_email": "E-Mail-Adresse speichern",
 	"profile.email_saved": "E-Mail-Adresse gespeichert.",
 	"profile.rating_mails": "Schick mir eine E-Mail, wenn ich einen Film bewerten kann",

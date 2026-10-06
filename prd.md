@@ -215,7 +215,7 @@ The honest trade-off on the login link: it is a bearer token that will end up in
 
 **Sessions.** HTTP-only, secure, SameSite=Lax cookies; server-side sessions in the database; 30-day lifetime with sliding expiration. No JWT in local storage. Session tokens are stored **hashed**, so a leaked database is not also a set of live sessions.
 
-**Email.** Optional, per user, nullable, and collected for exactly one purpose: password reset. A member who does not set one loses nothing except that recovery path. Nothing else reads the column, and the app sends no other mail until rating reminders arrive in v1.0.
+**Email.** Optional, per user, nullable. It serves password reset, the draw emails, and the rating emails ("rating is open", "closes tomorrow"); the rating emails can be switched off on the profile. A member who does not set one loses nothing except those emails and that recovery path.
 
 **SMTP is optional per instance.** With none configured, the reset form says so plainly and points at the personal login link. Everything else — joining, logging in, suggesting, drawing, rating — works unchanged.
 
@@ -303,7 +303,7 @@ One caveat belongs in the README rather than in a bug report: the volume holding
 
 **Testing and CI.** Vitest from the first commit, covering the logic that can actually be wrong: the draw weighting and its 1000-night fairness simulation, dedupe key generation, rating-window arithmetic, and the state transitions of section 6. No browser tests in the MVP — for a handful of screens they cost more maintenance than the bugs they would catch. One GitHub Action: install, lint, test, build, plus a multi-arch `docker buildx` on tag, which is also the release process.
 
-**Privacy.** A username, a display name, an optional avatar and an **optional** email address are stored. The address is used for password reset and nothing else; a member who does not set one is not nagged and loses no functionality except that recovery path. No analytics, no trackers, no external fonts — everything served locally. Outgoing connections go to TMDB only, and only for metadata. A user can export their data as JSON and delete their account; their ratings are then reassigned to a placeholder "former member" so group statistics do not break. This consequence is shown clearly before deletion.
+**Privacy.** A username, a display name, an optional avatar and an **optional** email address are stored. The address is used for password reset, draw emails and rating emails, and for nothing else; rating emails can be switched off on the profile. A member who does not set one is not nagged and loses no functionality except that recovery path and those emails. No analytics, no trackers, no external fonts — everything served locally. Outgoing connections go to TMDB only, and only for metadata. A user can export their data as JSON and delete their account; their ratings are then reassigned to a placeholder "former member" so group statistics do not break. This consequence is shown clearly before deletion.
 
 **Timezone.** All timestamps are stored in UTC. The instance admin sets a single timezone for the instance in the setup screen and can change it later in the admin settings. Per-group timezones are overhead: friends who share a couch share a timezone.
 
