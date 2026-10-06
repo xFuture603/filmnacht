@@ -129,7 +129,8 @@
 							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
 						</p>
 						{#if entry.drawnFor}
-							<span class="mt-1 badge badge-sm badge-neutral"
+							<!-- h-auto + whitespace-normal: wrap rather than spill past the column. -->
+							<span class="mt-1 badge h-auto badge-sm py-0.5 whitespace-normal badge-neutral"
 								>{t(data.locale, 'pool.drawn_for', { when: entry.drawnFor })}</span
 							>
 						{:else if entry.status === 'drawn'}

@@ -137,7 +137,7 @@
 	"pool.withdraw_named": "Withdraw {title}",
 	"pool.count": "{used} of {max} suggestions used",
 	"pool.drawn": "Already watched",
-	"pool.drawn_for": "Drawn for {when}",
+	"pool.drawn_for": "Drawn · {when}",
 	"new.badge": "New",
 	"next.title": "Next movie night",
 	"next.not_drawn": "Not drawn yet",

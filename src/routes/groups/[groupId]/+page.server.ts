@@ -5,7 +5,7 @@ import { rateLimit } from '$lib/server/rate-limit';
 import { nextNight, unrevealedDrawnIds } from '$lib/server/nights';
 import { visit } from '$lib/server/seen';
 import { getTimezone } from '$lib/server/settings';
-import { formatWhen } from '$lib/time';
+import { formatDay, formatWhen } from '$lib/time';
 import { countOpenSuggestions, listPool, withdrawSuggestion } from '$lib/server/suggestions';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -24,7 +24,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 			isNew: newIds.has(entry.suggestionId),
 			drawnFor:
 				entry.night && !entry.night.watched
-					? formatWhen(entry.night.scheduledAt, getTimezone(db), locals.locale)
+					? formatDay(entry.night.scheduledAt, getTimezone(db), locals.locale)
 					: null
 		})),
 		newCounts: counts,

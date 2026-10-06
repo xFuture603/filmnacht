@@ -61,6 +61,15 @@ export function formatWhen(at: Date, timeZone: string, locale: Locale): string {
 	}).format(at);
 }
 
+/** A short day ("7 Oct", "7. Okt.") for tight spots like a badge on a poster. */
+export function formatDay(at: Date, timeZone: string, locale: Locale): string {
+	return new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'en-GB', {
+		timeZone,
+		day: 'numeric',
+		month: 'short'
+	}).format(at);
+}
+
 /** The instance's wall clock at `at`: calendar date "YYYY-MM-DD" and time "HH:MM". */
 export function wallParts(at: Date, timeZone: string): { date: string; time: string } {
 	const p = Object.fromEntries(

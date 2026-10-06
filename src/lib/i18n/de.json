@@ -135,7 +135,7 @@
 	"pool.withdraw_named": "{title} zurückziehen",
 	"pool.count": "{used} von {max} Vorschlägen genutzt",
 	"pool.drawn": "Schon gesehen",
-	"pool.drawn_for": "Ausgelost für {when}",
+	"pool.drawn_for": "Ausgelost · {when}",
 	"new.badge": "Neu",
 	"next.title": "Nächste Filmnacht",
 	"next.not_drawn": "Noch nicht ausgelost",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatWhen, wallTimeToUtc } from './time';
+import { formatDay, formatWhen, wallTimeToUtc } from './time';
 
 describe('wallTimeToUtc', () => {
 	it('reads a summer evening in Berlin as CEST (UTC+2)', () => {
@@ -50,5 +50,14 @@ describe('formatWhen', () => {
 		expect(formatWhen(at, 'Europe/Berlin', 'en')).toContain('20:00');
 		expect(formatWhen(at, 'America/New_York', 'en')).toContain('14:00');
 		expect(formatWhen(at, 'Europe/Berlin', 'de')).toContain('Juli');
+	});
+});
+
+describe('formatDay', () => {
+	it('gives a short day in the instance timezone, not the server one', () => {
+		// 22:30 UTC on 1 July is already 2 July in Berlin.
+		const at = new Date('2030-07-01T22:30:00Z');
+		expect(formatDay(at, 'Europe/Berlin', 'en')).toBe('2 Jul');
+		expect(formatDay(at, 'Europe/Berlin', 'de')).toBe('2. Juli');
 	});
 });
