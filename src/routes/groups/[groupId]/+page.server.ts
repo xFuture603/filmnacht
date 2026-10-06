@@ -2,8 +2,10 @@ import { db } from '$lib/server/db';
 import { listMembers, requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import { createInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
-import { unrevealedDrawnIds } from '$lib/server/nights';
+import { nextNight, unrevealedDrawnIds } from '$lib/server/nights';
 import { visit } from '$lib/server/seen';
+import { getTimezone } from '$lib/server/settings';
+import { formatWhen } from '$lib/time';
 import { countOpenSuggestions, listPool, withdrawSuggestion } from '$lib/server/suggestions';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -13,6 +15,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	const group = requireMember(db, user.id, params.groupId);
 	// After requireMember: a non-member must not mark anything as seen.
 	const { newIds, counts } = visit(db, user.id, params.groupId, 'pool');
+	const next = nextNight(db, params.groupId, user.id, group.settings, new Date());
 	return {
 		group,
 		members: listMembers(db, params.groupId),
@@ -21,6 +24,10 @@ export const load: PageServerLoad = ({ locals, params }) => {
 			isNew: newIds.has(entry.suggestionId)
 		})),
 		newCounts: counts,
+		next: next && {
+			...next,
+			when: formatWhen(next.scheduledAt, getTimezone(db), locals.locale)
+		},
 		used: countOpenSuggestions(db, params.groupId, user.id),
 		max: group.settings.maxOpenSuggestions
 	};

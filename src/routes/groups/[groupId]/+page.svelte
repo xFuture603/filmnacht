@@ -4,7 +4,7 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { Film, Plus, Users, X } from '@lucide/svelte';
+	import { CalendarDays, Film, MapPin, Plus, Users, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
@@ -32,6 +32,49 @@
 
 {#if form?.error}
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
+{/if}
+
+{#if data.next}
+	{@const next = data.next}
+	<section class="card mb-8 border border-base-300 bg-base-100 shadow-sm">
+		<div class="card-body flex-row items-center gap-4 sm:gap-6">
+			<div class="w-24 shrink-0 sm:w-32">
+				<Poster src={next.film?.posterUrl ?? null} />
+			</div>
+			<div class="flex min-w-0 flex-1 flex-col gap-1">
+				<p class="text-sm font-medium text-base-content/70">{t(data.locale, 'next.title')}</p>
+				<h2 class="text-xl font-bold break-words sm:text-2xl">
+					{#if next.film}
+						{next.film.title}
+						{#if next.film.year}
+							<span class="font-normal text-base-content/60">({next.film.year})</span>
+						{/if}
+					{:else if next.filmHidden}
+						{t(data.locale, 'next.surprise')}
+					{:else}
+						{t(data.locale, 'next.not_drawn')}
+					{/if}
+				</h2>
+				<p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+					<span class="inline-flex items-center gap-1"
+						><CalendarDays class="size-4" />{next.when}</span
+					>
+					{#if next.location}
+						<span class="inline-flex min-w-0 items-center gap-1"
+							><MapPin class="size-4 shrink-0" /><span class="truncate">{next.location}</span></span
+						>
+					{/if}
+				</p>
+				<p class="text-sm text-base-content/70">
+					{t(data.locale, `next.you.${next.myResponse ?? 'none'}`)}
+				</p>
+				<a
+					class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+					href="/groups/{data.group.groupId}/nights/{next.id}">{t(data.locale, 'next.open')}</a
+				>
+			</div>
+		</div>
+	</section>
 {/if}
 
 <section class="mb-8">

@@ -96,3 +96,21 @@ describe('new films', () => {
 		await expect(poolFor(lin)).rejects.toMatchObject({ status: 404 });
 	});
 });
+
+describe('the next night card', () => {
+	it('names the drawn film when the group reveals immediately', async () => {
+		const next = (await poolFor(grace)).next;
+		expect(next?.status).toBe('drawn');
+		expect(['Dune', 'Arrival']).toContain(next?.film?.title);
+	});
+
+	it('keeps a surprise film out of the page data, not just off the screen', async () => {
+		db.update(groups)
+			.set({ settings: { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' } })
+			.where(eq(groups.id, groupId))
+			.run();
+		const next = (await poolFor(grace)).next;
+		expect(next?.filmHidden).toBe(true);
+		expect(JSON.stringify(next)).not.toMatch(/Dune|Arrival/);
+	});
+});

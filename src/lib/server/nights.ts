@@ -577,6 +577,73 @@ export function isResultVisible(settings: GroupSettings, scheduledAt: Date, now:
 	return settings.resultVisible === 'immediately' || now.getTime() >= scheduledAt.getTime();
 }
 
+export type NextNight = {
+	id: string;
+	scheduledAt: Date;
+	location: string | null;
+	status: 'scheduled' | 'drawn';
+	myResponse: 'yes' | 'no' | 'maybe' | null;
+	film: { title: string; year: number | null; posterUrl: string | null } | null;
+	/** A film is drawn, but the group keeps it a surprise until the night starts. */
+	filmHidden: boolean;
+};
+
+/**
+ * The night the group's start page puts first: the soonest one that is neither
+ * cancelled nor over. A night stays "next" while it is under way, until
+ * `nightEndsAfterMinutes` after its start, so it does not vanish at 20:01.
+ * The film is left out, not just unflagged, while it is still a surprise.
+ */
+export function nextNight(
+	db: DB,
+	groupId: string,
+	viewerId: string,
+	settings: GroupSettings,
+	now: Date
+): NextNight | null {
+	const lasts = settings.nightEndsAfterMinutes * 60_000;
+	const night = db
+		.select({
+			id: movieNights.id,
+			scheduledAt: movieNights.scheduledAt,
+			location: movieNights.location,
+			status: movieNights.status,
+			title: movies.title,
+			year: movies.year,
+			posterUrl: movies.posterUrl
+		})
+		.from(movieNights)
+		.leftJoin(suggestions, eq(suggestions.id, movieNights.suggestionId))
+		.leftJoin(movies, eq(movies.id, suggestions.movieId))
+		.where(
+			and(eq(movieNights.groupId, groupId), inArray(movieNights.status, ['scheduled', 'drawn']))
+		)
+		.orderBy(movieNights.scheduledAt)
+		.all()
+		.find((n) => n.scheduledAt.getTime() + lasts > now.getTime());
+	if (!night) return null;
+
+	const mine = db
+		.select({ response: attendance.response })
+		.from(attendance)
+		.where(and(eq(attendance.movieNightId, night.id), eq(attendance.userId, viewerId)))
+		.get();
+	const drawn = night.status === 'drawn' && night.title !== null;
+	const visible = isResultVisible(settings, night.scheduledAt, now);
+	return {
+		id: night.id,
+		scheduledAt: night.scheduledAt,
+		location: night.location,
+		status: night.status as 'scheduled' | 'drawn',
+		myResponse: mine?.response ?? null,
+		film:
+			drawn && visible
+				? { title: night.title as string, year: night.year, posterUrl: night.posterUrl }
+				: null,
+		filmHidden: drawn && !visible
+	};
+}
+
 /** Suggestions drawn for a night that has not started yet — watched early included. */
 export function unrevealedDrawnIds(db: DB, groupId: string, now: Date): Set<string> {
 	return new Set(
