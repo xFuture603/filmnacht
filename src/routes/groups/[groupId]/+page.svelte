@@ -53,7 +53,7 @@
 					<div class="relative">
 						<Poster src={entry.posterUrl} />
 						{#if entry.mine}
-							<span class="badge badge-sm badge-primary absolute top-2 left-2 shadow-sm">
+							<span class="badge badge-sm badge-neutral absolute top-2 left-2 shadow-sm">
 								{t(data.locale, 'pool.yours')}
 							</span>
 						{/if}
