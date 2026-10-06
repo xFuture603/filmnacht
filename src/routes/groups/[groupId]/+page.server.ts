@@ -3,6 +3,7 @@ import { listMembers, requireMember, requireOwner, requireUser } from '$lib/serv
 import { createInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
 import { nextNight, unrevealedDrawnIds } from '$lib/server/nights';
+import { nightsToRate } from '$lib/server/ratings';
 import { visit } from '$lib/server/seen';
 import { getTimezone } from '$lib/server/settings';
 import { formatDay, formatWhen } from '$lib/time';
@@ -16,6 +17,11 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	// After requireMember: a non-member must not mark anything as seen.
 	const { newIds, counts } = visit(db, user.id, params.groupId, 'pool');
 	const next = nextNight(db, params.groupId, user.id, group.settings, new Date());
+	const toRate = nightsToRate(db, params.groupId, user.id, new Date()).map((n) => ({
+		id: n.id,
+		title: n.title,
+		closes: formatDay(n.closesAt, getTimezone(db), locals.locale)
+	}));
 	return {
 		group,
 		members: listMembers(db, params.groupId),
@@ -28,6 +34,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 					: null
 		})),
 		newCounts: counts,
+		toRate,
 		next: next && {
 			...next,
 			when: formatWhen(next.scheduledAt, getTimezone(db), locals.locale)

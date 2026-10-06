@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { DB } from './db/client';
 import {
 	attendance,
+	groups,
 	memberships,
 	movieNights,
 	movies,
@@ -11,6 +12,7 @@ import {
 	type GroupSettings
 } from './db/schema';
 import { requireMember, requireOwner } from './groups';
+import { groupSettings } from './group-settings';
 import { FORMER_MEMBER_USERNAME } from './members';
 
 /** PRD §7: an optional comment of at most 500 characters. Longer is refused, not clipped. */
@@ -400,4 +402,55 @@ export function averagesFor(
 		if (scores.length > 0) out.set(n.id, scores.reduce((a, b) => a + b, 0) / scores.length / 2);
 	}
 	return out;
+}
+
+/** The "How was it?" card: open windows this member has not rated, soonest closing first. */
+export function nightsToRate(
+	db: DB,
+	groupId: string,
+	userId: string,
+	now: Date
+): { id: string; title: string; closesAt: Date }[] {
+	const member = db
+		.select({ settings: groups.settings })
+		.from(memberships)
+		.innerJoin(groups, eq(groups.id, memberships.groupId))
+		.where(
+			and(
+				eq(memberships.groupId, groupId),
+				eq(memberships.userId, userId),
+				isNull(memberships.leftAt)
+			)
+		)
+		.get();
+	if (!member) return [];
+	const settings = groupSettings(member.settings);
+	const rated = new Set(
+		db
+			.select({ nightId: ratings.movieNightId })
+			.from(ratings)
+			.where(eq(ratings.userId, userId))
+			.all()
+			.map((r) => r.nightId)
+	);
+	return db
+		.select({
+			id: movieNights.id,
+			status: movieNights.status,
+			scheduledAt: movieNights.scheduledAt,
+			watchedAt: movieNights.watchedAt,
+			title: movies.title
+		})
+		.from(movieNights)
+		.innerJoin(suggestions, eq(suggestions.id, movieNights.suggestionId))
+		.innerJoin(movies, eq(movies.id, suggestions.movieId))
+		.where(and(eq(movieNights.groupId, groupId), inArray(movieNights.status, ['drawn', 'watched'])))
+		.all()
+		.flatMap((n) => {
+			const window = ratingWindow(n, settings, now);
+			return window.state === 'open' && !rated.has(n.id)
+				? [{ id: n.id, title: n.title, closesAt: window.closesAt }]
+				: [];
+		})
+		.sort((a, b) => a.closesAt.getTime() - b.closesAt.getTime());
 }

@@ -9,6 +9,7 @@ import { createUser } from '$lib/server/users';
 import {
 	COMMENT_MAX,
 	averagesFor,
+	nightsToRate,
 	parseScore,
 	ratingView,
 	ratingWindow,
@@ -362,4 +363,24 @@ describe('averagesFor', () => {
 // Keep the `movies` import honest: the TMDB rating really is on the movie row.
 it('stores the TMDB rating the figures compare against', () => {
 	expect(db.select({ r: movies.tmdbRating }).from(movies).get()?.r).toBe(8);
+});
+
+describe('nightsToRate', () => {
+	it('lists a night with an open window until the member rates it', () => {
+		expect(nightsToRate(db, groupId, grace, DURING)).toEqual([
+			{ id: nightId, title: 'Dune', closesAt: CLOSES }
+		]);
+		rate(grace, 7);
+		expect(nightsToRate(db, groupId, grace, DURING)).toEqual([]);
+	});
+
+	it('lists nothing before the window opens or after it closes', () => {
+		expect(nightsToRate(db, groupId, grace, START)).toEqual([]);
+		expect(nightsToRate(db, groupId, grace, CLOSES)).toEqual([]);
+	});
+
+	it('lists nothing for someone who has left the group', () => {
+		leaveGroup(db, alan, groupId);
+		expect(nightsToRate(db, groupId, alan, DURING)).toEqual([]);
+	});
 });

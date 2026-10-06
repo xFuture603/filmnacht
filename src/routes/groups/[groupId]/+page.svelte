@@ -4,7 +4,7 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { CalendarDays, Film, MapPin, Plus, Users, X } from '@lucide/svelte';
+	import { CalendarDays, Film, MapPin, Plus, Star, Users, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
@@ -33,6 +33,30 @@
 {#if form?.error}
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
 {/if}
+
+{#each data.toRate as night (night.id)}
+	<section class="card mb-4 border border-primary bg-base-100 shadow-sm">
+		<div class="card-body flex-row flex-wrap items-center gap-4">
+			<span
+				class="grid size-11 shrink-0 place-items-center rounded-field bg-primary text-primary-content"
+			>
+				<Star class="size-5" />
+			</span>
+			<div class="min-w-0 flex-1">
+				<h2 class="text-lg font-bold break-words">
+					{t(data.locale, 'rate.title', { title: night.title })}
+				</h2>
+				<p class="text-sm text-base-content/70">
+					{t(data.locale, 'rate.before', { day: night.closes })}
+				</p>
+			</div>
+			<a
+				class="btn btn-primary min-h-11 w-full sm:w-auto"
+				href="/groups/{data.group.groupId}/nights/{night.id}">{t(data.locale, 'rate.now')}</a
+			>
+		</div>
+	</section>
+{/each}
 
 {#if data.next}
 	{@const next = data.next}

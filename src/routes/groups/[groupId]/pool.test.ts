@@ -4,6 +4,7 @@ import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { DEFAULT_GROUP_SETTINGS, groups, memberships, movieNights } from '$lib/server/db/schema';
 import { addMember, createGroup } from '$lib/server/groups';
 import { drawForNight, markWatched, scheduleNight } from '$lib/server/nights';
+import { saveRating } from '$lib/server/ratings';
 import { addSuggestion, type PoolEntry } from '$lib/server/suggestions';
 import { createUser } from '$lib/server/users';
 
@@ -136,5 +137,29 @@ describe('the label on a drawn film', () => {
 		const entry = await drawnEntry();
 		expect(entry.night?.watched).toBe(true);
 		expect(entry.drawnFor).toBeNull();
+	});
+});
+
+describe('the rating card', () => {
+	beforeEach(() => {
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() - 5 * 3_600_000) })
+			.where(eq(movieNights.groupId, groupId))
+			.run();
+	});
+
+	it('asks a member who has not rated, and goes away once they have', async () => {
+		const first = (await poolFor(grace)).toRate;
+		expect(first).toHaveLength(1);
+		expect(['Dune', 'Arrival']).toContain(first[0].title);
+		expect(first[0].closes).toBeTruthy();
+		saveRating(db, {
+			nightId: first[0].id,
+			userId: grace,
+			scoreX2: 14,
+			comment: null,
+			now: new Date()
+		});
+		expect((await poolFor(grace)).toRate).toEqual([]);
 	});
 });
