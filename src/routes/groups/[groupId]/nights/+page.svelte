@@ -6,7 +6,19 @@
 	import NightStatus from '$lib/components/NightStatus.svelte';
 	import Scheduler from './Scheduler.svelte';
 	import { CalendarDays, MapPin, Star, Users } from '@lucide/svelte';
+	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { invalidateAll } from '$app/navigation';
+	import { startLiveRefresh } from '$lib/live-refresh';
 	let { data, form } = $props();
+
+	onMount(() => startLiveRefresh(invalidateAll));
+	// Each refresh counts as a visit, so the server stops calling a night new.
+	// Keep its badge for as long as this page stays open.
+	const shownNew = new SvelteSet<string>();
+	$effect(() => {
+		for (const night of [...data.upcoming, ...data.past]) if (night.isNew) shownNew.add(night.id);
+	});
 
 	const fmt = (n: number) =>
 		new Intl.NumberFormat(data.locale === 'de' ? 'de-DE' : 'en-GB', {
@@ -43,7 +55,7 @@
 									{t(data.locale, 'ratings.average_short', { average: fmt(night.average) })}
 								</span>
 							{/if}
-							{#if night.isNew}
+							{#if night.isNew || shownNew.has(night.id)}
 								<span class="badge badge-sm badge-primary">{t(data.locale, 'new.badge')}</span>
 							{/if}
 							<NightStatus status={night.status} locale={data.locale} />

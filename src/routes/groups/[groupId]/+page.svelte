@@ -5,7 +5,19 @@
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import { Film, Plus, Users, X } from '@lucide/svelte';
+	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { invalidateAll } from '$app/navigation';
+	import { startLiveRefresh } from '$lib/live-refresh';
 	let { data, form } = $props();
+
+	onMount(() => startLiveRefresh(invalidateAll));
+	// Each refresh counts as a visit, so the server stops calling a film new.
+	// Keep its badge for as long as this page stays open.
+	const shownNew = new SvelteSet<string>();
+	$effect(() => {
+		for (const entry of data.pool) if (entry.isNew) shownNew.add(entry.suggestionId);
+	});
 </script>
 
 <PageHeader title={data.group.name} icon={Users} />
@@ -45,7 +57,7 @@
 								{t(data.locale, 'pool.yours')}
 							</span>
 						{/if}
-						{#if entry.isNew}
+						{#if entry.isNew || shownNew.has(entry.suggestionId)}
 							<span class="badge badge-sm badge-primary absolute top-2 right-2 shadow-sm">
 								{t(data.locale, 'new.badge')}
 							</span>
