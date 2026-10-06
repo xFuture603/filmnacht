@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
-import { DEFAULT_GROUP_SETTINGS, groups, memberships } from '$lib/server/db/schema';
+import { DEFAULT_GROUP_SETTINGS, groups, memberships, movieNights } from '$lib/server/db/schema';
 import { addMember, createGroup } from '$lib/server/groups';
-import { drawForNight, scheduleNight } from '$lib/server/nights';
+import { drawForNight, markWatched, scheduleNight } from '$lib/server/nights';
 import { addSuggestion, type PoolEntry } from '$lib/server/suggestions';
 import { createUser } from '$lib/server/users';
 
@@ -112,5 +112,29 @@ describe('the next night card', () => {
 		const next = (await poolFor(grace)).next;
 		expect(next?.filmHidden).toBe(true);
 		expect(JSON.stringify(next)).not.toMatch(/Dune|Arrival/);
+	});
+});
+
+describe('the label on a drawn film', () => {
+	type Entry = Data['pool'][number];
+	const drawnEntry = async () =>
+		(await poolFor(grace)).pool.find((e: Entry) => e.status === 'drawn') as Entry;
+
+	it('says when it is on, while its night is still to come', async () => {
+		const entry = await drawnEntry();
+		expect(entry.night?.watched).toBe(false);
+		expect(entry.drawnFor).toBeTruthy();
+	});
+
+	it('says watched only once its night is marked watched', async () => {
+		const night = db
+			.select({ id: movieNights.id })
+			.from(movieNights)
+			.where(eq(movieNights.groupId, groupId))
+			.get()!;
+		markWatched(db, night.id, ada);
+		const entry = await drawnEntry();
+		expect(entry.night?.watched).toBe(true);
+		expect(entry.drawnFor).toBeNull();
 	});
 });

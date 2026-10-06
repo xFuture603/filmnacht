@@ -1,4 +1,4 @@
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 import type { DB } from './db/client';
 import { movieNights, movies, suggestions, type GroupSettings } from './db/schema';
 import { dedupeKey } from './dedupe';
@@ -24,6 +24,8 @@ export type PoolEntry = {
 	runtime: number | null;
 	mine: boolean;
 	status: 'open' | 'drawn';
+	/** The night a drawn film was drawn for. "Drawn" is not "watched" until that night is. */
+	night: { scheduledAt: Date; watched: boolean } | null;
 };
 
 export function countOpenSuggestions(db: DB, groupId: string, userId: string): number {
@@ -157,28 +159,45 @@ export function listPool(db: DB, groupId: string, viewerId: string): PoolEntry[]
 	// not something the group watched.
 	const visible = or(eq(suggestions.status, 'open'), eq(suggestions.status, 'drawn'));
 
-	return db
-		.select({
-			suggestionId: suggestions.id,
-			suggestedBy: suggestions.suggestedBy,
-			status: suggestions.status,
-			title: movies.title,
-			year: movies.year,
-			posterUrl: movies.posterUrl,
-			runtime: movies.runtime
-		})
-		.from(suggestions)
-		.innerJoin(movies, eq(movies.id, suggestions.movieId))
-		.where(and(eq(suggestions.groupId, groupId), visible))
-		.orderBy(movies.title)
-		.all()
-		.map((row) => ({
-			suggestionId: row.suggestionId,
-			title: row.title,
-			year: row.year,
-			posterUrl: row.posterUrl,
-			runtime: row.runtime,
-			mine: row.suggestedBy === viewerId,
-			status: row.status as 'open' | 'drawn'
-		}));
+	return (
+		db
+			.select({
+				suggestionId: suggestions.id,
+				suggestedBy: suggestions.suggestedBy,
+				status: suggestions.status,
+				title: movies.title,
+				year: movies.year,
+				posterUrl: movies.posterUrl,
+				runtime: movies.runtime,
+				nightAt: movieNights.scheduledAt,
+				nightStatus: movieNights.status
+			})
+			.from(suggestions)
+			.innerJoin(movies, eq(movies.id, suggestions.movieId))
+			// A cancelled night released its film back to the pool, so only a live
+			// draw counts — and a film is drawn for at most one of those.
+			.leftJoin(
+				movieNights,
+				and(
+					eq(movieNights.suggestionId, suggestions.id),
+					inArray(movieNights.status, ['drawn', 'watched'])
+				)
+			)
+			.where(and(eq(suggestions.groupId, groupId), visible))
+			.orderBy(movies.title)
+			.all()
+			.map((row) => ({
+				suggestionId: row.suggestionId,
+				title: row.title,
+				year: row.year,
+				posterUrl: row.posterUrl,
+				runtime: row.runtime,
+				mine: row.suggestedBy === viewerId,
+				status: row.status as 'open' | 'drawn',
+				night:
+					row.status === 'drawn' && row.nightAt
+						? { scheduledAt: row.nightAt, watched: row.nightStatus === 'watched' }
+						: null
+			}))
+	);
 }

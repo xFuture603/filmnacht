@@ -128,7 +128,11 @@
 						<p class="text-sm text-base-content/70">
 							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
 						</p>
-						{#if entry.status === 'drawn'}
+						{#if entry.drawnFor}
+							<span class="mt-1 badge badge-sm badge-neutral"
+								>{t(data.locale, 'pool.drawn_for', { when: entry.drawnFor })}</span
+							>
+						{:else if entry.status === 'drawn'}
 							<span class="mt-1 badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
 						{/if}
 					</div>

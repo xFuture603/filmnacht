@@ -21,7 +21,11 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		members: listMembers(db, params.groupId),
 		pool: visiblePool(params.groupId, user.id, group.settings.resultVisible).map((entry) => ({
 			...entry,
-			isNew: newIds.has(entry.suggestionId)
+			isNew: newIds.has(entry.suggestionId),
+			drawnFor:
+				entry.night && !entry.night.watched
+					? formatWhen(entry.night.scheduledAt, getTimezone(db), locals.locale)
+					: null
 		})),
 		newCounts: counts,
 		next: next && {
