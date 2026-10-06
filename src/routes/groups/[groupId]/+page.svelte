@@ -46,7 +46,7 @@
 							</span>
 						{/if}
 						{#if entry.isNew}
-							<span class="badge badge-sm badge-info absolute top-2 right-2 shadow-sm">
+							<span class="badge badge-sm badge-primary absolute top-2 right-2 shadow-sm">
 								{t(data.locale, 'new.badge')}
 							</span>
 						{/if}

@@ -53,7 +53,7 @@
 		>
 			<tab.icon class="size-4 max-sm:hidden" />{tab.label}
 			{#if tab.id !== 'settings' && counts[tab.id] > 0}
-				<span class="badge badge-sm badge-info" aria-hidden="true">{counts[tab.id]}</span>
+				<span class="badge badge-sm badge-primary" aria-hidden="true">{counts[tab.id]}</span>
 				<span class="sr-only">{t(locale, 'new.count', { count: counts[tab.id] })}</span>
 			{/if}
 		</a>

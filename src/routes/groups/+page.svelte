@@ -27,7 +27,7 @@
 					</span>
 					<span class="line-clamp-2 min-w-0 flex-1 font-semibold break-words">{group.name}</span>
 					{#if group.newCount > 0}
-						<span class="badge badge-sm badge-info"
+						<span class="badge badge-sm badge-primary"
 							>{t(data.locale, 'new.count', { count: group.newCount })}</span
 						>
 					{/if}

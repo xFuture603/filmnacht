@@ -44,7 +44,7 @@
 								</span>
 							{/if}
 							{#if night.isNew}
-								<span class="badge badge-sm badge-info">{t(data.locale, 'new.badge')}</span>
+								<span class="badge badge-sm badge-primary">{t(data.locale, 'new.badge')}</span>
 							{/if}
 							<NightStatus status={night.status} locale={data.locale} />
 						</span>
