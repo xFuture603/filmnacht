@@ -46,6 +46,8 @@ export const users = sqliteTable('users', {
 	 * without that, Ada@x.com and ada@x.com would both pass this constraint.
 	 */
 	email: text('email').unique(),
+	/** Rating emails on or off, from the profile toggle. On unless the member opts out. */
+	ratingMails: integer('rating_mails', { mode: 'boolean' }).notNull().default(true),
 	/**
 	 * What you sign in with. Deliberately separate from `displayName` (PRD §9,
 	 * decision 20): two friends may both be "Alex" to the group, and either may
@@ -241,6 +243,10 @@ export const movieNights = sqliteTable('movie_nights', {
 	 * watched means the night happened).
 	 */
 	watchedAt: integer('watched_at', { mode: 'timestamp' }),
+	/** When the "rating is open" email went out (rating-reminders spec). Claimed, then sent. */
+	ratingOpenMailedAt: integer('rating_open_mailed_at', { mode: 'timestamp' }),
+	/** When the "closes tomorrow" email went out, or was skipped because "open" came late. */
+	ratingReminderMailedAt: integer('rating_reminder_mailed_at', { mode: 'timestamp' }),
 	status: text('status', { enum: ['scheduled', 'drawn', 'watched', 'cancelled'] })
 		.notNull()
 		.default('scheduled'),
