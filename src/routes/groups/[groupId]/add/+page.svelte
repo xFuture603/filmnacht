@@ -41,13 +41,15 @@
 							{#each form.results as result (result.tmdbId)}
 								<li class="flex min-w-0 flex-col gap-2">
 									<Poster src={result.posterUrl} />
-									<div class="min-w-0">
+									<!-- flex-1 + mt-auto: a two-line title or a missing year must not
+									     shift this card's button out of line with its neighbours. -->
+									<div class="flex min-w-0 flex-1 flex-col">
 										<p class="line-clamp-2 font-medium break-words">{result.title}</p>
-										<p class="text-sm text-base-content/70">{result.year ?? ''}</p>
+										<p class="mb-1 text-sm text-base-content/70">{result.year ?? ''}</p>
 										<button
 											name="tmdbId"
 											value={result.tmdbId}
-											class="btn btn-primary btn-sm mt-1 min-h-11 w-full"
+											class="btn btn-primary btn-sm mt-auto min-h-11 w-full"
 											aria-label={t(data.locale, 'add.adopt_named', { title: result.title })}
 										>
 											{t(data.locale, 'add.adopt')}
