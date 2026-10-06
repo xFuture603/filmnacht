@@ -60,7 +60,7 @@ function formRequest(fields: Record<string, string>) {
 type Caller = { id: string; displayName: string; isAdmin: boolean } | null;
 
 async function post(
-	action: 'changePassword' | 'changeDisplayName' | 'setEmail' | 'reveal',
+	action: 'changePassword' | 'changeDisplayName' | 'setEmail' | 'setRatingMails' | 'reveal',
 	fields: Record<string, string> = {},
 	user: Caller = ada,
 	cookies = cookieSpy()
@@ -110,7 +110,7 @@ describe('GET /profile', () => {
 		// This return value is serialised into the page. A hash here is a hash in
 		// every visitor's HTML source, ready for an offline attack.
 		const data = load({ locals: { user: ada, locale: 'en' } } as never) as Record<string, unknown>;
-		expect(Object.keys(data).sort()).toEqual(['displayName', 'email', 'username']);
+		expect(Object.keys(data).sort()).toEqual(['displayName', 'email', 'ratingMails', 'username']);
 	});
 
 	it('refuses a signed-out visitor', async () => {
@@ -494,6 +494,22 @@ describe('reveal', () => {
 
 	it('refuses a signed-out visitor', async () => {
 		expect(await statusOfThrow(() => post('reveal', { currentPassword: PASSWORD }, null))).toBe(
+			401
+		);
+	});
+});
+
+describe('setRatingMails', () => {
+	it('switches rating emails off and on again', async () => {
+		expect(userProfile(db, ada.id)?.ratingMails).toBe(true);
+		expect(await post('setRatingMails', {})).toEqual({ success: 'profile.rating_mails_saved' });
+		expect(userProfile(db, ada.id)?.ratingMails).toBe(false);
+		await post('setRatingMails', { ratingMails: 'on' });
+		expect(userProfile(db, ada.id)?.ratingMails).toBe(true);
+	});
+
+	it('refuses a signed-out caller', async () => {
+		expect(await statusOfThrow(() => post('setRatingMails', { ratingMails: 'on' }, null))).toBe(
 			401
 		);
 	});

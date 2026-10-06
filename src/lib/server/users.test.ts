@@ -539,6 +539,7 @@ describe('userProfile', () => {
 		expect(Object.keys(userProfile(db, user.id) ?? {}).sort()).toEqual([
 			'displayName',
 			'email',
+			'ratingMails',
 			'username'
 		]);
 	});

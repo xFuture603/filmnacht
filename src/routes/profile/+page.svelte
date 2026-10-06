@@ -66,6 +66,14 @@
 			</Field>
 			<button class={submit}>{t(data.locale, 'profile.save_email')}</button>
 		</form>
+		<form method="POST" action="?/setRatingMails" class="mt-4 flex flex-col gap-1">
+			<label class="flex min-h-11 cursor-pointer items-center gap-3">
+				<input type="checkbox" name="ratingMails" checked={data.ratingMails} class="toggle" />
+				<span>{t(data.locale, 'profile.rating_mails')}</span>
+			</label>
+			<p class="text-sm text-base-content/70">{t(data.locale, 'profile.rating_mails_hint')}</p>
+			<button class={submit}>{t(data.locale, 'profile.save_rating_mails')}</button>
+		</form>
 	</div>
 </section>
 
