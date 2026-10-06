@@ -21,7 +21,7 @@ export const init: ServerInit = () => {
 	// drawing and emailing on its own every time it starts is not something to
 	// do by default.
 	if (!building && (!dev || env.FILMNACHT_SCHEDULER === '1')) {
-		startScheduler(db, (nightId) => notifyDraw(db, nightId));
+		startScheduler(db, (nightId) => notifyDraw(db, nightId), env.ORIGIN ?? null);
 	}
 };
 

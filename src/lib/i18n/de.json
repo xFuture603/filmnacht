@@ -275,6 +275,13 @@
 	"mail.draw.surprise": "Der Film wurde gezogen. Er bleibt eine Überraschung, bis der Abend beginnt.",
 	"mail.draw.redrawn": "Das ist eine neue Ziehung: Sie ersetzt den vorher gezogenen Film.",
 	"mail.draw.link": "Details: {link}",
+	"mail.rating.open.subject": "Wie war {title}?",
+	"mail.rating.open.body": "{group} hat {title} geschaut. Wie fandest du ihn? Bewerte ihn bis {closes}.",
+	"mail.rating.reminder.subject": "Bewertung für {title} endet morgen",
+	"mail.rating.reminder.body": "Du hast {title} aus {group} noch nicht bewertet. Die Bewertung endet {closes}.",
+	"mail.rating.link": "Hier bewerten: {link}",
+	"mail.rating.opt_out": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus.",
+	"mail.rating.opt_out_link": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus: {link}",
 	"mail.reset.subject": "Setze dein Filmnacht-Passwort zurück",
 	"mail.reset.body": "Öffne diesen Link innerhalb einer Stunde, um ein neues Passwort zu wählen:\n\n{link}\n\nWenn du das nicht angefordert hast, hat sich nichts geändert und du kannst diese Nachricht ignorieren."
 }

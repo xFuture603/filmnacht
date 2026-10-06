@@ -277,6 +277,13 @@
 	"mail.draw.surprise": "The film has been drawn. It stays a surprise until the night starts.",
 	"mail.draw.redrawn": "This is a redraw: it replaces the film drawn before.",
 	"mail.draw.link": "Details: {link}",
+	"mail.rating.open.subject": "How was {title}?",
+	"mail.rating.open.body": "{group} watched {title}. How was it? Rate it by {closes}.",
+	"mail.rating.reminder.subject": "Rating for {title} closes tomorrow",
+	"mail.rating.reminder.body": "You haven't rated {title} from {group} yet. Rating closes {closes}.",
+	"mail.rating.link": "Rate it here: {link}",
+	"mail.rating.opt_out": "Don't want these emails? Switch them off on your profile.",
+	"mail.rating.opt_out_link": "Don't want these emails? Switch them off on your profile: {link}",
 	"mail.reset.subject": "Reset your filmnacht password",
 	"mail.reset.body": "Open this link within the hour to choose a new password:\n\n{link}\n\nIf you did not ask for this, nothing has changed and you can ignore this message."
 }

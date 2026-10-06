@@ -3,6 +3,7 @@ import type { DB } from './db/client';
 import { groups, movieNights } from './db/schema';
 import { groupSettings } from './group-settings';
 import { drawNight } from './nights';
+import { runRatingMails } from './rating-mail';
 
 const HOUR = 60 * 60 * 1000;
 
@@ -53,13 +54,18 @@ export function runDueDraws(
 const STARTED = Symbol.for('filmnacht.scheduler');
 
 /** Once per process, even when the dev server reloads this module. */
-export function startScheduler(db: DB, onDrawn: (nightId: string) => void): void {
+export function startScheduler(
+	db: DB,
+	onDrawn: (nightId: string) => void,
+	origin: string | null
+): void {
 	const g = globalThis as Record<symbol, unknown>;
 	if (g[STARTED]) return;
 	g[STARTED] = true;
 	setInterval(() => {
 		try {
 			runDueDraws(db, new Date(), onDrawn);
+			void runRatingMails(db, new Date(), origin);
 		} catch (err) {
 			// A tick must never take the server down; the next minute tries again.
 			console.error('[filmnacht] automatic draw tick failed', err);

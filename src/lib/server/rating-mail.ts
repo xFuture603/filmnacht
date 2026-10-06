@@ -1,8 +1,12 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { t, type Locale } from '$lib/i18n';
+import { formatWhen } from '$lib/time';
 import type { DB } from './db/client';
 import { groups, memberships, movieNights, movies, ratings, suggestions, users } from './db/schema';
 import { groupSettings } from './group-settings';
+import { isMailConfigured, sendMail } from './mail';
 import { ratingWindow } from './ratings';
+import { getEmailLocale, getTimezone } from './settings';
 
 /**
  * "Rating is open" and "closes tomorrow" emails (rating-reminders spec). Each
@@ -127,4 +131,71 @@ export function ratingMailInfo(
 		title: row.title,
 		closesAt: window.closesAt
 	};
+}
+
+export function composeRatingMail(input: {
+	locale: Locale;
+	kind: RatingMailKind;
+	groupName: string;
+	title: string;
+	closes: string;
+	link: string | null;
+	profileLink: string | null;
+}): { subject: string; body: string } {
+	const { locale, kind, groupName, title, closes, link, profileLink } = input;
+	const lines = [t(locale, `mail.rating.${kind}.body`, { group: groupName, title, closes })];
+	if (link) lines.push(t(locale, 'mail.rating.link', { link }));
+	lines.push(
+		profileLink
+			? t(locale, 'mail.rating.opt_out_link', { link: profileLink })
+			: t(locale, 'mail.rating.opt_out')
+	);
+	return {
+		subject: t(locale, `mail.rating.${kind}.subject`, { title }),
+		body: lines.join('\n\n')
+	};
+}
+
+/**
+ * One scheduler tick's worth of rating emails. Claims are synchronous; the
+ * sends that follow are not awaited by the scheduler, only by tests.
+ */
+export function runRatingMails(
+	db: DB,
+	now: Date,
+	origin: string | null,
+	send: (to: string, subject: string, body: string) => Promise<boolean> | boolean = sendMail
+): Promise<number> {
+	// Without mail nothing is claimed: the emails go out once it is set up.
+	if (!isMailConfigured()) return Promise.resolve(0);
+	const locale = getEmailLocale(db);
+	const timezone = getTimezone(db);
+	const sends: Promise<boolean>[] = [];
+	for (const due of dueRatingMails(db, now)) {
+		if (!claimRatingMail(db, due, now)) continue;
+		const info = ratingMailInfo(db, due.nightId, now);
+		if (!info) continue;
+		const { subject, body } = composeRatingMail({
+			locale,
+			kind: due.kind,
+			groupName: info.groupName,
+			title: info.title,
+			closes: formatWhen(info.closesAt, timezone, locale),
+			link: origin ? `${origin}/groups/${info.groupId}/nights/${due.nightId}` : null,
+			profileLink: origin ? `${origin}/profile` : null
+		});
+		for (const to of ratingRecipients(db, due.nightId)) {
+			// Each send isolated: a throwing one must not cost the rest their email.
+			sends.push(
+				Promise.resolve()
+					.then(() => send(to, subject, body))
+					.catch(() => false)
+			);
+		}
+	}
+	return Promise.all(sends).then((results) => {
+		const failed = results.filter((ok) => !ok).length;
+		if (failed > 0) console.error(`[filmnacht] rating mail: ${failed}/${results.length} failed`);
+		return results.length;
+	});
 }
