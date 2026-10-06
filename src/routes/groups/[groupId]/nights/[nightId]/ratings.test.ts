@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
-import { DEFAULT_GROUP_SETTINGS, movieNights } from '$lib/server/db/schema';
+import { DEFAULT_GROUP_SETTINGS, groups, movieNights } from '$lib/server/db/schema';
 import { addMember, createGroup } from '$lib/server/groups';
 import { drawForNight, scheduleNight } from '$lib/server/nights';
 import { addSuggestion } from '$lib/server/suggestions';
@@ -126,6 +126,30 @@ describe('rating', () => {
 			data: { error: 'ratings.error.window' }
 		});
 		expect((await view(grace)).ratings.window.state).toBe('before');
+	});
+
+	it('lets members rate at once when the owner marks the night watched early', async () => {
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000) })
+			.where(eq(movieNights.id, nightId))
+			.run();
+		await post('markWatched', ada, { confirm: 'on' });
+		expect((await view(grace)).ratings.window.state).toBe('open');
+		expect(await post('rate', grace, { score: '7' })).not.toMatchObject({ status: 400 });
+	});
+
+	it('names a surprise film once the owner marks the night watched early', async () => {
+		db.update(groups)
+			.set({ settings: { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' } })
+			.where(eq(groups.id, groupId))
+			.run();
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000) })
+			.where(eq(movieNights.id, nightId))
+			.run();
+		expect((await view(grace)).film).toBeNull();
+		await post('markWatched', ada, { confirm: 'on' });
+		expect((await view(grace)).film?.title).toBeTruthy();
 	});
 
 	it('refuses a score that is not a half step from 1 to 10', async () => {

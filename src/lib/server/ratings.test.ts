@@ -79,7 +79,7 @@ describe('parseScore', () => {
 });
 
 describe('ratingWindow', () => {
-	const night = { status: 'drawn', scheduledAt: START };
+	const night = { status: 'drawn', scheduledAt: START, watchedAt: null };
 
 	it('opens when the night ends and closes after the window', () => {
 		expect(ratingWindow(night, DEFAULT_GROUP_SETTINGS, new Date(OPENS.getTime() - 1000))).toEqual({
@@ -99,9 +99,43 @@ describe('ratingWindow', () => {
 		});
 	});
 
+	it('opens when the night is marked watched early, and runs the full window from then', () => {
+		const watchedAt = new Date(START.getTime() - 2 * DAY);
+		const early = { status: 'watched', scheduledAt: START, watchedAt };
+		expect(ratingWindow(early, DEFAULT_GROUP_SETTINGS, watchedAt)).toEqual({
+			state: 'open',
+			closesAt: new Date(watchedAt.getTime() + 7 * DAY)
+		});
+		expect(
+			ratingWindow(early, DEFAULT_GROUP_SETTINGS, new Date(watchedAt.getTime() + 7 * DAY)).state
+		).toBe('closed');
+	});
+
+	it('keeps the scheduled window when the night is marked watched after it ended', () => {
+		const late = { status: 'watched', scheduledAt: START, watchedAt: DURING };
+		expect(ratingWindow(late, DEFAULT_GROUP_SETTINGS, OPENS)).toEqual({
+			state: 'open',
+			closesAt: CLOSES
+		});
+	});
+
+	it('keeps the scheduled window for a night watched before watched_at existed', () => {
+		const legacy = { status: 'watched', scheduledAt: START, watchedAt: null };
+		expect(ratingWindow(legacy, DEFAULT_GROUP_SETTINGS, new Date(OPENS.getTime() - 1000))).toEqual({
+			state: 'before',
+			opensAt: OPENS
+		});
+	});
+
 	it('never opens for a night without a film', () => {
 		for (const status of ['scheduled', 'cancelled']) {
-			expect(ratingWindow({ status, scheduledAt: START }, DEFAULT_GROUP_SETTINGS, DURING)).toEqual({
+			expect(
+				ratingWindow(
+					{ status, scheduledAt: START, watchedAt: null },
+					DEFAULT_GROUP_SETTINGS,
+					DURING
+				)
+			).toEqual({
 				state: 'not_ratable'
 			});
 		}

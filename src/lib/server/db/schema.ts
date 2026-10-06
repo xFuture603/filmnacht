@@ -234,6 +234,13 @@ export const movieNights = sqliteTable('movie_nights', {
 	 * un-happen. A closed rating window also counts as revealed, derived on read.
 	 */
 	revealedAt: integer('revealed_at', { mode: 'timestamp' }),
+	/**
+	 * When the owner pressed "We watched it". NULL for nights marked before this
+	 * column existed, and for nights moved to watched by their first rating. An
+	 * early one opens the rating window and lifts the surprise at once (PRD §4:
+	 * watched means the night happened).
+	 */
+	watchedAt: integer('watched_at', { mode: 'timestamp' }),
 	status: text('status', { enum: ['scheduled', 'drawn', 'watched', 'cancelled'] })
 		.notNull()
 		.default('scheduled'),

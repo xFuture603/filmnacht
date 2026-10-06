@@ -371,8 +371,16 @@ describe('markWatched', () => {
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		drawForNight(db, id, ada);
 
+		const before = Date.now();
 		expect(markWatched(db, id, ada)).toBe(true);
 		expect(nightDetail(db, id, ada)?.status).toBe('watched');
+		const { watchedAt } = db
+			.select({ watchedAt: movieNights.watchedAt })
+			.from(movieNights)
+			.where(eq(movieNights.id, id))
+			.get()!;
+		// created_at-style columns have one-second precision.
+		expect(watchedAt!.getTime()).toBeGreaterThanOrEqual(Math.floor(before / 1000) * 1000);
 
 		addSuggestion(db, {
 			groupId,
@@ -604,15 +612,20 @@ describe('what the night page is told about the draw', () => {
 
 describe('isResultVisible', () => {
 	const at = new Date('2030-01-01T20:00:00Z');
+	const drawn = { status: 'drawn', scheduledAt: at };
+	const surprise = { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' as const };
 	it('always shows the film when the group reveals immediately', () => {
-		expect(isResultVisible(DEFAULT_GROUP_SETTINGS, at, new Date('2029-12-31T00:00:00Z'))).toBe(
+		expect(isResultVisible(DEFAULT_GROUP_SETTINGS, drawn, new Date('2029-12-31T00:00:00Z'))).toBe(
 			true
 		);
 	});
 	it('hides it until the night when the group keeps it a surprise', () => {
-		const settings = { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' as const };
-		expect(isResultVisible(settings, at, new Date('2030-01-01T19:59:59Z'))).toBe(false);
-		expect(isResultVisible(settings, at, at)).toBe(true);
+		expect(isResultVisible(surprise, drawn, new Date('2030-01-01T19:59:59Z'))).toBe(false);
+		expect(isResultVisible(surprise, drawn, at)).toBe(true);
+	});
+	it('shows it once the night is marked watched, even before it starts', () => {
+		const watched = { status: 'watched', scheduledAt: at };
+		expect(isResultVisible(surprise, watched, new Date('2029-12-31T00:00:00Z'))).toBe(true);
 	});
 });
 
@@ -632,7 +645,7 @@ describe('unrevealedDrawnIds', () => {
 		expect(unrevealedDrawnIds(db, groupId, new Date(LATER.getTime() + 1000)).size).toBe(0);
 	});
 
-	it('keeps a film hidden when its night is marked watched before it starts', () => {
+	it('reveals a film once its night is marked watched, even before it starts', () => {
 		addSuggestion(db, {
 			groupId,
 			userId: ada,
@@ -644,6 +657,6 @@ describe('unrevealedDrawnIds', () => {
 		if (!drawn.ok) throw new Error('draw failed');
 		markWatched(db, future, ada);
 
-		expect([...unrevealedDrawnIds(db, groupId, new Date())]).toEqual([drawn.suggestionId]);
+		expect(unrevealedDrawnIds(db, groupId, new Date()).size).toBe(0);
 	});
 });

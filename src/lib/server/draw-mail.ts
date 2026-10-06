@@ -133,7 +133,12 @@ function drawMailInfo(db: DB, nightId: string, now: Date) {
 		// only hides the title until the night actually starts. Usually still
 		// true right after a draw, but not for a manual draw made after the
 		// night has already begun.
-		surprise: !isResultVisible(groupSettings(row.groupSettings), row.scheduledAt, now),
+		// The mail goes out at the draw, so the night is 'drawn', never 'watched'.
+		surprise: !isResultVisible(
+			groupSettings(row.groupSettings),
+			{ status: 'drawn', scheduledAt: row.scheduledAt },
+			now
+		),
 		redrawn: redrawEntry?.reason ? { byName: redrawnBy ?? '', reason: redrawEntry.reason } : null
 	};
 }

@@ -461,7 +461,7 @@ export function markWatched(db: DB, nightId: string, ownerId: string): boolean {
 	return db.transaction(() => {
 		const claimed = db
 			.update(movieNights)
-			.set({ status: 'watched' })
+			.set({ status: 'watched', watchedAt: new Date() })
 			.where(and(eq(movieNights.id, nightId), eq(movieNights.status, 'drawn')))
 			.run();
 		return claimed.changes > 0;
@@ -573,8 +573,17 @@ function appendDrawLog(db: DB, nightId: string, entry: DrawLogEntry): void {
  * night page and the pool alike — because a title withheld in one place and
  * shown in another is not withheld.
  */
-export function isResultVisible(settings: GroupSettings, scheduledAt: Date, now: Date): boolean {
-	return settings.resultVisible === 'immediately' || now.getTime() >= scheduledAt.getTime();
+export function isResultVisible(
+	settings: GroupSettings,
+	night: { status: string; scheduledAt: Date },
+	now: Date
+): boolean {
+	return (
+		settings.resultVisible === 'immediately' ||
+		// Watched means everyone has seen it: there is no surprise left to keep.
+		night.status === 'watched' ||
+		now.getTime() >= night.scheduledAt.getTime()
+	);
 }
 
 export type NextNight = {
@@ -629,7 +638,7 @@ export function nextNight(
 		.where(and(eq(attendance.movieNightId, night.id), eq(attendance.userId, viewerId)))
 		.get();
 	const drawn = night.status === 'drawn' && night.title !== null;
-	const visible = isResultVisible(settings, night.scheduledAt, now);
+	const visible = isResultVisible(settings, night, now);
 	return {
 		id: night.id,
 		scheduledAt: night.scheduledAt,
@@ -644,15 +653,13 @@ export function nextNight(
 	};
 }
 
-/** Suggestions drawn for a night that has not started yet — watched early included. */
+/** Suggestions drawn for a night that has not started yet. A night watched early is no secret. */
 export function unrevealedDrawnIds(db: DB, groupId: string, now: Date): Set<string> {
 	return new Set(
 		db
 			.select({ suggestionId: movieNights.suggestionId, scheduledAt: movieNights.scheduledAt })
 			.from(movieNights)
-			.where(
-				and(eq(movieNights.groupId, groupId), inArray(movieNights.status, ['drawn', 'watched']))
-			)
+			.where(and(eq(movieNights.groupId, groupId), eq(movieNights.status, 'drawn')))
 			.all()
 			.filter((n) => n.suggestionId !== null && n.scheduledAt.getTime() > now.getTime())
 			.map((n) => n.suggestionId as string)

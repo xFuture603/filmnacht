@@ -30,12 +30,15 @@ export type RatingWindow =
  * opens or closes anything. A night with no film to rate never opens.
  */
 export function ratingWindow(
-	night: { status: string; scheduledAt: Date },
+	night: { status: string; scheduledAt: Date; watchedAt: Date | null },
 	settings: GroupSettings,
 	now: Date
 ): RatingWindow {
 	if (night.status !== 'drawn' && night.status !== 'watched') return { state: 'not_ratable' };
-	const opensAt = new Date(night.scheduledAt.getTime() + settings.nightEndsAfterMinutes * MINUTE);
+	const ends = new Date(night.scheduledAt.getTime() + settings.nightEndsAfterMinutes * MINUTE);
+	// Watched means the night happened (PRD §4): a group that watched early
+	// rates from then, not from a date that has lost its meaning.
+	const opensAt = night.watchedAt && night.watchedAt < ends ? night.watchedAt : ends;
 	const closesAt = new Date(opensAt.getTime() + settings.ratingWindowDays * DAY);
 	if (now < opensAt) return { state: 'before', opensAt };
 	if (now < closesAt) return { state: 'open', closesAt };
@@ -53,6 +56,7 @@ type NightRow = {
 	groupId: string;
 	status: string;
 	scheduledAt: Date;
+	watchedAt: Date | null;
 	revealedAt: Date | null;
 };
 
@@ -62,6 +66,7 @@ function nightRow(db: DB, nightId: string): NightRow | undefined {
 			groupId: movieNights.groupId,
 			status: movieNights.status,
 			scheduledAt: movieNights.scheduledAt,
+			watchedAt: movieNights.watchedAt,
 			revealedAt: movieNights.revealedAt
 		})
 		.from(movieNights)
@@ -371,6 +376,7 @@ export function averagesFor(
 			groupId: movieNights.groupId,
 			status: movieNights.status,
 			scheduledAt: movieNights.scheduledAt,
+			watchedAt: movieNights.watchedAt,
 			revealedAt: movieNights.revealedAt
 		})
 		.from(movieNights)

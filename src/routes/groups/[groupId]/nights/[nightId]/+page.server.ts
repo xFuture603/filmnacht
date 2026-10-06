@@ -63,7 +63,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 
 	// Withheld from the payload, not hidden in the markup: a title sitting in
 	// `data` is readable in the page source, and the group was promised a surprise.
-	const visible = isResultVisible(group.settings, night.scheduledAt, new Date());
+	const visible = isResultVisible(group.settings, night, new Date());
 	const { drawnTitle, drawnBy, drawnByFormer, onlyCandidate, ...rest } = night;
 	// A cancelled night keeps its suggestionId, but its film was released: show none.
 	const hasFilm = drawnTitle !== null && (night.status === 'drawn' || night.status === 'watched');
