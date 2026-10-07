@@ -229,6 +229,7 @@
 	"night.owner": "For the owner",
 	"night.redraw_hint": "One re-draw per night. Both results stay on record.",
 	"night.redrawn_badge": "Redrawn",
+	"night.add_to_calendar": "Add to calendar",
 	"night.error.cannot_cancel": "This night can no longer be cancelled.",
 	"night.error.response": "That is not an answer this page offers.",
 	"night.drawn_auto": "Drawn automatically.",

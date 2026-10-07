@@ -3,6 +3,7 @@
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import {
+		CalendarPlus,
 		Check,
 		ChevronLeft,
 		CircleCheck,
@@ -57,6 +58,17 @@
 		<NightStatus status={data.night.status} locale={data.locale} />
 	{/snippet}
 </PageHeader>
+
+{#if data.night.status !== 'cancelled'}
+	<a
+		class="btn btn-ghost btn-sm mb-4 min-h-11 gap-1 px-2"
+		href="/groups/{data.group.groupId}/nights/{data.night.id}/calendar.ics"
+		download
+		data-sveltekit-reload
+	>
+		<CalendarPlus class="size-4" />{t(data.locale, 'night.add_to_calendar')}
+	</a>
+{/if}
 
 {#if form?.error}
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>

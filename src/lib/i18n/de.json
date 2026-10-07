@@ -227,6 +227,7 @@
 	"night.owner": "Für die Gruppenleitung",
 	"night.redraw_hint": "Pro Filmnacht darf einmal neu gezogen werden. Beide Ergebnisse bleiben festgehalten.",
 	"night.redrawn_badge": "Neu gezogen",
+	"night.add_to_calendar": "Zum Kalender hinzufügen",
 	"night.error.cannot_cancel": "Diese Filmnacht kann nicht mehr abgesagt werden.",
 	"night.error.response": "Diese Antwort gibt es hier nicht.",
 	"night.drawn_auto": "Automatisch gezogen.",
