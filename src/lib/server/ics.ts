@@ -16,8 +16,13 @@ export function nightIcs(input: {
 	end: Date;
 	location: string | null;
 	url: string | null;
+	/** REQUEST/CANCEL only: iTIP clients match a cancellation by UID and organizer. */
+	organizer?: string | null;
+	/** REQUEST/CANCEL only: the one recipient of this copy; no replies wanted. */
+	attendee?: string | null;
 	now?: Date;
 }): string {
+	const itip = input.method !== 'PUBLISH';
 	const cancel = input.method === 'CANCEL';
 	const lines = [
 		'BEGIN:VCALENDAR',
@@ -32,6 +37,8 @@ export function nightIcs(input: {
 		`DTSTAMP:${utc(input.now ?? new Date())}`,
 		`DTSTART:${utc(input.start)}`,
 		`DTEND:${utc(input.end)}`,
+		...(itip && input.organizer ? [`ORGANIZER;CN=Filmnacht:mailto:${input.organizer}`] : []),
+		...(itip && input.attendee ? [`ATTENDEE;RSVP=FALSE:mailto:${input.attendee}`] : []),
 		`SUMMARY:${text(`Filmnacht: ${input.groupName}`)}`,
 		...(input.location ? [`LOCATION:${text(input.location)}`] : []),
 		...(input.url ? [`URL:${input.url}`, `DESCRIPTION:${text(input.url)}`] : []),

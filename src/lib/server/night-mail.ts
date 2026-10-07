@@ -6,7 +6,7 @@ import type { DB } from './db/client';
 import { groups, memberships, movieNights, users } from './db/schema';
 import { groupSettings } from './group-settings';
 import { nightIcs } from './ics';
-import { isMailConfigured, sendMail } from './mail';
+import { isMailConfigured, mailFromAddress, sendMail } from './mail';
 import { getEmailLocale, getTimezone } from './settings';
 
 /**
@@ -116,19 +116,24 @@ export function sendNightMail(
 		profileLink: origin ? `${origin}/profile` : null
 	});
 	const method = kind === 'scheduled' ? 'REQUEST' : 'CANCEL';
-	const content = nightIcs({
-		nightId,
-		method,
-		groupName: info.groupName,
-		start: info.scheduledAt,
-		end: info.endsAt,
-		location: info.location,
-		url: link
-	});
+	const organizer = mailFromAddress();
+	// One copy per recipient: each names its own attendee, as iTIP expects.
+	const contentFor = (attendee: string) =>
+		nightIcs({
+			nightId,
+			method,
+			groupName: info.groupName,
+			start: info.scheduledAt,
+			end: info.endsAt,
+			location: info.location,
+			url: link,
+			organizer,
+			attendee
+		});
 	const sends = nightMailRecipients(db, nightId, byUserId).map((to) =>
 		// Each send isolated: a throwing one must not cost the rest their email.
 		Promise.resolve()
-			.then(() => send(to, subject, body, { method, content }))
+			.then(() => send(to, subject, body, { method, content: contentFor(to) }))
 			.catch(() => false)
 	);
 	return Promise.all(sends).then((results) => {

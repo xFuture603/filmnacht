@@ -19,6 +19,17 @@ export function isMailConfigured(): boolean {
  * eventually leak one of them, so the distinction is destroyed here rather than
  * passed up and carefully ignored at every call site.
  */
+/**
+ * The bare address in SMTP_FROM ("Filmnacht <films@x.org>" or "films@x.org"),
+ * named as a calendar invite's ORGANIZER: iTIP needs one for a client to match
+ * a cancellation to its invite.
+ */
+export function mailFromAddress(): string | null {
+	const from = (env.SMTP_FROM ?? '').trim();
+	const address = /<([^<>\s]+@[^<>\s]+)>/.exec(from)?.[1] ?? from;
+	return /^[^\s@<>]+@[^\s@<>]+$/.test(address) ? address : null;
+}
+
 export async function sendMail(
 	to: string,
 	subject: string,

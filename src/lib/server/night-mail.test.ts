@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 let mailConfigured = true;
 vi.mock('./mail', () => ({
 	isMailConfigured: () => mailConfigured,
+	mailFromAddress: () => 'films@example.org',
 	sendMail: () => Promise.resolve(true)
 }));
 import { eq } from 'drizzle-orm';
@@ -99,6 +100,16 @@ describe('sendNightMail', () => {
 		expect(sent[0].subject).toContain('cancelled');
 		expect(sent[0].calendar?.method).toBe('CANCEL');
 		expect(sent[0].calendar?.content).toContain('UID:night-' + nightId + '@filmnacht');
+	});
+
+	it('names the sender as organizer and each recipient as the attendee of their copy', async () => {
+		await sendNightMail(db, nightId, 'cancelled', ada, null, send);
+		expect(sent).toHaveLength(2);
+		for (const s of sent) {
+			const content = s.calendar!.content.replace(/\r\n /g, '');
+			expect(content).toContain('ORGANIZER;CN=Filmnacht:mailto:films@example.org');
+			expect(content).toContain(`ATTENDEE;RSVP=FALSE:mailto:${s.to}`);
+		}
 	});
 
 	it('sends nothing without SMTP', async () => {

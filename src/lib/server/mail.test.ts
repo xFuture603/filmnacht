@@ -230,3 +230,19 @@ describe('the global test guard (src/test-setup.ts)', () => {
 		});
 	});
 });
+
+describe('mailFromAddress', () => {
+	it('takes the bare address from SMTP_FROM, with or without a display name', async () => {
+		expect((await loadMail({ SMTP_FROM: 'Filmnacht <films@example.org>' })).mailFromAddress()).toBe(
+			'films@example.org'
+		);
+		expect((await loadMail({ SMTP_FROM: ' films@example.org ' })).mailFromAddress()).toBe(
+			'films@example.org'
+		);
+	});
+
+	it('is null when there is no usable address', async () => {
+		expect((await loadMail({ SMTP_FROM: undefined })).mailFromAddress()).toBeNull();
+		expect((await loadMail({ SMTP_FROM: 'Filmnacht' })).mailFromAddress()).toBeNull();
+	});
+});

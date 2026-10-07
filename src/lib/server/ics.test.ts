@@ -75,4 +75,25 @@ describe('nightIcs', () => {
 		expect(ics).not.toContain('\uFFFD');
 		expect(lines(ics)).toContain(`SUMMARY:Filmnacht: ${groupName}`);
 	});
+
+	it('names the organizer and the one attendee on an invite or a cancellation', () => {
+		for (const method of ['REQUEST', 'CANCEL'] as const) {
+			const all = lines(
+				nightIcs({ ...base, method, organizer: 'films@example.org', attendee: 'grace@example.org' })
+			);
+			expect(all).toContain('ORGANIZER;CN=Filmnacht:mailto:films@example.org');
+			expect(all).toContain('ATTENDEE;RSVP=FALSE:mailto:grace@example.org');
+		}
+	});
+
+	it('leaves organizer and attendee out of a download', () => {
+		const ics = nightIcs({
+			...base,
+			method: 'PUBLISH',
+			organizer: 'films@example.org',
+			attendee: 'grace@example.org'
+		});
+		expect(ics).not.toContain('ORGANIZER');
+		expect(ics).not.toContain('ATTENDEE');
+	});
 });
