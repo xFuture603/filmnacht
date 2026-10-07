@@ -168,14 +168,21 @@ export function usernameTaken(db: DB, username: string): boolean {
 export function userProfile(
 	db: DB,
 	userId: string
-): { username: string; displayName: string; email: string | null; ratingMails: boolean } | null {
+): {
+	username: string;
+	displayName: string;
+	email: string | null;
+	ratingMails: boolean;
+	nightMails: boolean;
+} | null {
 	return (
 		db
 			.select({
 				username: users.username,
 				displayName: users.displayName,
 				email: users.email,
-				ratingMails: users.ratingMails
+				ratingMails: users.ratingMails,
+				nightMails: users.nightMails
 			})
 			.from(users)
 			.where(eq(users.id, userId))
@@ -183,8 +190,12 @@ export function userProfile(
 	);
 }
 
-export function setRatingMails(db: DB, userId: string, on: boolean): void {
-	db.update(users).set({ ratingMails: on }).where(eq(users.id, userId)).run();
+export function setMailPrefs(
+	db: DB,
+	userId: string,
+	prefs: { ratingMails: boolean; nightMails: boolean }
+): void {
+	db.update(users).set(prefs).where(eq(users.id, userId)).run();
 }
 
 /** For the current-password check, which knows the id but not the username. */

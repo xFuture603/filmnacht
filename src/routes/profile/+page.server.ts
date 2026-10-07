@@ -10,7 +10,7 @@ import {
 	regenerateLoginToken,
 	setDisplayName,
 	setEmail,
-	setRatingMails,
+	setMailPrefs,
 	setPassword,
 	userProfile,
 	validateDisplayName,
@@ -129,12 +129,15 @@ export const actions: Actions = {
 		return { success: 'profile.email_saved' };
 	},
 
-	setRatingMails: async ({ locals, request }) => {
+	setMailPrefs: async ({ locals, request }) => {
 		const user = requireUser(locals);
 		// An unticked checkbox is simply absent from the form.
-		const on = (await request.formData()).get('ratingMails') === 'on';
-		setRatingMails(db, user.id, on);
-		return { success: 'profile.rating_mails_saved' };
+		const form = await request.formData();
+		setMailPrefs(db, user.id, {
+			ratingMails: form.get('ratingMails') === 'on',
+			nightMails: form.get('nightMails') === 'on'
+		});
+		return { success: 'profile.mail_prefs_saved' };
 	},
 
 	/**

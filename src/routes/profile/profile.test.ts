@@ -60,7 +60,7 @@ function formRequest(fields: Record<string, string>) {
 type Caller = { id: string; displayName: string; isAdmin: boolean } | null;
 
 async function post(
-	action: 'changePassword' | 'changeDisplayName' | 'setEmail' | 'setRatingMails' | 'reveal',
+	action: 'changePassword' | 'changeDisplayName' | 'setEmail' | 'setMailPrefs' | 'reveal',
 	fields: Record<string, string> = {},
 	user: Caller = ada,
 	cookies = cookieSpy()
@@ -110,7 +110,13 @@ describe('GET /profile', () => {
 		// This return value is serialised into the page. A hash here is a hash in
 		// every visitor's HTML source, ready for an offline attack.
 		const data = load({ locals: { user: ada, locale: 'en' } } as never) as Record<string, unknown>;
-		expect(Object.keys(data).sort()).toEqual(['displayName', 'email', 'ratingMails', 'username']);
+		expect(Object.keys(data).sort()).toEqual([
+			'displayName',
+			'email',
+			'nightMails',
+			'ratingMails',
+			'username'
+		]);
 	});
 
 	it('refuses a signed-out visitor', async () => {
@@ -499,18 +505,18 @@ describe('reveal', () => {
 	});
 });
 
-describe('setRatingMails', () => {
-	it('switches rating emails off and on again', async () => {
-		expect(userProfile(db, ada.id)?.ratingMails).toBe(true);
-		expect(await post('setRatingMails', {})).toEqual({ success: 'profile.rating_mails_saved' });
-		expect(userProfile(db, ada.id)?.ratingMails).toBe(false);
-		await post('setRatingMails', { ratingMails: 'on' });
-		expect(userProfile(db, ada.id)?.ratingMails).toBe(true);
+describe('setMailPrefs', () => {
+	it('saves both switches, and an unticked box means off', async () => {
+		expect(userProfile(db, ada.id)).toMatchObject({ ratingMails: true, nightMails: true });
+		expect(await post('setMailPrefs', { nightMails: 'on' })).toEqual({
+			success: 'profile.mail_prefs_saved'
+		});
+		expect(userProfile(db, ada.id)).toMatchObject({ ratingMails: false, nightMails: true });
+		await post('setMailPrefs', { ratingMails: 'on' });
+		expect(userProfile(db, ada.id)).toMatchObject({ ratingMails: true, nightMails: false });
 	});
 
 	it('refuses a signed-out caller', async () => {
-		expect(await statusOfThrow(() => post('setRatingMails', { ratingMails: 'on' }, null))).toBe(
-			401
-		);
+		expect(await statusOfThrow(() => post('setMailPrefs', {}, null))).toBe(401);
 	});
 });
