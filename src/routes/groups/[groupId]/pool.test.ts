@@ -190,11 +190,8 @@ describe('leaving the group', () => {
 		expect((await poolFor(ada)).pool.length).toBe(before);
 	});
 
-	it('refuses without the confirming tick', async () => {
-		expect(await leave(grace, {})).toMatchObject({
-			status: 400,
-			data: { error: 'groups.error.confirm' }
-		});
+	it('asks for the second click before leaving', async () => {
+		expect(await leave(grace, {})).toMatchObject({ status: 400, data: { confirm: 'leave' } });
 		expect(listGroupsFor(db, grace)).toHaveLength(1);
 	});
 

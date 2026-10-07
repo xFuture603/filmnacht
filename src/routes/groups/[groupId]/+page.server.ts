@@ -93,7 +93,7 @@ export const actions: Actions = {
 		// One owner per group and no hand-over yet: the owner deletes it instead.
 		if (group.role === 'owner') return fail(400, { error: 'groups.error.owner_leave' });
 		if ((await request.formData()).get('confirm') !== 'on') {
-			return fail(400, { error: 'groups.error.confirm' });
+			return fail(400, { confirm: 'leave' });
 		}
 		leaveGroup(db, user.id, params.groupId);
 		redirect(303, '/groups');

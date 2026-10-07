@@ -51,6 +51,12 @@ function refused(outcome: Extract<DrawOutcome, { ok: false }>, notScheduledKey: 
 }
 
 /** Cancel and Mark watched cannot be undone, so each needs its box ticked (R14). */
+/**
+ * Irreversible actions take two clicks. A request without `confirm` is the
+ * first one: the action answers `{ confirm: <its name> }`, and the page shows
+ * that button armed (ConfirmButton) so the next click sends the confirmation.
+ * Works with or without JavaScript.
+ */
 async function confirmed(request: Request) {
 	return (await request.formData()).get('confirm') === 'on';
 }
@@ -116,7 +122,7 @@ export const actions: Actions = {
 	redraw: async ({ request, locals, params }) => {
 		const user = ownerOf(locals, params);
 		// One re-draw per night, and it cannot be undone: a tick, not a reason.
-		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		if (!(await confirmed(request))) return fail(400, { confirm: 'redraw' });
 		const outcome = redraw(db, params.nightId, user.id);
 		if (!outcome.ok) return refused(outcome, 'night.error.not_drawn');
 		notifyDraw(db, params.nightId);
@@ -125,7 +131,7 @@ export const actions: Actions = {
 
 	cancel: async ({ request, locals, params }) => {
 		const user = ownerOf(locals, params);
-		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		if (!(await confirmed(request))) return fail(400, { confirm: 'cancel' });
 		// Nothing awaits after this line.
 		if (!cancelNight(db, params.nightId, user.id)) {
 			return fail(400, { error: 'night.error.cannot_cancel' });
@@ -135,7 +141,7 @@ export const actions: Actions = {
 
 	markWatched: async ({ request, locals, params }) => {
 		const user = ownerOf(locals, params);
-		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		if (!(await confirmed(request))) return fail(400, { confirm: 'markWatched' });
 		// Nothing awaits after this line.
 		if (!markWatched(db, params.nightId, user.id)) {
 			return fail(400, { error: 'night.error.not_drawn' });
@@ -179,7 +185,7 @@ export const actions: Actions = {
 
 	reveal: async ({ request, locals, params }) => {
 		const user = ownerOf(locals, params);
-		if (!(await confirmed(request))) return fail(400, { error: 'night.error.confirm' });
+		if (!(await confirmed(request))) return fail(400, { confirm: 'reveal' });
 		const outcome = revealNow(db, { nightId: params.nightId, ownerId: user.id, now: new Date() });
 		if (outcome === 'not_found') error(404, 'Not found');
 		if (outcome !== 'ok') return fail(400, { error: `ratings.error.${outcome}` });

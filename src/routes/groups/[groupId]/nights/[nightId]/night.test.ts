@@ -172,9 +172,9 @@ describe('who may act on a night', () => {
 		expect(nightDetail(db, nightId, ada)?.status).toBe('watched');
 	});
 
-	it('refuses to draw again without the confirming tick, and asks for no reason', async () => {
+	it('asks for the second click before drawing again, and asks for no reason', async () => {
 		const result = await post('redraw', ada);
-		expect(result).toMatchObject({ status: 400, data: { error: 'night.error.confirm' } });
+		expect(result).toMatchObject({ status: 400, data: { confirm: 'redraw' } });
 	});
 
 	it('says plainly why a one-film pool cannot be drawn again', async () => {
@@ -182,13 +182,10 @@ describe('who may act on a night', () => {
 		expect(result).toMatchObject({ status: 400, data: { error: 'night.error.sole_suggestion' } });
 	});
 
-	it('refuses to cancel or mark watched without the confirming tick', async () => {
-		// R14: both are irreversible, so one stray tap must not do either.
+	it('asks for the second click before cancelling or marking watched', async () => {
+		// R14: both are irreversible, so one stray click must not do either.
 		for (const action of ['cancel', 'markWatched'] as const) {
-			expect(await post(action, ada)).toMatchObject({
-				status: 400,
-				data: { error: 'night.error.confirm' }
-			});
+			expect(await post(action, ada)).toMatchObject({ status: 400, data: { confirm: action } });
 		}
 		expect(nightDetail(db, nightId, ada)?.status).toBe('drawn');
 		expect(await post('cancel', ada, { confirm: 'on' })).toEqual({ cancelled: true });

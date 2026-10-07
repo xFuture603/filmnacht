@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
@@ -199,13 +200,13 @@
 			>
 				<p class="text-sm text-base-content/70">{t(data.locale, 'groups.leave_hint')}</p>
 				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-					<label class="flex min-h-11 cursor-pointer items-center gap-3">
-						<input type="checkbox" name="confirm" required class="checkbox" />
-						<span>{t(data.locale, 'groups.leave_confirm', { group: data.group.name })}</span>
-					</label>
-					<button class="btn btn-outline min-h-11 w-full sm:w-auto"
-						>{t(data.locale, 'groups.leave')}</button
+					<ConfirmButton
+						armed={form?.confirm === 'leave'}
+						armedLabel={t(data.locale, 'confirm.again')}
+						class="btn btn-outline min-h-11 w-full sm:w-auto "
 					>
+						{t(data.locale, 'groups.leave')}
+					</ConfirmButton>
 				</div>
 			</form>
 		{/if}

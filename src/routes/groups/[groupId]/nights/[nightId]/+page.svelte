@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import {
@@ -171,13 +172,13 @@
 
 					{#if data.isOwner && data.ratings.count > 0}
 						<form method="POST" action="?/reveal" class="mt-2 flex flex-col gap-1">
-							<label class="flex min-h-11 cursor-pointer items-center gap-3">
-								<input type="checkbox" name="confirm" required class="checkbox" />
-								<span>{t(data.locale, 'ratings.confirm_reveal')}</span>
-							</label>
-							<button class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start">
+							<ConfirmButton
+								armed={form?.confirm === 'reveal'}
+								armedLabel={t(data.locale, 'confirm.again')}
+								class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
+							>
 								<Eye class="size-4" />{t(data.locale, 'ratings.reveal')}
-							</button>
+							</ConfirmButton>
 						</form>
 					{/if}
 				{/if}
@@ -294,38 +295,38 @@
 				</form>
 			{:else}
 				<form method="POST" action="?/markWatched" class="flex flex-col gap-1">
-					<label class="flex min-h-11 cursor-pointer items-center gap-3">
-						<input type="checkbox" name="confirm" required class="checkbox" />
-						<span>{t(data.locale, 'night.confirm_watched')}</span>
-					</label>
-					<button class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start">
+					<ConfirmButton
+						armed={form?.confirm === 'markWatched'}
+						armedLabel={t(data.locale, 'confirm.again')}
+						class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
+					>
 						<CircleCheck class="size-4" />{t(data.locale, 'night.mark_watched')}
-					</button>
+					</ConfirmButton>
 					<p class="text-sm text-base-content/70">{t(data.locale, 'night.mark_watched_hint')}</p>
 				</form>
 
 				{#if !data.night.redrawUsed}
 					<form method="POST" action="?/redraw" class="mt-2 flex flex-col gap-1">
-						<label class="flex min-h-11 cursor-pointer items-center gap-3">
-							<input type="checkbox" name="confirm" required class="checkbox" />
-							<span>{t(data.locale, 'night.confirm_redraw')}</span>
-						</label>
-						<button class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start">
+						<ConfirmButton
+							armed={form?.confirm === 'redraw'}
+							armedLabel={t(data.locale, 'confirm.again')}
+							class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
+						>
 							<RotateCcw class="size-4" />{t(data.locale, 'night.redraw')}
-						</button>
+						</ConfirmButton>
 						<p class="text-sm text-base-content/70">{t(data.locale, 'night.redraw_hint')}</p>
 					</form>
 				{/if}
 			{/if}
 
 			<form method="POST" action="?/cancel" class="mt-2 flex flex-col gap-1">
-				<label class="flex min-h-11 cursor-pointer items-center gap-3">
-					<input type="checkbox" name="confirm" required class="checkbox" />
-					<span>{t(data.locale, 'night.confirm_cancel')}</span>
-				</label>
-				<button class="btn btn-ghost min-h-11 w-full text-error sm:w-auto sm:self-start">
+				<ConfirmButton
+					armed={form?.confirm === 'cancel'}
+					armedLabel={t(data.locale, 'confirm.again')}
+					class="btn btn-ghost min-h-11 w-full text-error sm:w-auto sm:self-start"
+				>
 					<CircleX class="size-4" />{t(data.locale, 'night.cancel')}
-				</button>
+				</ConfirmButton>
 			</form>
 		</div>
 	</section>

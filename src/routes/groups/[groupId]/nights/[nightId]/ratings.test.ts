@@ -159,13 +159,13 @@ describe('rating', () => {
 		});
 	});
 
-	it('lets only the owner reveal, and only with the box ticked', async () => {
+	it('lets only the owner reveal, and only on the second click', async () => {
 		await post('rate', grace, { score: '7' });
 		expect(await statusOf(() => post('reveal', grace, { confirm: 'on' }))).toBe(403);
 		expect(await statusOf(() => post('reveal', mallory, { confirm: 'on' }))).toBe(404);
 		expect(await post('reveal', ada, {})).toMatchObject({
 			status: 400,
-			data: { error: 'night.error.confirm' }
+			data: { confirm: 'reveal' }
 		});
 		expect(await post('reveal', ada, { confirm: 'on' })).toEqual({ revealed: true });
 		expect((await view(alan)).ratings.results?.average).toBe(7);
