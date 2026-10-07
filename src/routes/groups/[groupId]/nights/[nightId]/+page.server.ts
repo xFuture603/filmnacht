@@ -1,6 +1,7 @@
 import { t } from '$lib/i18n';
 import { db } from '$lib/server/db';
 import { notifyDraw } from '$lib/server/draw-mail';
+import { notifyNightCancelled } from '$lib/server/night-mail';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
 import {
 	candidatesFor,
@@ -136,6 +137,7 @@ export const actions: Actions = {
 		if (!cancelNight(db, params.nightId, user.id)) {
 			return fail(400, { error: 'night.error.cannot_cancel' });
 		}
+		notifyNightCancelled(db, params.nightId, user.id);
 		return { cancelled: true };
 	},
 

@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `night_mails` integer DEFAULT true NOT NULL;

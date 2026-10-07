@@ -50,6 +50,13 @@
       "when": 1791310038154,
       "tag": "0006_secret_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791398796974,
+      "tag": "0007_cloudy_bloodaxe",
+      "breakpoints": true
     }
   ]
 }

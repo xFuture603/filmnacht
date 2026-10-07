@@ -20,6 +20,11 @@ vi.mock('$lib/server/db', () => ({
 		return db;
 	}
 }));
+const nightMail = vi.hoisted(() => ({ cancelled: [] as string[] }));
+vi.mock('$lib/server/night-mail', () => ({
+	notifyNightCancelled: (_db: unknown, nightId: string) => nightMail.cancelled.push(nightId),
+	notifyNightScheduled: () => {}
+}));
 
 const { load, actions } = await import('./+page.server');
 
@@ -210,5 +215,14 @@ describe('the night page', () => {
 			settings: DEFAULT_GROUP_SETTINGS
 		});
 		expect((await view(ada, { groupId, nightId: empty })).canDraw).toBe(true);
+	});
+});
+
+describe('the cancellation email', () => {
+	it('goes out once, when the night is actually cancelled', async () => {
+		nightMail.cancelled.length = 0;
+		await post('cancel', ada, { confirm: 'on' });
+		await post('cancel', ada, { confirm: 'on' });
+		expect(nightMail.cancelled).toEqual([nightId]);
 	});
 });

@@ -48,6 +48,8 @@ export const users = sqliteTable('users', {
 	email: text('email').unique(),
 	/** Rating emails on or off, from the profile toggle. On unless the member opts out. */
 	ratingMails: integer('rating_mails', { mode: 'boolean' }).notNull().default(true),
+	/** "Night scheduled" and "night cancelled" emails, from the profile. On by default. */
+	nightMails: integer('night_mails', { mode: 'boolean' }).notNull().default(true),
 	/**
 	 * What you sign in with. Deliberately separate from `displayName` (PRD §9,
 	 * decision 20): two friends may both be "Alex" to the group, and either may

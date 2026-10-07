@@ -300,6 +300,16 @@
 	"mail.rating.link": "Hier bewerten: {link}",
 	"mail.rating.opt_out": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus.",
 	"mail.rating.opt_out_link": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus: {link}",
+	"mail.night.scheduled.subject": "{group}: Filmnacht am {when}",
+	"mail.night.scheduled.body": "Für {group} ist eine Filmnacht am {when} geplant.",
+	"mail.night.cancelled.subject": "{group}: Filmnacht am {when} abgesagt",
+	"mail.night.cancelled.body": "Die Filmnacht von {group} am {when} wurde abgesagt.",
+	"mail.night.where": "Ort: {location}",
+	"mail.night.link": "Details und Zusage: {link}",
+	"mail.night.calendar": "Die angehängte Einladung trägt sie in deinen Kalender ein.",
+	"mail.night.calendar_cancel": "Die angehängte Änderung entfernt sie aus deinem Kalender.",
+	"mail.night.opt_out": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus.",
+	"mail.night.opt_out_link": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus: {link}",
 	"mail.reset.subject": "Setze dein Filmnacht-Passwort zurück",
 	"mail.reset.body": "Öffne diesen Link innerhalb einer Stunde, um ein neues Passwort zu wählen:\n\n{link}\n\nWenn du das nicht angefordert hast, hat sich nichts geändert und du kannst diese Nachricht ignorieren."
 }

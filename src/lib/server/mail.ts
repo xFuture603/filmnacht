@@ -19,11 +19,23 @@ export function isMailConfigured(): boolean {
  * eventually leak one of them, so the distinction is destroyed here rather than
  * passed up and carefully ignored at every call site.
  */
-export async function sendMail(to: string, subject: string, body: string): Promise<boolean> {
+export async function sendMail(
+	to: string,
+	subject: string,
+	body: string,
+	calendar?: { method: 'REQUEST' | 'CANCEL'; content: string }
+): Promise<boolean> {
 	if (!isMailConfigured()) return false;
 
 	try {
-		await transport().sendMail({ from: env.SMTP_FROM, to, subject, text: body });
+		await transport().sendMail({
+			from: env.SMTP_FROM,
+			to,
+			subject,
+			text: body,
+			// Shown by mail clients as an invite with Accept/Decline, or as a cancellation.
+			...(calendar ? { icalEvent: { method: calendar.method, content: calendar.content } } : {})
+		});
 		return true;
 	} catch {
 		// Bare catch, deliberately: the error object carries the host, the user

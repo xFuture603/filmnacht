@@ -1,5 +1,6 @@
 import { db } from '$lib/server/db';
 import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
+import { notifyNightScheduled } from '$lib/server/night-mail';
 import { LOCATION_MAX, listNights, scheduleNight } from '$lib/server/nights';
 import { averagesFor } from '$lib/server/ratings';
 import { visit } from '$lib/server/seen';
@@ -79,6 +80,7 @@ export const actions: Actions = {
 			scheduledAt,
 			location: location || null
 		});
+		notifyNightScheduled(db, id, user.id);
 		redirect(303, `/groups/${params.groupId}/nights/${id}`);
 	}
 };
