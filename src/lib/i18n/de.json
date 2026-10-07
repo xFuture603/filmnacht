@@ -42,7 +42,7 @@
 	"settings.delete_title": "Gruppe löschen",
 	"settings.delete_hint": "Löscht die Gruppe mit allen Filmen, Filmnächten und Bewertungen, für alle Mitglieder. Das lässt sich nicht rückgängig machen.",
 	"settings.delete_label": "Tippe „{group}“ zur Bestätigung",
-	"settings.delete": "Gruppe endgültig löschen",
+	"settings.delete": "Gruppe löschen",
 	"settings.error.delete_name": "Das ist nicht genau der Name der Gruppe. Nichts wurde gelöscht.",
 	"admin.groups": "Gruppen",
 	"admin.groups_empty": "Noch keine Gruppen.",

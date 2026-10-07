@@ -211,18 +211,23 @@
 								{t(data.locale, 'admin.group_meta', { owner: group.owner, count: group.members })}
 							</p>
 						</div>
-						<form
-							method="POST"
-							action="?/deleteGroup"
-							class="flex flex-col gap-2 sm:flex-row sm:items-end"
-						>
+						<form method="POST" action="?/deleteGroup" class="flex flex-col gap-2">
 							<input type="hidden" name="groupId" value={group.id} />
-							<Field label={t(data.locale, 'settings.delete_label', { group: group.name })}>
-								<input name="name" required autocomplete="off" class="input min-h-11 w-full" />
-							</Field>
-							<button class="btn btn-outline btn-error min-h-11"
-								>{t(data.locale, 'settings.delete')}</button
+							<label class="text-sm font-medium" for="delete-{group.id}"
+								>{t(data.locale, 'settings.delete_label', { group: group.name })}</label
 							>
+							<div class="flex flex-col gap-2 sm:flex-row">
+								<input
+									id="delete-{group.id}"
+									name="name"
+									required
+									autocomplete="off"
+									class="input min-h-11 w-full sm:flex-1"
+								/>
+								<button class="btn btn-outline btn-error min-h-11"
+									>{t(data.locale, 'settings.delete')}</button
+								>
+							</div>
 						</form>
 					</li>
 				{/each}

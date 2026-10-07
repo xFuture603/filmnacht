@@ -192,15 +192,21 @@
 				<input class="input min-h-11 w-full font-mono text-sm" readonly value={form.inviteUrl} />
 			{/if}
 		{:else}
-			<form method="POST" action="?/leave" class="mt-4 flex flex-col gap-1">
-				<label class="flex min-h-11 cursor-pointer items-center gap-3">
-					<input type="checkbox" name="confirm" required class="checkbox" />
-					<span>{t(data.locale, 'groups.leave_confirm', { group: data.group.name })}</span>
-				</label>
-				<button class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
-					>{t(data.locale, 'groups.leave')}</button
-				>
+			<form
+				method="POST"
+				action="?/leave"
+				class="mt-2 flex flex-col gap-3 border-t border-base-300 pt-4"
+			>
 				<p class="text-sm text-base-content/70">{t(data.locale, 'groups.leave_hint')}</p>
+				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<label class="flex min-h-11 cursor-pointer items-center gap-3">
+						<input type="checkbox" name="confirm" required class="checkbox" />
+						<span>{t(data.locale, 'groups.leave_confirm', { group: data.group.name })}</span>
+					</label>
+					<button class="btn btn-outline min-h-11 w-full sm:w-auto"
+						>{t(data.locale, 'groups.leave')}</button
+					>
+				</div>
 			</form>
 		{/if}
 	</div>

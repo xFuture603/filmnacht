@@ -44,7 +44,7 @@
 	"settings.delete_title": "Delete group",
 	"settings.delete_hint": "Deletes the group with all its films, movie nights and ratings, for every member. This can't be undone.",
 	"settings.delete_label": "Type “{group}” to confirm",
-	"settings.delete": "Delete group for good",
+	"settings.delete": "Delete group",
 	"settings.error.delete_name": "That isn't the group's exact name. Nothing was deleted.",
 	"admin.groups": "Groups",
 	"admin.groups_empty": "No groups yet.",

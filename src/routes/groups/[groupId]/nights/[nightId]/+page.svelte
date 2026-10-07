@@ -17,7 +17,13 @@
 		X
 	} from '@lucide/svelte';
 	import NightStatus from '$lib/components/NightStatus.svelte';
+	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { startLiveRefresh } from '$lib/live-refresh';
 	let { data, form } = $props();
+
+	// A draw, RSVPs and ratings by others show up without a reload.
+	onMount(() => startLiveRefresh(invalidateAll));
 
 	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
 	const answers = ['yes', 'maybe', 'no'] as const;
