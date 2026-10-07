@@ -24,6 +24,7 @@
 	"auth.username_hint": "Letters, digits, dot, dash and underscore. This is what you sign in with.",
 	"auth.display_name": "Shown to the group as",
 	"auth.display_name_hint": "Change this any time. It does not have to be unique.",
+	"auth.email_optional": "Email (optional)",
 	"auth.password": "Password",
 	"auth.password_hint": "At least 8 characters.",
 	"auth.password_repeat": "Repeat password",

@@ -16,7 +16,13 @@ import { createUser } from './users';
  */
 export function claimInstance(
 	db: DB,
-	input: { username: string; displayName: string; passwordHash: string; timezone: string }
+	input: {
+		username: string;
+		displayName: string;
+		passwordHash: string;
+		timezone: string;
+		email?: string | null;
+	}
 ): SessionUser | null {
 	return db.transaction(() => {
 		if (isSetupComplete(db)) return null;
@@ -24,7 +30,8 @@ export function claimInstance(
 			username: input.username,
 			displayName: input.displayName,
 			passwordHash: input.passwordHash,
-			isAdmin: true
+			isAdmin: true,
+			email: input.email
 		});
 		setSetting(db, 'timezone', input.timezone);
 		setSetting(db, 'setup_complete', '1');

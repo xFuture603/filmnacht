@@ -82,3 +82,31 @@ describe('session cookie secure flag', () => {
 		);
 	});
 });
+
+describe('an optional email address at setup', () => {
+	async function setup(email: string) {
+		try {
+			return await actions.default({
+				request: formRequest({ ...validFields, email }),
+				cookies: cookieSpy(),
+				url: new URL('/setup', 'http://localhost')
+			} as never);
+		} catch (err) {
+			if (isRedirect(err)) return 'redirected';
+			throw err;
+		}
+	}
+
+	it("stores the admin's address", async () => {
+		expect(await setup('Admin@Example.org')).toBe('redirected');
+		expect(db.select({ email: users.email }).from(users).get()?.email).toBe('admin@example.org');
+	});
+
+	it('refuses an invalid address and claims nothing', async () => {
+		expect(await setup('nope')).toMatchObject({
+			status: 400,
+			data: { error: 'profile.error.email' }
+		});
+		expect(db.select().from(users).all()).toHaveLength(0);
+	});
+});

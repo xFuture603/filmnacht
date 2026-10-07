@@ -6,6 +6,7 @@ import {
 	UsernameTakenError,
 	usernameTaken,
 	validateDisplayName,
+	validateEmail,
 	validateUsername
 } from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
@@ -22,6 +23,9 @@ export const actions: Actions = {
 		if (!username) return fail(400, { error: 'auth.error.username' });
 		const displayName = validateDisplayName(form.get('displayName'));
 		if (!displayName) return fail(400, { error: 'setup.error.name' });
+		// Optional: '' means none, null means not an address.
+		const email = validateEmail(form.get('email'));
+		if (email === null) return fail(400, { error: 'profile.error.email' });
 
 		const timezone = String(form.get('timezone') ?? '');
 		if (!timezones.includes(timezone)) return fail(400, { error: 'setup.error.timezone' });
@@ -43,7 +47,7 @@ export const actions: Actions = {
 
 		let admin: { id: string } | null;
 		try {
-			admin = claimInstance(db, { username, displayName, passwordHash, timezone });
+			admin = claimInstance(db, { username, displayName, passwordHash, timezone, email });
 		} catch (err) {
 			// Same race as join: usernameTaken above is a pre-check, the unique
 			// index is the guarantee. Consistent handling with createUser's other

@@ -1,4 +1,5 @@
 import { isRedirect } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mocked before the SUT import so `+page.server.ts`'s `import { db } from
@@ -274,5 +275,54 @@ describe('session cookie secure flag', () => {
 			expect.any(String),
 			expect.objectContaining({ secure: true })
 		);
+	});
+});
+
+describe('an optional email address on joining', () => {
+	const fields = (username: string, email: string) => ({
+		username,
+		displayName: 'Lin',
+		password: 'a fine password here',
+		passwordRepeat: 'a fine password here',
+		email
+	});
+	const fresh = () => `lin-${crypto.randomUUID().slice(0, 8)}`;
+	const emailOf = (username: string) =>
+		db.select({ email: users.email }).from(users).where(eq(users.username, username)).get()?.email;
+
+	it('stores an address, lowercased', async () => {
+		const token = createInvite(db, { groupId, createdBy: ownerId });
+		const name = fresh();
+		await postExpectRedirect(token, fields(name, `${name}@Example.org`));
+		expect(emailOf(name)).toBe(`${name}@example.org`);
+	});
+
+	it('leaves it empty when none is given', async () => {
+		const token = createInvite(db, { groupId, createdBy: ownerId });
+		const name = fresh();
+		await postExpectRedirect(token, fields(name, ''));
+		expect(emailOf(name)).toBeNull();
+	});
+
+	it('refuses an invalid address and creates no account', async () => {
+		const token = createInvite(db, { groupId, createdBy: ownerId });
+		const before = userCount();
+		expect(await post(token, fields(fresh(), 'not-an-address'))).toMatchObject({
+			status: 400,
+			data: { error: 'profile.error.email' }
+		});
+		expect(userCount()).toBe(before);
+	});
+
+	it('refuses an address another account has, and creates no account', async () => {
+		const token = createInvite(db, { groupId, createdBy: ownerId });
+		const first = fresh();
+		await postExpectRedirect(token, fields(first, `${first}@example.org`));
+		const before = userCount();
+		expect(await post(token, fields(fresh(), `${first}@example.org`))).toMatchObject({
+			status: 400,
+			data: { error: 'profile.error.email_taken' }
+		});
+		expect(userCount()).toBe(before);
 	});
 });

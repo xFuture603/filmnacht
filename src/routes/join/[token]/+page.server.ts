@@ -5,9 +5,11 @@ import { lookupInvite, redeemInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
 import {
 	createUser,
+	EmailTakenError,
 	UsernameTakenError,
 	usernameTaken,
 	validateDisplayName,
+	validateEmail,
 	validateUsername
 } from '$lib/server/users';
 import { fail, redirect } from '@sveltejs/kit';
@@ -53,6 +55,9 @@ export const actions: Actions = {
 		if (!username) return fail(400, { error: 'auth.error.username' });
 		const displayName = validateDisplayName(form.get('displayName'));
 		if (!displayName) return fail(400, { error: 'invite.error.name' });
+		// Optional: '' means none, null means not an address.
+		const email = validateEmail(form.get('email'));
+		if (email === null) return fail(400, { error: 'profile.error.email' });
 		const password = validatePassword(form.get('password'));
 		if (!password) return fail(400, { error: 'auth.error.password' });
 		if (password !== form.get('passwordRepeat')) {
@@ -78,8 +83,13 @@ export const actions: Actions = {
 
 		let user: { id: string };
 		try {
-			user = createUser(db, { username, displayName, passwordHash });
+			user = createUser(db, { username, displayName, passwordHash, email });
 		} catch (err) {
+			// Same message as the profile. It does confirm the address has an
+			// account here, accepted there already for a private friends' group.
+			if (err instanceof EmailTakenError) {
+				return fail(400, { error: 'profile.error.email_taken' });
+			}
 			// usernameTaken above is a pre-check, not a guarantee: two submissions
 			// can race past it while both hash. The unique index is the real
 			// guarantee, and this is what turns its violation into the translated

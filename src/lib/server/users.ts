@@ -46,7 +46,14 @@ export class UsernameTakenError extends Error {}
 
 export function createUser(
 	db: DB,
-	input: { username: string; displayName: string; passwordHash: string; isAdmin?: boolean }
+	input: {
+		username: string;
+		displayName: string;
+		passwordHash: string;
+		isAdmin?: boolean;
+		/** Already validated (validateEmail); stored in the same insert as the account. */
+		email?: string | null;
+	}
 ): SessionUser {
 	const id = crypto.randomUUID();
 	const isAdmin = input.isAdmin ?? false;
@@ -64,10 +71,18 @@ export function createUser(
 				displayName: input.displayName,
 				passwordHash: input.passwordHash,
 				isAdmin,
-				loginTokenHash: hashToken(generateToken())
+				loginTokenHash: hashToken(generateToken()),
+				email: input.email?.trim().toLowerCase() || null
 			})
 			.run();
 	} catch (err) {
+		if (
+			err instanceof Database.SqliteError &&
+			err.code === 'SQLITE_CONSTRAINT_UNIQUE' &&
+			err.message.includes('users.email')
+		) {
+			throw new EmailTakenError(input.email ?? '');
+		}
 		// Matched narrowly on the username column specifically, not on the
 		// generic UNIQUE code alone: users.login_token_hash is also unique, and
 		// mislabelling that astronomically unlikely collision as "username

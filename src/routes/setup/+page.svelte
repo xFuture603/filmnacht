@@ -35,6 +35,19 @@
 			/>
 		</Field>
 
+		<Field
+			label={t(data.locale, 'auth.email_optional')}
+			hint={t(data.locale, 'profile.email_hint')}
+		>
+			<input
+				name="email"
+				type="email"
+				maxlength="254"
+				autocomplete="email"
+				class="input min-h-11 w-full"
+			/>
+		</Field>
+
 		<Field label={t(data.locale, 'auth.password')} hint={t(data.locale, 'auth.password_hint')}>
 			<input
 				name="password"

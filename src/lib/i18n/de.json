@@ -22,6 +22,7 @@
 	"auth.username_hint": "Buchstaben, Ziffern, Punkt, Bindestrich und Unterstrich. Damit meldest du dich an.",
 	"auth.display_name": "Der Gruppe angezeigt als",
 	"auth.display_name_hint": "Jederzeit änderbar. Muss nicht eindeutig sein.",
+	"auth.email_optional": "E-Mail (optional)",
 	"auth.password": "Passwort",
 	"auth.password_hint": "Mindestens 8 Zeichen.",
 	"auth.password_repeat": "Passwort wiederholen",
