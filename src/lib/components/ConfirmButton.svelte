@@ -10,10 +10,21 @@
 	 */
 	let {
 		armed: armedByServer = false,
+		destructive = false,
+		quiet = false,
 		armedLabel,
 		class: className = '',
 		children
-	}: { armed?: boolean; armedLabel: string; class?: string; children: Snippet } = $props();
+	}: {
+		armed?: boolean;
+		/** Can't be undone (cancel, leave): the armed step turns red (Practical UI). */
+		destructive?: boolean;
+		/** A plain text button until armed (Practical UI: tertiary, low prominence). */
+		quiet?: boolean;
+		armedLabel: string;
+		class?: string;
+		children: Snippet;
+	} = $props();
 
 	let clicked = $state(false);
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -31,7 +42,15 @@
 </script>
 
 {#if armed}<input type="hidden" name="confirm" value="on" />{/if}
-<button {onclick} class={[className, armed && 'btn-warning']}>
+<button
+	{onclick}
+	class={[
+		className,
+		// Only while unarmed: the armed red must not be overridden by "transparent".
+		quiet && !armed && 'border-none bg-transparent px-0 shadow-none hover:underline',
+		armed && (destructive ? 'btn-error' : 'btn-warning')
+	]}
+>
 	<span aria-live="polite" class="inline-flex items-center gap-1">
 		{#if armed}{armedLabel}{:else}{@render children()}{/if}
 	</span>

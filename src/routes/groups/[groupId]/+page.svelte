@@ -209,6 +209,7 @@
 				<p class="text-sm text-base-content/70">{t(data.locale, 'groups.leave_hint')}</p>
 				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<ConfirmButton
+						destructive
 						armed={form?.confirm === 'leave'}
 						armedLabel={t(data.locale, 'confirm.again')}
 						class="btn btn-outline min-h-11 w-full sm:w-auto "

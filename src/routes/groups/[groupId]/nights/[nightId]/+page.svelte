@@ -345,7 +345,9 @@
 				<ConfirmButton
 					armed={form?.confirm === 'cancel'}
 					armedLabel={t(data.locale, 'confirm.again')}
-					class="btn btn-ghost min-h-11 w-full text-error sm:w-auto sm:self-start"
+					destructive
+					quiet
+					class="btn min-h-11 self-start"
 				>
 					<CircleX class="size-4" />{t(data.locale, 'night.cancel')}
 				</ConfirmButton>
