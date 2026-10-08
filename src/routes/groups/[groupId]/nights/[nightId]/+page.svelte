@@ -179,9 +179,10 @@
 					</p>
 					<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.hidden_until')}</p>
 					{#if rateOpen}
-						<!-- <details>: changing works without JavaScript too. -->
-						<details class="mt-1">
-							<summary class="btn min-h-11 w-full btn-outline sm:w-auto"
+						<!-- <details>: changing works without JavaScript too. The summary is
+						     only the way in, so it goes once the form is open. -->
+						<details class="group mt-1">
+							<summary class="btn min-h-11 w-full btn-outline group-open:hidden sm:w-auto"
 								>{t(data.locale, 'ratings.change')}</summary
 							>
 							<div class="mt-2 flex flex-col gap-2">
@@ -239,8 +240,8 @@
 
 				{#if rateOpen && rv.mine === null && rv.revealed}
 					<!-- Revealed, but the window is still open for whoever has not rated. -->
-					<details>
-						<summary class="btn min-h-11 w-full btn-outline sm:w-auto"
+					<details class="group">
+						<summary class="btn min-h-11 w-full btn-outline group-open:hidden sm:w-auto"
 							>{t(data.locale, 'ratings.rate_too')}</summary
 						>
 						<div class="mt-2">{@render rateForm()}</div>
