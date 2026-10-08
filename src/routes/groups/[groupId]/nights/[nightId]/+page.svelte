@@ -128,7 +128,9 @@
 			{#snippet rateForm()}
 				<form method="POST" action="?/rate" class="flex flex-col gap-3">
 					<div class="flex min-h-11 items-center gap-3">
-						<output for="score" class="w-14 text-3xl font-bold tabular-nums">{fmt(score)}</output>
+						<output for="score" class="w-[4ch] shrink-0 text-3xl font-bold tabular-nums"
+							>{fmt(score)}</output
+						>
 						<input
 							id="score"
 							type="range"
