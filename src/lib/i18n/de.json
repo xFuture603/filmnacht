@@ -1,6 +1,7 @@
 {
 	"app.name": "Filmnacht",
 	"confirm.again": "Zum Bestätigen nochmal klicken",
+	"origin.mismatch": "Diese Seite ist unter {browser} geöffnet, Filmnacht ist aber für {server} eingerichtet, daher funktionieren Formulare hier nicht. Setze ORIGIN in .env auf die Adresse, die du öffnest (hinter einem Reverse Proxy: dessen öffentliche https-Adresse), und erstelle den Container neu.",
 	"nav.groups": "Gruppen",
 	"nav.profile": "Profil",
 	"nav.admin": "Verwaltung",

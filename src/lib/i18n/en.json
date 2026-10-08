@@ -1,6 +1,7 @@
 {
 	"app.name": "Filmnacht",
 	"confirm.again": "Click again to confirm",
+	"origin.mismatch": "This page is open at {browser}, but Filmnacht is set up for {server}, so forms here will not work. Set ORIGIN in .env to the address you open (behind a reverse proxy: its public https address) and recreate the container.",
 	"nav.groups": "Groups",
 	"nav.profile": "Profile",
 	"nav.admin": "Administration",

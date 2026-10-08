@@ -4,8 +4,17 @@
 	import { CircleUser, ShieldCheck, Users } from '@lucide/svelte';
 	import TvLogo from '$lib/components/TvLogo.svelte';
 	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
+	import { onMount } from 'svelte';
+	import { originMismatch } from '$lib/origin';
 
 	let { data, children } = $props();
+
+	// Only the browser knows the address in its bar (see $lib/origin).
+	let browserOrigin = $state<string | null>(null);
+	onMount(() => (browserOrigin = location.origin));
+	const wrongOrigin = $derived(
+		browserOrigin !== null && originMismatch(data.serverOrigin, browserOrigin)
+	);
 
 	const sections = $derived(
 		[
@@ -61,6 +70,14 @@
 			data.user && 'pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6'
 		]}
 	>
+		{#if wrongOrigin}
+			<div class="alert alert-error mb-4" role="alert">
+				{t(data.locale, 'origin.mismatch', {
+					browser: browserOrigin ?? '',
+					server: data.serverOrigin
+				})}
+			</div>
+		{/if}
 		{@render children()}
 	</main>
 
