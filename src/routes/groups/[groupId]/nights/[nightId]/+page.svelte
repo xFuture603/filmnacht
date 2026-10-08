@@ -302,18 +302,20 @@
 			<h2 class="card-title text-lg">{t(data.locale, 'night.owner')}</h2>
 
 			{#if data.night.status === 'scheduled'}
-				<form method="POST" action="?/draw" class="flex flex-col gap-1">
-					<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start">
-						<Dices class="size-4" />{t(data.locale, 'night.draw')}
-					</button>
+				<!-- Hints above their buttons: read before pressing (Practical UI). -->
+				<form method="POST" action="?/draw" class="flex flex-col gap-2">
 					{#if !data.canDraw}
 						<p class="text-sm text-base-content/70">
 							{t(data.locale, 'night.error.no_candidates')}
 						</p>
 					{/if}
+					<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start">
+						<Dices class="size-4" />{t(data.locale, 'night.draw')}
+					</button>
 				</form>
 			{:else}
-				<form method="POST" action="?/markWatched" class="flex flex-col gap-1">
+				<form method="POST" action="?/markWatched" class="flex flex-col gap-2">
+					<p class="text-sm text-base-content/70">{t(data.locale, 'night.mark_watched_hint')}</p>
 					<ConfirmButton
 						armed={form?.confirm === 'markWatched'}
 						armedLabel={t(data.locale, 'confirm.again')}
@@ -321,11 +323,11 @@
 					>
 						<CircleCheck class="size-4" />{t(data.locale, 'night.mark_watched')}
 					</ConfirmButton>
-					<p class="text-sm text-base-content/70">{t(data.locale, 'night.mark_watched_hint')}</p>
 				</form>
 
 				{#if !data.night.redrawUsed}
-					<form method="POST" action="?/redraw" class="mt-2 flex flex-col gap-1">
+					<form method="POST" action="?/redraw" class="mt-4 flex flex-col gap-2">
+						<p class="text-sm text-base-content/70">{t(data.locale, 'night.redraw_hint')}</p>
 						<ConfirmButton
 							armed={form?.confirm === 'redraw'}
 							armedLabel={t(data.locale, 'confirm.again')}
@@ -333,7 +335,6 @@
 						>
 							<RotateCcw class="size-4" />{t(data.locale, 'night.redraw')}
 						</ConfirmButton>
-						<p class="text-sm text-base-content/70">{t(data.locale, 'night.redraw_hint')}</p>
 					</form>
 				{/if}
 			{/if}

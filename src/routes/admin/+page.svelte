@@ -138,13 +138,14 @@
 		{/if}
 
 		{#if data.myEmail}
-			<form method="POST" action="?/testMail" class="flex flex-col gap-1">
-				<button class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start">
-					<Send class="size-4" />{t(data.locale, 'admin.test_mail')}
-				</button>
+			<!-- Where it goes, read before pressing (hints above, Practical UI). -->
+			<form method="POST" action="?/testMail" class="flex flex-col gap-2">
 				<p class="text-sm text-base-content/70">
 					{t(data.locale, 'admin.test_mail_to', { email: data.myEmail })}
 				</p>
+				<button class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start">
+					<Send class="size-4" />{t(data.locale, 'admin.test_mail')}
+				</button>
 			</form>
 		{:else}
 			<p class="text-sm text-base-content/70">
