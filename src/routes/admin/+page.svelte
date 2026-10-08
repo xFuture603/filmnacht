@@ -79,8 +79,8 @@
 				name="locale"
 				value={data.emailLocale}
 				options={locales.map((l) => ({ value: l, label: languageNames[l] }))}
+				hint={t(data.locale, 'admin.email_locale_hint')}
 			/>
-			<p class="text-sm text-base-content/70">{t(data.locale, 'admin.email_locale_hint')}</p>
 			<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.email_locale_save')}</button
 			>
@@ -143,7 +143,7 @@
 				<p class="text-sm text-base-content/70">
 					{t(data.locale, 'admin.test_mail_to', { email: data.myEmail })}
 				</p>
-				<button class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start">
+				<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start">
 					<Send class="size-4" />{t(data.locale, 'admin.test_mail')}
 				</button>
 			</form>

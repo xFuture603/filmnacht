@@ -215,10 +215,10 @@
 			<form
 				method="POST"
 				action="?/leave"
-				class="mt-2 flex flex-col gap-3 border-t border-base-300 pt-4"
+				class="mt-2 flex flex-col gap-2 border-t border-base-300 pt-4"
 			>
 				<p class="text-sm text-base-content/70">{t(data.locale, 'groups.leave_hint')}</p>
-				<div class="flex flex-col gap-2 sm:flex-row">
+				<div class="mt-2 flex flex-col gap-2 sm:flex-row">
 					<ConfirmButton
 						destructive
 						armed={form?.confirm === 'leave'}

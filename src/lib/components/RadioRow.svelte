@@ -9,17 +9,20 @@
 		legend,
 		name,
 		options,
-		value
+		value,
+		hint
 	}: {
 		legend: string;
 		name: string;
 		options: { value: string | number; label: string }[];
 		value: string | number;
+		hint?: string;
 	} = $props();
 </script>
 
 <fieldset class="fieldset">
 	<legend class="fieldset-legend text-sm">{legend}</legend>
+	{#if hint}<p class="label text-sm whitespace-normal">{hint}</p>{/if}
 	{#each options as option (option.value)}
 		<!-- The whole row is the 48px target, not just the circle. -->
 		<label class="flex min-h-12 cursor-pointer items-center gap-3 text-base">

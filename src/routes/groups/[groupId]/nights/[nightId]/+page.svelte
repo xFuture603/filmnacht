@@ -309,7 +309,7 @@
 							{t(data.locale, 'night.error.no_candidates')}
 						</p>
 					{/if}
-					<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start">
+					<button class="btn btn-primary mt-2 min-h-12 w-full sm:w-auto sm:self-start">
 						<Dices class="size-4" />{t(data.locale, 'night.draw')}
 					</button>
 				</form>
@@ -319,7 +319,7 @@
 					<ConfirmButton
 						armed={form?.confirm === 'markWatched'}
 						armedLabel={t(data.locale, 'confirm.again')}
-						class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start"
+						class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 					>
 						<CircleCheck class="size-4" />{t(data.locale, 'night.mark_watched')}
 					</ConfirmButton>
@@ -331,7 +331,7 @@
 						<ConfirmButton
 							armed={form?.confirm === 'redraw'}
 							armedLabel={t(data.locale, 'confirm.again')}
-							class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start"
+							class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 						>
 							<RotateCcw class="size-4" />{t(data.locale, 'night.redraw')}
 						</ConfirmButton>
