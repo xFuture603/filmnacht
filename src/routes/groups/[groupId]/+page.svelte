@@ -1,4 +1,6 @@
 <script lang="ts">
+	import CopyField from '$lib/components/CopyField.svelte';
+	import { enhance } from '$app/forms';
 	import { t } from '$lib/i18n';
 	import NewBadge from '$lib/components/NewBadge.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
@@ -191,14 +193,23 @@
 		</ul>
 
 		{#if data.group.role === 'owner'}
-			<form method="POST" action="?/invite" class="mt-2">
+			<!-- Enhanced: the page stays where it is instead of jumping to the top. -->
+			<form method="POST" action="?/invite" class="mt-2" use:enhance>
 				<button class="btn btn-outline min-h-12 w-full sm:w-auto"
 					>{t(data.locale, 'invite.create')}</button
 				>
 			</form>
 			{#if form?.inviteUrl}
 				<p class="mt-2 text-sm">{t(data.locale, 'invite.created')}</p>
-				<input class="input min-h-12 w-full font-mono text-sm" readonly value={form.inviteUrl} />
+				{#key form.inviteUrl}
+					<CopyField
+						value={form.inviteUrl}
+						label={t(data.locale, 'invite.link_label')}
+						copyLabel={t(data.locale, 'common.copy')}
+						copiedLabel={t(data.locale, 'common.copied')}
+						autoCopy
+					/>
+				{/key}
 			{/if}
 		{:else}
 			<form

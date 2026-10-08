@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CopyField from '$lib/components/CopyField.svelte';
 	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import RadioRow from '$lib/components/RadioRow.svelte';
 	import { locales, t, type Locale } from '$lib/i18n';
@@ -43,10 +44,15 @@
 	<div class="alert alert-success alert-soft mb-2" role="alert">
 		{t(data.locale, 'admin.recovered', { name: form.recoveredName })}
 	</div>
-	<!-- Readonly input rather than a <code> block, matching the login link on
-	     /profile: it is the one thing on this page that has to be selected and
-	     copied, often on a phone. -->
-	<input class="input mb-6 min-h-12 w-full font-mono text-sm" readonly value={form.recoveryUrl} />
+	<!-- The one thing on this page that has to be copied, often on a phone. -->
+	<div class="mb-6">
+		<CopyField
+			value={form.recoveryUrl}
+			label={t(data.locale, 'admin.recovery_link_label')}
+			copyLabel={t(data.locale, 'common.copy')}
+			copiedLabel={t(data.locale, 'common.copied')}
+		/>
+	</div>
 {/if}
 
 <section class={card}>

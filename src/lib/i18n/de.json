@@ -62,6 +62,8 @@
 	"error.home": "Zurück zum Start",
 	"invite.create": "Einladungslink erstellen",
 	"invite.created": "Schick diesen Link an deine Freunde. Er gilt 7 Tage und für bis zu 12 Personen.",
+	"invite.link_label": "Einladungslink",
+	"admin.recovery_link_label": "Wiederherstellungslink",
 	"invite.join_title": "{group} beitreten",
 	"invite.join_as": "Du bist als {name} angemeldet. Tritt der Gruppe als du selbst bei.",
 	"invite.join_submit": "Gruppe beitreten",

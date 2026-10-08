@@ -37,8 +37,12 @@
 		<button class="btn btn-primary mt-2 min-h-12 w-full">{t(data.locale, 'login.submit')}</button>
 	</form>
 
-	<p class="text-sm text-base-content/70">
-		{t(data.locale, 'login.forgot')}
-		<a class="link" href="/reset">{t(data.locale, 'reset.title')}</a>
-	</p>
+	<!-- Only once a sign-in failed: before that it is noise for everyone who
+	     knows their password. /reset itself stays reachable directly. -->
+	{#if form?.error === 'login.failed' || form?.error === 'login.rate_limited'}
+		<p class="text-sm text-base-content/70">
+			{t(data.locale, 'login.forgot')}
+			<a class="link" href="/reset">{t(data.locale, 'reset.title')}</a>
+		</p>
+	{/if}
 </FormCard>

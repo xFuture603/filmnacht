@@ -64,6 +64,8 @@
 	"error.home": "Back to start",
 	"invite.create": "Create invite link",
 	"invite.created": "Send this link to your friends. It works for 7 days and for up to 12 people.",
+	"invite.link_label": "Invite link",
+	"admin.recovery_link_label": "Recovery link",
 	"invite.join_title": "Join {group}",
 	"invite.join_as": "You are signed in as {name}. Join this group as yourself.",
 	"invite.join_submit": "Join the group",

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CopyField from '$lib/components/CopyField.svelte';
 	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import Toast from '$lib/components/Toast.svelte';
@@ -160,9 +161,13 @@
 		</form>
 
 		{#if form?.loginUrl}
-			<Field label={t(data.locale, 'profile.login_link')}>
-				<input class="input min-h-12 w-full font-mono text-sm" readonly value={form.loginUrl} />
-			</Field>
+			<p class="mt-4 text-sm font-bold">{t(data.locale, 'profile.login_link')}</p>
+			<CopyField
+				value={form.loginUrl}
+				label={t(data.locale, 'profile.login_link')}
+				copyLabel={t(data.locale, 'common.copy')}
+				copiedLabel={t(data.locale, 'common.copied')}
+			/>
 		{/if}
 	</div>
 </section>
