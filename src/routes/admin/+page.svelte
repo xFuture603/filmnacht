@@ -58,7 +58,7 @@
 					{/each}
 				</select>
 			</Field>
-			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+			<button class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.timezone_save')}</button
 			>
 		</form>
@@ -76,7 +76,7 @@
 					{/each}
 				</select>
 			</Field>
-			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+			<button class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.email_locale_save')}</button
 			>
 		</form>

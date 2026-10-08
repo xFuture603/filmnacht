@@ -320,7 +320,7 @@
 					<ConfirmButton
 						armed={form?.confirm === 'markWatched'}
 						armedLabel={t(data.locale, 'confirm.again')}
-						class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
+						class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
 					>
 						<CircleCheck class="size-4" />{t(data.locale, 'night.mark_watched')}
 					</ConfirmButton>

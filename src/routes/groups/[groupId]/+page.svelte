@@ -35,11 +35,11 @@
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
 {/if}
 
-{#each data.toRate as night (night.id)}
-	<section class="card mb-4 border border-primary bg-base-100 shadow-sm">
+{#each data.toRate as night, i (night.id)}
+	<section class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
 		<div class="card-body flex-row flex-wrap items-center gap-4">
 			<span
-				class="grid size-11 shrink-0 place-items-center rounded-field bg-primary text-primary-content"
+				class="grid size-11 shrink-0 place-items-center rounded-field bg-base-200 text-base-content"
 			>
 				<Star class="size-5" />
 			</span>
@@ -52,7 +52,7 @@
 				</p>
 			</div>
 			<a
-				class="btn btn-primary min-h-11 w-full sm:w-auto"
+				class={['btn min-h-11 w-full sm:w-auto', i === 0 ? 'btn-primary' : 'btn-outline']}
 				href="/groups/{data.group.groupId}/nights/{night.id}">{t(data.locale, 'rate.now')}</a
 			>
 		</div>
@@ -94,7 +94,7 @@
 					{t(data.locale, `next.you.${next.myResponse ?? 'none'}`)}
 				</p>
 				<a
-					class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+					class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
 					href="/groups/{data.group.groupId}/nights/{next.id}">{t(data.locale, 'next.open')}</a
 				>
 			</div>
@@ -107,7 +107,11 @@
 		<p class="text-sm text-base-content/70">
 			{t(data.locale, 'pool.count', { used: data.used, max: data.max })}
 		</p>
-		<a class="btn btn-primary min-h-11" href="/groups/{data.group.groupId}/add">
+		<!-- One primary action per screen: a due rating outranks adding a film. -->
+		<a
+			class={['btn min-h-11', data.toRate.length > 0 ? 'btn-outline' : 'btn-primary']}
+			href="/groups/{data.group.groupId}/add"
+		>
 			<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
 		</a>
 	</div>
@@ -121,12 +125,14 @@
 					<div class="relative">
 						<Poster src={entry.posterUrl} />
 						{#if entry.mine}
-							<span class="badge badge-sm badge-neutral absolute top-2 left-2 shadow-sm">
+							<span
+								class="badge badge-sm absolute top-2 left-2 border-base-300 bg-base-100 shadow-sm"
+							>
 								{t(data.locale, 'pool.yours')}
 							</span>
 						{/if}
 						{#if entry.isNew || shownNew.has(entry.suggestionId)}
-							<span class="badge badge-sm badge-primary absolute top-2 right-2 shadow-sm">
+							<span class="badge badge-sm badge-neutral absolute top-2 right-2 shadow-sm">
 								{t(data.locale, 'new.badge')}
 							</span>
 						{/if}

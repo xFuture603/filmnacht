@@ -7,7 +7,8 @@
 	let { data, form } = $props();
 
 	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
-	const submit = 'btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start';
+	// Several equal forms on one page: secondary buttons, no single primary.
+	const submit = 'btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start';
 </script>
 
 <PageHeader title={t(data.locale, 'profile.title')} />

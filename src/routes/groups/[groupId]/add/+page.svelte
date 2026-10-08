@@ -49,7 +49,7 @@
 										<button
 											name="tmdbId"
 											value={result.tmdbId}
-											class="btn btn-primary btn-sm mt-auto min-h-11 w-full"
+											class="btn btn-outline btn-sm mt-auto min-h-11 w-full"
 											aria-label={t(data.locale, 'add.adopt_named', { title: result.title })}
 										>
 											{t(data.locale, 'add.adopt')}
@@ -79,8 +79,12 @@
 			<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
 				<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"></textarea>
 			</Field>
-			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
-				>{t(data.locale, 'add.submit')}</button
+			<!-- The fallback: primary only when search is not available. -->
+			<button
+				class={[
+					'btn mt-2 min-h-11 w-full sm:w-auto sm:self-start',
+					data.tmdbEnabled ? 'btn-outline' : 'btn-primary'
+				]}>{t(data.locale, 'add.submit')}</button
 			>
 		</form>
 	</div>
