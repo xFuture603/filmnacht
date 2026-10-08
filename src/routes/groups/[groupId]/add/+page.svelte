@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Poster from '$lib/components/Poster.svelte';
@@ -73,6 +74,7 @@
 	<div class="card-body">
 		<h2 class="card-title text-lg">{t(data.locale, 'add.manual_heading')}</h2>
 		<form method="POST" action="?/manual" class="flex flex-col gap-2">
+			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'add.film_title')}>
 				<input name="title" required maxlength="200" class="input min-h-11 w-full" />
 			</Field>

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import RequiredNote from '$lib/components/RequiredNote.svelte';
+	import RadioRow from '$lib/components/RadioRow.svelte';
 	import { locales, t, type Locale } from '$lib/i18n';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Field from '$lib/components/Field.svelte';
@@ -66,16 +68,13 @@
 		<div class="divider my-2"></div>
 
 		<form method="POST" action="?/emailLocale" class="flex flex-col gap-2">
-			<Field
-				label={t(data.locale, 'admin.email_locale')}
-				hint={t(data.locale, 'admin.email_locale_hint')}
-			>
-				<select name="locale" required class="select min-h-11 w-full sm:w-40">
-					{#each locales as l (l)}
-						<option value={l} selected={l === data.emailLocale}>{languageNames[l]}</option>
-					{/each}
-				</select>
-			</Field>
+			<RadioRow
+				legend={t(data.locale, 'admin.email_locale')}
+				name="locale"
+				value={data.emailLocale}
+				options={locales.map((l) => ({ value: l, label: languageNames[l] }))}
+			/>
+			<p class="text-xs text-base-content/70">{t(data.locale, 'admin.email_locale_hint')}</p>
 			<button class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.email_locale_save')}</button
 			>
@@ -161,6 +160,7 @@
 		     account it acts on as name/value, which is plain HTML and needs no
 		     JavaScript and no password field per row. -->
 		<form method="POST" action="?/recover" class="flex flex-col gap-3">
+			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'admin.recover_password')}>
 				<!-- No minlength: an account may predate a bound change, and a client-side
 				     rule that disagrees with the server only ever locks someone out. -->

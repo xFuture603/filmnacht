@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import FormCard from '$lib/components/FormCard.svelte';
 	import Field from '$lib/components/Field.svelte';
@@ -15,6 +16,7 @@
 
 	{#if data.mailConfigured}
 		<form method="POST" class="flex flex-col gap-2">
+			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'reset.email')}>
 				<input
 					name="email"

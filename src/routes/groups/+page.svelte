@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import NewBadge from '$lib/components/NewBadge.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -47,6 +48,7 @@
 			<div class="alert alert-error alert-soft" role="alert">{t(data.locale, form.error)}</div>
 		{/if}
 		<form method="POST" action="?/create" class="flex flex-col gap-2">
+			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'groups.name')}>
 				<input name="name" required maxlength="60" class="input min-h-11 w-full" />
 			</Field>

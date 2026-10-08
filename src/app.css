@@ -105,3 +105,14 @@
 		color: var(--btn-color, var(--color-base-content));
 	}
 }
+
+/*
+ * Practical UI: mark required fields. Driven by the control's own `required`,
+ * so the star can never disagree with what the browser and server enforce.
+ * Screen readers already announce "required", so the star is hidden from them
+ * where the alt-text syntax is supported; elsewhere the first value applies.
+ */
+.fieldset:has(:is(input, select, textarea):required) > .fieldset-legend::after {
+	content: ' *';
+	content: ' *' / '';
+}

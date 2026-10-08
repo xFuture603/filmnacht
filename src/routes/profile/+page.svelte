@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import Toast from '$lib/components/Toast.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -12,6 +13,7 @@
 </script>
 
 <PageHeader title={t(data.locale, 'profile.title')} />
+<div class="mb-4"><RequiredNote locale={data.locale} /></div>
 
 {#if form?.error}
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
@@ -54,7 +56,10 @@
 	<div class="card-body">
 		<h2 class="card-title text-lg">{t(data.locale, 'profile.email')}</h2>
 		<form method="POST" action="?/setEmail" class="flex flex-col gap-2">
-			<Field label={t(data.locale, 'profile.email')} hint={t(data.locale, 'profile.email_hint')}>
+			<Field
+				label={t(data.locale, 'profile.email_label')}
+				hint={t(data.locale, 'profile.email_hint')}
+			>
 				<!-- Not required: leaving it empty is how you clear it. -->
 				<input
 					name="email"

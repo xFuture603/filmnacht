@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import RadioRow from '$lib/components/RadioRow.svelte';
+	import NumberStepper from '$lib/components/NumberStepper.svelte';
+	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Field from '$lib/components/Field.svelte';
@@ -80,15 +83,15 @@
 				</p>
 			</div>
 
-			<Field label={t(data.locale, 'settings.draw_before')}>
-				<select name="autoDrawHoursBefore" class="select min-h-11 w-full sm:w-64">
-					{#each data.choices.autoDrawHoursBefore as n (n)}
-						<option value={n} selected={n === s.autoDrawHoursBefore}
-							>{t(data.locale, 'settings.hours_before', { n })}</option
-						>
-					{/each}
-				</select>
-			</Field>
+			<RadioRow
+				legend={t(data.locale, 'settings.draw_before')}
+				name="autoDrawHoursBefore"
+				value={s.autoDrawHoursBefore}
+				options={data.choices.autoDrawHoursBefore.map((n) => ({
+					value: n,
+					label: t(data.locale, 'settings.hours_before', { n })
+				}))}
+			/>
 
 			<div class="flex flex-col gap-1">
 				<label class="flex min-h-11 cursor-pointer items-center gap-3">
@@ -122,33 +125,35 @@
 				</p>
 			</div>
 
-			<Field label={t(data.locale, 'settings.films_per_member')}>
-				<select name="maxOpenSuggestions" class="select min-h-11 w-full sm:w-64">
-					{#each data.choices.maxOpenSuggestions as n (n)}
-						<option value={n} selected={n === s.maxOpenSuggestions}>{n}</option>
-					{/each}
-				</select>
-			</Field>
+			<NumberStepper
+				legend={t(data.locale, 'settings.films_per_member')}
+				name="maxOpenSuggestions"
+				value={s.maxOpenSuggestions}
+				min={data.choices.maxOpenSuggestions[0]}
+				max={data.choices.maxOpenSuggestions.at(-1) ?? 10}
+				decreaseLabel={t(data.locale, 'common.decrease')}
+				increaseLabel={t(data.locale, 'common.increase')}
+			/>
 
-			<Field label={t(data.locale, 'settings.night_ends')}>
-				<select name="nightEndsAfterMinutes" class="select min-h-11 w-full sm:w-64">
-					{#each data.choices.nightEndsAfterMinutes as n (n)}
-						<option value={n} selected={n === s.nightEndsAfterMinutes}
-							>{t(data.locale, 'settings.hours_after', { n: n / 60 })}</option
-						>
-					{/each}
-				</select>
-			</Field>
+			<RadioRow
+				legend={t(data.locale, 'settings.night_ends')}
+				name="nightEndsAfterMinutes"
+				value={s.nightEndsAfterMinutes}
+				options={data.choices.nightEndsAfterMinutes.map((n) => ({
+					value: n,
+					label: t(data.locale, 'settings.hours_after', { n: n / 60 })
+				}))}
+			/>
 
-			<Field label={t(data.locale, 'settings.rating_window')}>
-				<select name="ratingWindowDays" class="select min-h-11 w-full sm:w-64">
-					{#each data.choices.ratingWindowDays as n (n)}
-						<option value={n} selected={n === s.ratingWindowDays}
-							>{t(data.locale, 'settings.days', { n })}</option
-						>
-					{/each}
-				</select>
-			</Field>
+			<RadioRow
+				legend={t(data.locale, 'settings.rating_window')}
+				name="ratingWindowDays"
+				value={s.ratingWindowDays}
+				options={data.choices.ratingWindowDays.map((n) => ({
+					value: n,
+					label: t(data.locale, 'settings.days', { n })
+				}))}
+			/>
 
 			<button class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'settings.save')}</button
@@ -164,6 +169,7 @@
 		</h2>
 		<p class="text-sm text-base-content/70">{t(data.locale, 'settings.delete_hint')}</p>
 		<form method="POST" action="?/deleteGroup" class="flex flex-col gap-2">
+			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'settings.delete_label', { group: data.group.name })}>
 				<input name="name" required autocomplete="off" class="input min-h-11 w-full" />
 			</Field>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import FormCard from '$lib/components/FormCard.svelte';
 	import Field from '$lib/components/Field.svelte';
@@ -11,6 +12,7 @@
 	{/if}
 
 	<form method="POST" class="flex flex-col gap-2">
+		<RequiredNote locale={data.locale} />
 		<!-- Without this the action's form.get('redirectTo') is always null and
 		     every sign-in lands on /groups, silently dropping the deep link. -->
 		<input type="hidden" name="redirectTo" value={data.redirectTo} />
