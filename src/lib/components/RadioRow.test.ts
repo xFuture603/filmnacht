@@ -15,7 +15,7 @@ describe('RadioRow', () => {
 				]
 			}
 		});
-		// Practical UI: keep the radio circle so one-of-many reads as one-of-many.
+		// Keep the radio circle so one-of-many reads as one-of-many.
 		expect(body).toContain('class="radio');
 		expect(body).not.toContain('class="btn');
 		expect(body).toContain('>3 days<');

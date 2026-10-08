@@ -138,7 +138,7 @@
 		{/if}
 
 		{#if data.myEmail}
-			<!-- Where it goes, read before pressing (hints above, Practical UI). -->
+			<!-- Where it goes, read before pressing: hints sit above their buttons. -->
 			<form method="POST" action="?/testMail" class="flex flex-col gap-2">
 				<p class="text-sm text-base-content/70">
 					{t(data.locale, 'admin.test_mail_to', { email: data.myEmail })}

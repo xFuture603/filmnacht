@@ -2,7 +2,7 @@
 	import Field from './Field.svelte';
 
 	/**
-	 * Over 400 zones: a field with suggestions as you type (Practical UI:
+	 * Over 400 zones: a field with suggestions as you type (an
 	 * autocomplete instead of a long dropdown). A native <datalist>, so no
 	 * script; the server still refuses anything not in the list.
 	 */

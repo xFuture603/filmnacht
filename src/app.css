@@ -107,7 +107,7 @@
 }
 
 /*
- * Practical UI: mark required fields. Driven by the control's own `required`,
+ * Mark required fields. Driven by the control's own `required`,
  * so the star can never disagree with what the browser and server enforce.
  * Screen readers already announce "required", so the star is hidden from them
  * where the alt-text syntax is supported; elsewhere the first value applies.
@@ -118,7 +118,7 @@
 }
 
 /*
- * Practical UI typography: two weights only, regular and bold. daisyUI's own
+ * Typography: two weights only, regular and bold. daisyUI's own
  * buttons, tabs, card titles and field labels default to 600; bold matches the
  * rest. The type scale is text-sm 14, text-base 16, text-lg 18, text-xl 20,
  * text-2xl 24, text-3xl 30, text-4xl 36: nothing smaller than 14.
@@ -130,7 +130,7 @@
 	font-weight: 700;
 }
 
-/* 40 to 80 characters per line read best (Practical UI); paragraphs stop at about 75. */
+/* 40 to 80 characters per line read best; paragraphs stop at about 75. */
 @layer base {
 	p {
 		max-width: 75ch;

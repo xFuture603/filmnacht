@@ -128,7 +128,7 @@
 	{#if day && slots.length === 0}
 		<p class="text-sm text-base-content/70">{t(locale, 'nights.no_times')}</p>
 	{:else}
-		<!-- Conventional radios (Practical UI): the circle says "pick one". -->
+		<!-- Conventional radios: the circle says "pick one". -->
 		<div class="grid grid-cols-3 gap-x-4 sm:grid-cols-5">
 			{#each slots as slot (slot)}
 				<label class="flex min-h-12 cursor-pointer items-center gap-2 tabular-nums">

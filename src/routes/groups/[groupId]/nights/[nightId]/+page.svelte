@@ -302,7 +302,7 @@
 			<h2 class="card-title text-lg">{t(data.locale, 'night.owner')}</h2>
 
 			{#if data.night.status === 'scheduled'}
-				<!-- Hints above their buttons: read before pressing (Practical UI). -->
+				<!-- Hints above their buttons: read before pressing. -->
 				<form method="POST" action="?/draw" class="flex flex-col gap-2">
 					{#if !data.canDraw}
 						<p class="text-sm text-base-content/70">

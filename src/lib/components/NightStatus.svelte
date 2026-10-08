@@ -5,7 +5,7 @@
 		locale
 	}: { status: 'scheduled' | 'drawn' | 'watched' | 'cancelled'; locale: Locale } = $props();
 
-	// Amber is for things you can press (Practical UI): status is neutral or a
+	// Amber is for things you can press: status is neutral or a
 	// system colour, and always text, never colour alone.
 	const tone = {
 		scheduled: 'badge-outline',

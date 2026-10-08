@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * A small number with − and + (Practical UI: steppers for numeric fields).
+	 * A small number with − and +, quicker than a dropdown of numbers.
 	 * The field stays a plain number input, so typing works without JavaScript
 	 * and the server keeps checking the range.
 	 */

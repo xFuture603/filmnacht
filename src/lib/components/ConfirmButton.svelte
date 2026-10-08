@@ -17,9 +17,9 @@
 		children
 	}: {
 		armed?: boolean;
-		/** Can't be undone (cancel, leave): the armed step turns red (Practical UI). */
+		/** Can't be undone (cancel, leave): the armed step turns red. */
 		destructive?: boolean;
-		/** A plain text button until armed (Practical UI: tertiary, low prominence). */
+		/** A plain text button until armed: a destructive action stays low-key. */
 		quiet?: boolean;
 		armedLabel: string;
 		class?: string;

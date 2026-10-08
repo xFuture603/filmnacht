@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * A handful of options as visible radio buttons, one click each, instead of a
-	 * dropdown (Practical UI). Conventional radios with the circle on the left:
+	 * dropdown. Conventional radios with the circle on the left:
 	 * styled as buttons they read as actions, or as more than one choice.
 	 * A <fieldset>, not Field: a <label> may wrap only one control.
 	 */
