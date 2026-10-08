@@ -5,7 +5,7 @@ Self-hosted movie nights for small groups, with a fair draw.
 ## Run with Docker
 
 ```sh
-curl -O https://raw.githubusercontent.com/xFuture603/filmnacht/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/xFuture603/filmnacht/main/compose.yaml
 curl -o .env https://raw.githubusercontent.com/xFuture603/filmnacht/main/.env.example
 # edit .env: set ORIGIN to the address people type, e.g. https://filmnacht.example.org
 docker compose up -d
@@ -16,17 +16,14 @@ of it. The first visit opens the setup page. Data lives in the `filmnacht-data`
 volume, which must be on local disk. Everything else you can set is described in
 `.env.example`.
 
-### Behind Traefik or NGINX
+### Hosting behind a Reverse Proxy
 
 - Set `ORIGIN` to the public address exactly as it appears in the browser, e.g.
-  `https://filmnacht.example.org`, with no trailing slash. The proxy may talk to the
-  container over plain http; `ORIGIN` alone decides what counts as the same site.
+  `https://filmnacht.example.org`, with no trailing slash.
 - If the page shows "This page is open at …, but Filmnacht is set up for …", the two
   differ and every form will be refused. Fix `ORIGIN` and run `docker compose up -d`.
 - A proxy running in Docker can reach the container over a shared network instead
   of the published port.
-- For per-client rate limiting behind the proxy, set `ADDRESS_HEADER` and
-  `XFF_DEPTH` as described in `.env.example`.
 
 Images are published to `ghcr.io/xfuture603/filmnacht` for amd64 and arm64 and
 signed with cosign. To pin a version, set `FILMNACHT_IMAGE=ghcr.io/xfuture603/filmnacht:1.2.3`.

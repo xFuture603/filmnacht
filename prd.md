@@ -10,7 +10,7 @@ A self-hosted web app where a group of friends collects movie suggestions, draws
 
 **Product principle.** Chance decides, not volume. Whoever did not get to pick the film gets to rate it afterwards — that is the playful compensation and the source of long-term engagement.
 
-**Scope.** Working title `filmnacht`. Open source under the MIT license, self-hosted, for private groups of 3–12 people. No monetization, no public user directory, no multi-tenant SaaS. Target installation: one `docker-compose.yml`, one `.env`, done.
+**Scope.** Working title `filmnacht`. Open source under the MIT license, self-hosted, for private groups of 3–12 people. No monetization, no public user directory, no multi-tenant SaaS. Target installation: one `compose.yaml`, one `.env`, done.
 
 ## 2. Goals and non-goals
 
@@ -287,7 +287,7 @@ The architecture follows a single guiding question: what does an operator have t
 
 **Deliberately not in the stack:** Redis, message queue, S3, a separate auth server, Kubernetes. None of it is necessary at this user count, and each one halves the number of people who will set the project up.
 
-**Deployment.** A `docker-compose.yml` with exactly one service. Configuration exclusively through environment variables. A single volume for the SQLite file and the poster cache. The first visit to the instance shows a setup screen that makes the first account the instance admin and asks for the timezone.
+**Deployment.** A `compose.yaml` with exactly one service. Configuration exclusively through environment variables. A single volume for the SQLite file and the poster cache. The first visit to the instance shows a setup screen that makes the first account the instance admin and asks for the timezone.
 
 One caveat belongs in the README rather than in a bug report: the volume holding the database must be local disk. SQLite's locking is not safe over NFS or SMB, and Synology and Pi operators are exactly the people who mount network storage by habit.
 
@@ -327,7 +327,7 @@ The cut is drawn by one criterion only: when can your own group use the app at a
 - [ ] Schedule a movie night, RSVP
 - [ ] Weighted draw with reproducible log, the four night states, re-draw and cancellation
 - [ ] Rating 1–10 with blind submission; reveal when all are in or the owner reveals
-- [ ] Docker image, `docker-compose.yml`, SQLite with pre-migration backup
+- [ ] Docker image, `compose.yaml`, SQLite with pre-migration backup
 - [ ] English and German
 - [ ] Vitest suite including the fairness simulation
 
