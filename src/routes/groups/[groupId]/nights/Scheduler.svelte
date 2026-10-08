@@ -128,17 +128,19 @@
 	{#if day && slots.length === 0}
 		<p class="text-sm text-base-content/70">{t(locale, 'nights.no_times')}</p>
 	{:else}
-		<div class="grid grid-cols-4 gap-2 sm:grid-cols-7">
+		<!-- Conventional radios (Practical UI): the circle says "pick one". -->
+		<div class="grid grid-cols-3 gap-x-4 sm:grid-cols-5">
 			{#each slots as slot (slot)}
-				<input
-					type="radio"
-					name="time"
-					value={slot}
-					aria-label={slot}
-					checked={slot === chosen}
-					onchange={() => (time = slot)}
-					class="btn min-h-12 px-2 tabular-nums"
-				/>
+				<label class="flex min-h-12 cursor-pointer items-center gap-2 tabular-nums">
+					<input
+						type="radio"
+						class="radio"
+						name="time"
+						value={slot}
+						checked={slot === chosen}
+						onchange={() => (time = slot)}
+					/>{slot}
+				</label>
 			{/each}
 		</div>
 	{/if}

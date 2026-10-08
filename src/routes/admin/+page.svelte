@@ -1,4 +1,5 @@
 <script lang="ts">
+	import TimezoneField from '$lib/components/TimezoneField.svelte';
 	import CopyField from '$lib/components/CopyField.svelte';
 	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import RadioRow from '$lib/components/RadioRow.svelte';
@@ -59,13 +60,12 @@
 	<div class="card-body">
 		<h2 class="card-title text-lg"><Globe class="size-5" />{t(data.locale, 'admin.settings')}</h2>
 		<form method="POST" action="?/timezone" class="flex flex-col gap-2">
-			<Field label={t(data.locale, 'admin.timezone')} hint={t(data.locale, 'admin.timezone_hint')}>
-				<select name="timezone" required class="select min-h-12 w-full sm:w-80">
-					{#each data.timezones as tz (tz)}
-						<option value={tz} selected={tz === data.timezone}>{tz}</option>
-					{/each}
-				</select>
-			</Field>
+			<TimezoneField
+				label={t(data.locale, 'admin.timezone')}
+				hint={t(data.locale, 'admin.timezone_hint')}
+				timezones={data.timezones}
+				value={data.timezone}
+			/>
 			<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.timezone_save')}</button
 			>

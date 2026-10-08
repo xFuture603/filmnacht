@@ -1,4 +1,5 @@
 <script lang="ts">
+	import TimezoneField from '$lib/components/TimezoneField.svelte';
 	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import FormCard from '$lib/components/FormCard.svelte';
@@ -74,13 +75,12 @@
 			/>
 		</Field>
 
-		<Field label={t(data.locale, 'setup.timezone')}>
-			<select name="timezone" required class="select min-h-12 w-full">
-				{#each data.timezones as tz (tz)}
-					<option value={tz} selected={tz === 'Europe/Berlin'}>{tz}</option>
-				{/each}
-			</select>
-		</Field>
+		<TimezoneField
+			label={t(data.locale, 'setup.timezone')}
+			hint={t(data.locale, 'setup.timezone_hint')}
+			timezones={data.timezones}
+			value="Europe/Berlin"
+		/>
 
 		<button class="btn btn-primary mt-2 min-h-12 w-full">{t(data.locale, 'setup.submit')}</button>
 	</form>

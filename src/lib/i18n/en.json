@@ -21,6 +21,7 @@
 	"setup.title": "Set up your instance",
 	"setup.intro": "This account becomes the instance admin. Pick the timezone your movie nights happen in.",
 	"setup.timezone": "Timezone",
+	"setup.timezone_hint": "Start typing a city, for example Berlin. Every date and time in the app uses this timezone.",
 	"setup.submit": "Create instance",
 	"setup.error.name": "Please enter a display name of up to 60 characters.",
 	"setup.error.timezone": "Please pick a timezone from the list.",

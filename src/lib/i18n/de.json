@@ -19,6 +19,7 @@
 	"setup.title": "Instanz einrichten",
 	"setup.intro": "Dieses Konto wird Instanz-Administrator. Wähle die Zeitzone, in der eure Filmabende stattfinden.",
 	"setup.timezone": "Zeitzone",
+	"setup.timezone_hint": "Tippe eine Stadt, zum Beispiel Berlin. Alle Daten und Uhrzeiten in der App nutzen diese Zeitzone.",
 	"setup.submit": "Instanz erstellen",
 	"setup.error.name": "Bitte gib einen Anzeigenamen mit höchstens 60 Zeichen ein.",
 	"setup.error.timezone": "Bitte wähle eine Zeitzone aus der Liste.",

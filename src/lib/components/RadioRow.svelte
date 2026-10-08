@@ -1,7 +1,8 @@
 <script lang="ts">
 	/**
 	 * A handful of options as visible radio buttons, one click each, instead of a
-	 * dropdown (Practical UI). Native radios: keyboard and no-JS work as usual.
+	 * dropdown (Practical UI). Conventional radios with the circle on the left:
+	 * styled as buttons they read as actions, or as more than one choice.
 	 * A <fieldset>, not Field: a <label> may wrap only one control.
 	 */
 	let {
@@ -19,17 +20,16 @@
 
 <fieldset class="fieldset">
 	<legend class="fieldset-legend text-sm">{legend}</legend>
-	<!-- Separate buttons, not a joined bar: on a phone they wrap cleanly. -->
-	<div class="flex flex-wrap gap-2">
-		{#each options as option (option.value)}
+	{#each options as option (option.value)}
+		<!-- The whole row is the 48px target, not just the circle. -->
+		<label class="flex min-h-12 cursor-pointer items-center gap-3 text-base">
 			<input
-				class="btn min-h-12"
+				class="radio"
 				type="radio"
 				{name}
 				value={option.value}
-				aria-label={option.label}
 				checked={option.value === value}
-			/>
-		{/each}
-	</div>
+			/><span>{option.label}</span>
+		</label>
+	{/each}
 </fieldset>
