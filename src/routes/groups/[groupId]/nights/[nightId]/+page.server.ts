@@ -137,7 +137,7 @@ export const actions: Actions = {
 		if (!cancelNight(db, params.nightId, user.id)) {
 			return fail(400, { error: 'night.error.cannot_cancel' });
 		}
-		notifyNightCancelled(db, params.nightId, user.id);
+		notifyNightCancelled(db, params.nightId);
 		return { cancelled: true };
 	},
 

@@ -80,7 +80,7 @@ export const actions: Actions = {
 			scheduledAt,
 			location: location || null
 		});
-		notifyNightScheduled(db, id, user.id);
+		notifyNightScheduled(db, id);
 		redirect(303, `/groups/${params.groupId}/nights/${id}`);
 	}
 };

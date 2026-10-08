@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { t, type Locale } from '$lib/i18n';
 import { formatWhen } from '$lib/time';
-import { and, eq, isNull, ne } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { DB } from './db/client';
 import { groups, memberships, movieNights, users } from './db/schema';
 import { groupSettings } from './group-settings';
@@ -11,8 +11,8 @@ import { getEmailLocale, getTimezone } from './settings';
 
 /**
  * "Night scheduled" and "night cancelled" emails, each with a calendar file
- * (ics.ts). Sent right after the action, like the draw email; the owner who
- * acted gets none, and can use the night page's "Add to calendar" instead.
+ * (ics.ts). Sent right after the action, like the draw email, to every member
+ * with an address, the owner who acted included: they want the entry too.
  */
 
 export function nightMailInfo(db: DB, nightId: string) {
@@ -41,7 +41,7 @@ export function nightMailInfo(db: DB, nightId: string) {
 	};
 }
 
-export function nightMailRecipients(db: DB, nightId: string, exceptUserId: string): string[] {
+export function nightMailRecipients(db: DB, nightId: string): string[] {
 	const night = db
 		.select({ groupId: movieNights.groupId })
 		.from(movieNights)
@@ -52,13 +52,7 @@ export function nightMailRecipients(db: DB, nightId: string, exceptUserId: strin
 		.select({ email: users.email, nightMails: users.nightMails })
 		.from(memberships)
 		.innerJoin(users, eq(users.id, memberships.userId))
-		.where(
-			and(
-				eq(memberships.groupId, night.groupId),
-				isNull(memberships.leftAt),
-				ne(users.id, exceptUserId)
-			)
-		)
+		.where(and(eq(memberships.groupId, night.groupId), isNull(memberships.leftAt)))
 		.all()
 		.filter((u) => u.nightMails)
 		.map((u) => u.email)
@@ -97,7 +91,6 @@ export function sendNightMail(
 	db: DB,
 	nightId: string,
 	kind: 'scheduled' | 'cancelled',
-	byUserId: string,
 	origin: string | null,
 	send: typeof sendMail = sendMail
 ): Promise<number> {
@@ -130,7 +123,7 @@ export function sendNightMail(
 			organizer,
 			attendee
 		});
-	const sends = nightMailRecipients(db, nightId, byUserId).map((to) =>
+	const sends = nightMailRecipients(db, nightId).map((to) =>
 		// Each send isolated: a throwing one must not cost the rest their email.
 		Promise.resolve()
 			.then(() => send(to, subject, body, { method, content: contentFor(to) }))
@@ -153,17 +146,15 @@ function later(fn: () => Promise<unknown>) {
 export function notifyNightScheduled(
 	db: DB,
 	nightId: string,
-	byUserId: string,
 	origin: string | null = env.ORIGIN ?? null
 ): void {
-	later(() => sendNightMail(db, nightId, 'scheduled', byUserId, origin));
+	later(() => sendNightMail(db, nightId, 'scheduled', origin));
 }
 
 export function notifyNightCancelled(
 	db: DB,
 	nightId: string,
-	byUserId: string,
 	origin: string | null = env.ORIGIN ?? null
 ): void {
-	later(() => sendNightMail(db, nightId, 'cancelled', byUserId, origin));
+	later(() => sendNightMail(db, nightId, 'cancelled', origin));
 }

@@ -72,8 +72,10 @@ describe('nightMailInfo', () => {
 });
 
 describe('nightMailRecipients', () => {
-	it('lists members with an address, minus the acting owner', () => {
-		expect(nightMailRecipients(db, nightId, ada).sort()).toEqual([
+	it('lists every member with an address, the owner who scheduled it included', () => {
+		// The owner wants the calendar entry from the email as much as anyone.
+		expect(nightMailRecipients(db, nightId).sort()).toEqual([
+			'ada@example.org',
 			'grace@example.org',
 			'lin@example.org'
 		]);
@@ -82,13 +84,13 @@ describe('nightMailRecipients', () => {
 	it('leaves out whoever opted out or left', () => {
 		db.update(users).set({ nightMails: false }).where(eq(users.id, grace)).run();
 		leaveGroup(db, lin, groupId);
-		expect(nightMailRecipients(db, nightId, ada)).toEqual([]);
+		expect(nightMailRecipients(db, nightId)).toEqual(['ada@example.org']);
 	});
 });
 
 describe('sendNightMail', () => {
 	it('sends the invite with a REQUEST calendar and no film', async () => {
-		expect(await sendNightMail(db, nightId, 'scheduled', ada, 'https://f.example', send)).toBe(2);
+		expect(await sendNightMail(db, nightId, 'scheduled', 'https://f.example', send)).toBe(3);
 		expect(sent[0].subject).toContain('Filmnacht: movie night on');
 		expect(sent[0].body).toContain('https://f.example/groups/');
 		expect(sent[0].calendar?.method).toBe('REQUEST');
@@ -96,15 +98,15 @@ describe('sendNightMail', () => {
 	});
 
 	it('sends the cancellation with a CANCEL calendar for the same event', async () => {
-		await sendNightMail(db, nightId, 'cancelled', ada, null, send);
+		await sendNightMail(db, nightId, 'cancelled', null, send);
 		expect(sent[0].subject).toContain('cancelled');
 		expect(sent[0].calendar?.method).toBe('CANCEL');
 		expect(sent[0].calendar?.content).toContain('UID:night-' + nightId + '@filmnacht');
 	});
 
 	it('names the sender as organizer and each recipient as the attendee of their copy', async () => {
-		await sendNightMail(db, nightId, 'cancelled', ada, null, send);
-		expect(sent).toHaveLength(2);
+		await sendNightMail(db, nightId, 'cancelled', null, send);
+		expect(sent).toHaveLength(3);
 		for (const s of sent) {
 			const content = s.calendar!.content.replace(/\r\n /g, '');
 			expect(content).toContain('ORGANIZER;CN=Filmnacht:mailto:films@example.org');
@@ -114,7 +116,7 @@ describe('sendNightMail', () => {
 
 	it('sends nothing without SMTP', async () => {
 		mailConfigured = false;
-		expect(await sendNightMail(db, nightId, 'scheduled', ada, null, send)).toBe(0);
+		expect(await sendNightMail(db, nightId, 'scheduled', null, send)).toBe(0);
 		expect(sent).toEqual([]);
 	});
 
@@ -123,7 +125,7 @@ describe('sendNightMail', () => {
 			if (to === 'grace@example.org') throw new Error('smtp exploded');
 			return send(to, subject, body, calendar);
 		};
-		await sendNightMail(db, nightId, 'scheduled', ada, null, flaky);
-		expect(sent.map((s) => s.to)).toEqual(['lin@example.org']);
+		await sendNightMail(db, nightId, 'scheduled', null, flaky);
+		expect(sent.map((s) => s.to).sort()).toEqual(['ada@example.org', 'lin@example.org']);
 	});
 });
