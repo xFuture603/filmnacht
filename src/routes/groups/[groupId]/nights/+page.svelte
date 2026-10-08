@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import NewBadge from '$lib/components/NewBadge.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
@@ -56,7 +57,7 @@
 								</span>
 							{/if}
 							{#if night.isNew || shownNew.has(night.id)}
-								<span class="badge badge-sm badge-neutral">{t(data.locale, 'new.badge')}</span>
+								<NewBadge label={t(data.locale, 'new.badge')} />
 							{/if}
 							<NightStatus status={night.status} locale={data.locale} />
 						</span>

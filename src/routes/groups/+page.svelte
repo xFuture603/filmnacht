@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import NewBadge from '$lib/components/NewBadge.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Field from '$lib/components/Field.svelte';
@@ -27,9 +28,7 @@
 					</span>
 					<span class="line-clamp-2 min-w-0 flex-1 font-semibold break-words">{group.name}</span>
 					{#if group.newCount > 0}
-						<span class="badge badge-sm badge-neutral"
-							>{t(data.locale, 'new.count', { count: group.newCount })}</span
-						>
+						<NewBadge label={t(data.locale, 'new.count', { count: group.newCount })} />
 					{/if}
 					{#if group.role === 'owner'}
 						<span class="badge badge-sm">{t(data.locale, 'groups.owner')}</span>

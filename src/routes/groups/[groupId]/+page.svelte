@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import NewBadge from '$lib/components/NewBadge.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
@@ -132,9 +133,10 @@
 							</span>
 						{/if}
 						{#if entry.isNew || shownNew.has(entry.suggestionId)}
-							<span class="badge badge-sm badge-neutral absolute top-2 right-2 shadow-sm">
-								{t(data.locale, 'new.badge')}
-							</span>
+							<NewBadge
+								label={t(data.locale, 'new.badge')}
+								class="absolute top-2 right-2 shadow-sm"
+							/>
 						{/if}
 						{#if entry.mine && entry.status === 'open'}
 							<!-- A 44px tap area around a 32px red dot: easy to hit, small on the poster. -->
