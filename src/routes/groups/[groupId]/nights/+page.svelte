@@ -44,10 +44,10 @@
 			<li>
 				<a
 					href="/groups/{data.group.groupId}/nights/{night.id}"
-					class="card flex min-h-11 w-full flex-col gap-1 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
+					class="card flex min-h-12 w-full flex-col gap-1 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
 				>
 					<div class="flex flex-wrap items-center justify-between gap-2">
-						<span class="font-semibold">{night.when}</span>
+						<span class="font-bold">{night.when}</span>
 						<span class="flex items-center gap-2">
 							{#if night.average !== null}
 								<span class="badge badge-sm badge-outline gap-1 tabular-nums">
@@ -101,7 +101,7 @@
 					echo={form ?? undefined}
 				/>
 
-				<button class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
+				<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start"
 					>{t(data.locale, 'nights.schedule')}</button
 				>
 			</form>
@@ -115,14 +115,14 @@
 
 {#if data.upcoming.length > 0}
 	<section class="mb-6">
-		<h2 class="mb-3 text-lg font-semibold">{t(data.locale, 'nights.upcoming')}</h2>
+		<h2 class="mb-3 text-lg font-bold">{t(data.locale, 'nights.upcoming')}</h2>
 		{@render list(data.upcoming)}
 	</section>
 {/if}
 
 {#if data.past.length > 0}
 	<section>
-		<h2 class="mb-3 text-lg font-semibold">{t(data.locale, 'nights.past')}</h2>
+		<h2 class="mb-3 text-lg font-bold">{t(data.locale, 'nights.past')}</h2>
 		{@render list(data.past)}
 	</section>
 {/if}

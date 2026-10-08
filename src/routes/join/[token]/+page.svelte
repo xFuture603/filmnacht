@@ -25,7 +25,7 @@
 		{#if data.user}
 			<p>{t(data.locale, 'invite.join_as', { name: data.user.displayName })}</p>
 			<form method="POST">
-				<button class="btn btn-primary min-h-11 w-full"
+				<button class="btn btn-primary min-h-12 w-full"
 					>{t(data.locale, 'invite.join_submit')}</button
 				>
 			</form>
@@ -39,7 +39,7 @@
 						minlength="3"
 						maxlength="32"
 						autocomplete="username"
-						class="input min-h-11 w-full"
+						class="input min-h-12 w-full"
 					/>
 				</Field>
 
@@ -52,7 +52,7 @@
 						required
 						maxlength="60"
 						autocomplete="nickname"
-						class="input min-h-11 w-full"
+						class="input min-h-12 w-full"
 					/>
 				</Field>
 
@@ -65,7 +65,7 @@
 						type="email"
 						maxlength="254"
 						autocomplete="email"
-						class="input min-h-11 w-full"
+						class="input min-h-12 w-full"
 					/>
 				</Field>
 
@@ -77,7 +77,7 @@
 						minlength="8"
 						maxlength="200"
 						autocomplete="new-password"
-						class="input min-h-11 w-full"
+						class="input min-h-12 w-full"
 					/>
 				</Field>
 
@@ -89,11 +89,11 @@
 						minlength="8"
 						maxlength="200"
 						autocomplete="new-password"
-						class="input min-h-11 w-full"
+						class="input min-h-12 w-full"
 					/>
 				</Field>
 
-				<button class="btn btn-primary mt-2 min-h-11 w-full"
+				<button class="btn btn-primary mt-2 min-h-12 w-full"
 					>{t(data.locale, 'invite.join_submit')}</button
 				>
 			</form>

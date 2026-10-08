@@ -53,7 +53,7 @@
 				</p>
 			</div>
 			<a
-				class={['btn min-h-11 w-full sm:w-auto', i === 0 ? 'btn-primary' : 'btn-outline']}
+				class={['btn min-h-12 w-full sm:w-auto', i === 0 ? 'btn-primary' : 'btn-outline']}
 				href="/groups/{data.group.groupId}/nights/{night.id}">{t(data.locale, 'rate.now')}</a
 			>
 		</div>
@@ -68,7 +68,7 @@
 				<Poster src={next.film?.posterUrl ?? null} />
 			</div>
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="text-sm font-medium text-base-content/70">{t(data.locale, 'next.title')}</p>
+				<p class="text-sm text-base-content/70">{t(data.locale, 'next.title')}</p>
 				<h2 class="text-xl font-bold break-words sm:text-2xl">
 					{#if next.film}
 						{next.film.title}
@@ -95,7 +95,7 @@
 					{t(data.locale, `next.you.${next.myResponse ?? 'none'}`)}
 				</p>
 				<a
-					class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+					class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 					href="/groups/{data.group.groupId}/nights/{next.id}">{t(data.locale, 'next.open')}</a
 				>
 			</div>
@@ -110,7 +110,7 @@
 		</p>
 		<!-- One primary action per screen: a due rating outranks adding a film. -->
 		<a
-			class={['btn min-h-11', data.toRate.length > 0 ? 'btn-outline' : 'btn-primary']}
+			class={['btn min-h-12', data.toRate.length > 0 ? 'btn-outline' : 'btn-primary']}
 			href="/groups/{data.group.groupId}/add"
 		>
 			<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
@@ -139,11 +139,11 @@
 							/>
 						{/if}
 						{#if entry.mine && entry.status === 'open'}
-							<!-- A 44px tap area around a 32px red dot: easy to hit, small on the poster. -->
+							<!-- A 48px tap area around a 32px red dot: easy to hit, small on the poster. -->
 							<form method="POST" action="?/withdraw" class="absolute top-0 right-0">
 								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
 								<button
-									class="group grid size-11 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-error"
+									class="group grid size-12 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-error"
 									aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
 									title={t(data.locale, 'pool.withdraw')}
 								>
@@ -157,7 +157,7 @@
 						{/if}
 					</div>
 					<div class="flex min-w-0 flex-col items-start">
-						<p class="line-clamp-2 font-medium break-words">{entry.title}</p>
+						<p class="line-clamp-2 font-bold break-words">{entry.title}</p>
 						<p class="text-sm text-base-content/70">
 							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
 						</p>
@@ -181,7 +181,7 @@
 		<h2 class="card-title text-lg">{t(data.locale, 'groups.members')}</h2>
 		<ul class="divide-y divide-base-300">
 			{#each data.members as member (member.id)}
-				<li class="flex min-h-11 items-center justify-between gap-2 py-2">
+				<li class="flex min-h-12 items-center justify-between gap-2 py-2">
 					<span class="min-w-0 truncate">{member.displayName}</span>
 					{#if member.role === 'owner'}
 						<span class="badge badge-sm">{t(data.locale, 'groups.owner')}</span>
@@ -192,13 +192,13 @@
 
 		{#if data.group.role === 'owner'}
 			<form method="POST" action="?/invite" class="mt-2">
-				<button class="btn btn-outline min-h-11 w-full sm:w-auto"
+				<button class="btn btn-outline min-h-12 w-full sm:w-auto"
 					>{t(data.locale, 'invite.create')}</button
 				>
 			</form>
 			{#if form?.inviteUrl}
 				<p class="mt-2 text-sm">{t(data.locale, 'invite.created')}</p>
-				<input class="input min-h-11 w-full font-mono text-sm" readonly value={form.inviteUrl} />
+				<input class="input min-h-12 w-full font-mono text-sm" readonly value={form.inviteUrl} />
 			{/if}
 		{:else}
 			<form
@@ -207,12 +207,12 @@
 				class="mt-2 flex flex-col gap-3 border-t border-base-300 pt-4"
 			>
 				<p class="text-sm text-base-content/70">{t(data.locale, 'groups.leave_hint')}</p>
-				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="flex flex-col gap-2 sm:flex-row">
 					<ConfirmButton
 						destructive
 						armed={form?.confirm === 'leave'}
 						armedLabel={t(data.locale, 'confirm.again')}
-						class="btn btn-outline min-h-11 w-full sm:w-auto "
+						class="btn btn-outline min-h-12 w-full sm:w-auto "
 					>
 						{t(data.locale, 'groups.leave')}
 					</ConfirmButton>

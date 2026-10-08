@@ -30,13 +30,13 @@
 	<div class="join">
 		<button
 			type="button"
-			class="btn join-item min-h-11 min-w-11 text-lg"
+			class="btn join-item min-h-12 min-w-12 text-lg"
 			aria-label={decreaseLabel}
 			onclick={() => input.stepDown()}>−</button
 		>
 		<input
 			bind:this={input}
-			class="input join-item min-h-11 w-16 [appearance:textfield] text-center tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+			class="input join-item min-h-12 w-16 [appearance:textfield] text-center tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
 			type="number"
 			inputmode="numeric"
 			{name}
@@ -47,7 +47,7 @@
 		/>
 		<button
 			type="button"
-			class="btn join-item min-h-11 min-w-11 text-lg"
+			class="btn join-item min-h-12 min-w-12 text-lg"
 			aria-label={increaseLabel}
 			onclick={() => input.stepUp()}>+</button
 		>

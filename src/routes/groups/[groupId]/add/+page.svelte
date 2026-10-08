@@ -28,9 +28,9 @@
 					required
 					placeholder={t(data.locale, 'add.search_placeholder')}
 					aria-label={t(data.locale, 'add.search_placeholder')}
-					class="input min-h-11 w-full flex-1"
+					class="input min-h-12 w-full flex-1"
 				/>
-				<button class="btn btn-primary min-h-11">{t(data.locale, 'add.search_submit')}</button>
+				<button class="btn btn-primary min-h-12">{t(data.locale, 'add.search_submit')}</button>
 			</form>
 
 			{#if form?.results}
@@ -45,12 +45,12 @@
 									<!-- flex-1 + mt-auto: a two-line title or a missing year must not
 									     shift this card's button out of line with its neighbours. -->
 									<div class="flex min-w-0 flex-1 flex-col">
-										<p class="line-clamp-2 font-medium break-words">{result.title}</p>
+										<p class="line-clamp-2 font-bold break-words">{result.title}</p>
 										<p class="mb-1 text-sm text-base-content/70">{result.year ?? ''}</p>
 										<button
 											name="tmdbId"
 											value={result.tmdbId}
-											class="btn btn-outline btn-sm mt-auto min-h-11 w-full"
+											class="btn btn-outline btn-sm mt-auto min-h-12 w-full"
 											aria-label={t(data.locale, 'add.adopt_named', { title: result.title })}
 										>
 											{t(data.locale, 'add.adopt')}
@@ -76,7 +76,7 @@
 		<form method="POST" action="?/manual" class="flex flex-col gap-2">
 			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'add.film_title')}>
-				<input name="title" required maxlength="200" class="input min-h-11 w-full" />
+				<input name="title" required maxlength="200" class="input min-h-12 w-full" />
 			</Field>
 			<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
 				<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"></textarea>
@@ -84,7 +84,7 @@
 			<!-- The fallback: primary only when search is not available. -->
 			<button
 				class={[
-					'btn mt-2 min-h-11 w-full sm:w-auto sm:self-start',
+					'btn mt-2 min-h-12 w-full sm:w-auto sm:self-start',
 					data.tmdbEnabled ? 'btn-outline' : 'btn-primary'
 				]}>{t(data.locale, 'add.submit')}</button
 			>
@@ -93,7 +93,7 @@
 </section>
 
 <a
-	class="btn btn-ghost min-h-11"
+	class="btn btn-ghost min-h-12"
 	href="/groups/{data.group.groupId}"
 	data-sveltekit-preload-data="off"
 >

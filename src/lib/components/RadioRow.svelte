@@ -23,7 +23,7 @@
 	<div class="flex flex-wrap gap-2">
 		{#each options as option (option.value)}
 			<input
-				class="btn min-h-11"
+				class="btn min-h-12"
 				type="radio"
 				{name}
 				value={option.value}

@@ -61,23 +61,23 @@
 </script>
 
 <fieldset class="flex flex-col gap-2">
-	<legend class="mb-2 text-sm font-semibold">{t(locale, 'nights.day')}</legend>
+	<legend class="mb-2 text-sm font-bold">{t(locale, 'nights.day')}</legend>
 
 	<div class="flex items-center justify-between sm:max-w-md">
 		{#if canGoBack}
 			<a
 				href="?month={shiftMonth(month, -1)}"
-				class="btn btn-ghost btn-square min-h-11"
+				class="btn btn-ghost btn-square min-h-12"
 				aria-label={t(locale, 'nights.prev_month')}
 				onclick={(e) => go(e, -1)}><ChevronLeft class="size-5" /></a
 			>
 		{:else}
 			<span class="size-11" aria-hidden="true"></span>
 		{/if}
-		<p class="font-semibold" aria-live="polite">{monthTitle(month, locale)}</p>
+		<p class="font-bold" aria-live="polite">{monthTitle(month, locale)}</p>
 		<a
 			href="?month={shiftMonth(month, 1)}"
-			class="btn btn-ghost btn-square min-h-11"
+			class="btn btn-ghost btn-square min-h-12"
 			aria-label={t(locale, 'nights.next_month')}
 			onclick={(e) => go(e, 1)}><ChevronRight class="size-5" /></a
 		>
@@ -85,7 +85,7 @@
 
 	<div class="grid grid-cols-7 gap-1 text-center sm:max-w-md">
 		{#each weekdayNames(locale) as name (name)}
-			<span class="pb-1 text-xs font-medium text-base-content/60" aria-hidden="true">{name}</span>
+			<span class="pb-1 text-sm text-base-content/60" aria-hidden="true">{name}</span>
 		{/each}
 		{#each weeks.flat() as cell, i (cell?.date ?? `blank-${i}`)}
 			{#if cell}
@@ -102,7 +102,7 @@
 					/>
 					<span
 						class={[
-							'btn btn-ghost min-h-11 w-full px-0 tabular-nums',
+							'btn btn-ghost min-h-12 w-full px-0 tabular-nums',
 							// A fill with dark ink, never amber text: btn-ghost would override
 							// btn-primary's background and leave amber text on white.
 							'peer-checked:bg-primary peer-checked:text-primary-content peer-checked:hover:bg-primary',
@@ -124,7 +124,7 @@
 </fieldset>
 
 <fieldset class="flex flex-col gap-2">
-	<legend class="mb-2 text-sm font-semibold">{t(locale, 'nights.time')}</legend>
+	<legend class="mb-2 text-sm font-bold">{t(locale, 'nights.time')}</legend>
 	{#if day && slots.length === 0}
 		<p class="text-sm text-base-content/70">{t(locale, 'nights.no_times')}</p>
 	{:else}
@@ -137,7 +137,7 @@
 					aria-label={slot}
 					checked={slot === chosen}
 					onchange={() => (time = slot)}
-					class="btn min-h-11 px-2 tabular-nums"
+					class="btn min-h-12 px-2 tabular-nums"
 				/>
 			{/each}
 		</div>
@@ -149,6 +149,6 @@
 		name="location"
 		maxlength={locationMax}
 		value={echo?.location ?? defaults.location}
-		class="input min-h-11 w-full"
+		class="input min-h-12 w-full"
 	/>
 </Field>

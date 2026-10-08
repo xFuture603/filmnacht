@@ -21,7 +21,7 @@
 				minlength="8"
 				maxlength="200"
 				autocomplete="new-password"
-				class="input min-h-11 w-full"
+				class="input min-h-12 w-full"
 			/>
 		</Field>
 
@@ -33,11 +33,11 @@
 				minlength="8"
 				maxlength="200"
 				autocomplete="new-password"
-				class="input min-h-11 w-full"
+				class="input min-h-12 w-full"
 			/>
 		</Field>
 
-		<button class="btn btn-primary mt-2 min-h-11 w-full"
+		<button class="btn btn-primary mt-2 min-h-12 w-full"
 			>{t(data.locale, 'reset.choose_submit')}</button
 		>
 	</form>

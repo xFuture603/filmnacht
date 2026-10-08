@@ -46,7 +46,7 @@
 	<!-- Readonly input rather than a <code> block, matching the login link on
 	     /profile: it is the one thing on this page that has to be selected and
 	     copied, often on a phone. -->
-	<input class="input mb-6 min-h-11 w-full font-mono text-sm" readonly value={form.recoveryUrl} />
+	<input class="input mb-6 min-h-12 w-full font-mono text-sm" readonly value={form.recoveryUrl} />
 {/if}
 
 <section class={card}>
@@ -54,13 +54,13 @@
 		<h2 class="card-title text-lg"><Globe class="size-5" />{t(data.locale, 'admin.settings')}</h2>
 		<form method="POST" action="?/timezone" class="flex flex-col gap-2">
 			<Field label={t(data.locale, 'admin.timezone')} hint={t(data.locale, 'admin.timezone_hint')}>
-				<select name="timezone" required class="select min-h-11 w-full sm:w-80">
+				<select name="timezone" required class="select min-h-12 w-full sm:w-80">
 					{#each data.timezones as tz (tz)}
 						<option value={tz} selected={tz === data.timezone}>{tz}</option>
 					{/each}
 				</select>
 			</Field>
-			<button class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+			<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.timezone_save')}</button
 			>
 		</form>
@@ -74,8 +74,8 @@
 				value={data.emailLocale}
 				options={locales.map((l) => ({ value: l, label: languageNames[l] }))}
 			/>
-			<p class="text-xs text-base-content/70">{t(data.locale, 'admin.email_locale_hint')}</p>
-			<button class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+			<p class="text-sm text-base-content/70">{t(data.locale, 'admin.email_locale_hint')}</p>
+			<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'admin.email_locale_save')}</button
 			>
 		</form>
@@ -95,7 +95,7 @@
 					<CircleX class="mt-0.5 size-5 shrink-0 text-base-content/50" />
 				{/if}
 				<div class="min-w-0">
-					<p class="font-medium">{t(data.locale, 'admin.mail')}</p>
+					<p class="font-bold">{t(data.locale, 'admin.mail')}</p>
 					<p class="text-sm break-words text-base-content/70">
 						{data.mail.configured
 							? t(data.locale, 'admin.mail_on', {
@@ -114,7 +114,7 @@
 					<CircleX class="mt-0.5 size-5 shrink-0 text-base-content/50" />
 				{/if}
 				<div class="min-w-0">
-					<p class="flex items-center gap-1 font-medium">
+					<p class="flex items-center gap-1 font-bold">
 						<Search class="size-4" />{t(data.locale, 'admin.tmdb')}
 					</p>
 					<p class="text-sm text-base-content/70">
@@ -126,17 +126,14 @@
 
 		{#if form?.mailCode}
 			<div class="alert alert-error alert-soft flex-col items-start gap-1" role="alert">
-				<p class="font-medium">{t(data.locale, 'admin.mail_failed', { code: form.mailCode })}</p>
+				<p class="font-bold">{t(data.locale, 'admin.mail_failed', { code: form.mailCode })}</p>
 				<p class="text-sm">{t(data.locale, `admin.mail_hint.${form.mailHint}`)}</p>
 			</div>
 		{/if}
 
 		{#if data.myEmail}
 			<form method="POST" action="?/testMail" class="flex flex-col gap-1">
-				<button
-					class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
-					disabled={!data.mail.configured}
-				>
+				<button class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start">
 					<Send class="size-4" />{t(data.locale, 'admin.test_mail')}
 				</button>
 				<p class="text-sm text-base-content/70">
@@ -169,7 +166,7 @@
 					type="password"
 					required
 					autocomplete="current-password"
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
 
@@ -178,10 +175,10 @@
 					<li class="flex flex-wrap items-center justify-between gap-2 py-3">
 						<div class="min-w-0">
 							<div class="break-words">{member.displayName}</div>
-							<div class="font-mono text-xs text-base-content/70">{member.username}</div>
+							<div class="font-mono text-sm text-base-content/70">{member.username}</div>
 						</div>
 						<button
-							class="btn btn-outline btn-sm min-h-11"
+							class="btn btn-outline btn-sm min-h-12"
 							name="userId"
 							value={member.id}
 							aria-label={`${t(data.locale, 'admin.recover')} — ${member.username}`}
@@ -206,14 +203,14 @@
 				{#each data.groups as group (group.id)}
 					<li class="flex flex-col gap-2 py-3">
 						<div>
-							<p class="font-semibold break-words">{group.name}</p>
+							<p class="font-bold break-words">{group.name}</p>
 							<p class="text-sm text-base-content/70">
 								{t(data.locale, 'admin.group_meta', { owner: group.owner, count: group.members })}
 							</p>
 						</div>
 						<form method="POST" action="?/deleteGroup" class="flex flex-col gap-2">
 							<input type="hidden" name="groupId" value={group.id} />
-							<label class="text-sm font-medium" for="delete-{group.id}"
+							<label class="text-sm font-bold" for="delete-{group.id}"
 								>{t(data.locale, 'settings.delete_label', { group: group.name })}</label
 							>
 							<div class="flex flex-col gap-2 sm:flex-row">
@@ -222,9 +219,9 @@
 									name="name"
 									required
 									autocomplete="off"
-									class="input min-h-11 w-full sm:flex-1"
+									class="input min-h-12 w-full sm:flex-1"
 								/>
-								<button class="btn btn-outline btn-error min-h-11"
+								<button class="btn btn-outline btn-error min-h-12"
 									>{t(data.locale, 'settings.delete')}</button
 								>
 							</div>

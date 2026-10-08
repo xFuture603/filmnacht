@@ -18,5 +18,5 @@
 <div class="mx-auto flex max-w-md flex-col items-center gap-4 py-12 text-center">
 	<h1 class="text-6xl font-bold tracking-tight text-base-content/60">{page.status}</h1>
 	<p class="text-lg">{t(locale, key)}</p>
-	<a class="btn btn-primary min-h-11" href="/">{t(locale, 'error.home')}</a>
+	<a class="btn btn-primary min-h-12" href="/">{t(locale, 'error.home')}</a>
 </div>

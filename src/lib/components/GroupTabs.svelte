@@ -46,7 +46,7 @@
 <nav class="tabs tabs-box mb-6 w-fit flex-nowrap bg-base-300" aria-label={groupName}>
 	{#each tabs as tab (tab.id)}
 		<a
-			class={['tab min-h-11 gap-2', tab.id === active && 'tab-active']}
+			class={['tab min-h-12 gap-2', tab.id === active && 'tab-active']}
 			href={tab.href}
 			data-sveltekit-preload-data="off"
 			aria-current={tab.id === active ? 'page' : undefined}

@@ -42,7 +42,7 @@
 </script>
 
 <a
-	class="btn btn-ghost btn-sm mb-2 min-h-11 gap-1 px-2"
+	class="btn btn-ghost btn-sm mb-2 min-h-12 gap-1 px-2"
 	href="/groups/{data.group.groupId}/nights"
 	data-sveltekit-preload-data="off"
 >
@@ -61,7 +61,7 @@
 
 {#if data.night.status !== 'cancelled'}
 	<a
-		class="btn btn-ghost btn-sm mb-4 min-h-11 gap-1 px-2"
+		class="btn btn-ghost btn-sm mb-4 min-h-12 gap-1 px-2"
 		href="/groups/{data.group.groupId}/nights/{data.night.id}/calendar.ics"
 		download
 		data-sveltekit-reload
@@ -80,7 +80,7 @@
 		{#if data.film}
 			<div class="flex items-center gap-3">
 				<Film class="size-8 shrink-0 text-base-content/50" strokeWidth={1.5} />
-				<p class="text-lg font-semibold break-words">
+				<p class="text-lg font-bold break-words">
 					{#if data.film.onlyCandidate}
 						{t(data.locale, 'night.drawn_one', { title: data.film.title })}
 					{:else if data.film.byFormer}
@@ -127,7 +127,7 @@
 
 			{#snippet rateForm()}
 				<form method="POST" action="?/rate" class="flex flex-col gap-3">
-					<div class="flex min-h-11 items-center gap-3">
+					<div class="flex min-h-12 items-center gap-3">
 						<output for="score" class="w-[4ch] shrink-0 text-3xl font-bold tabular-nums"
 							>{fmt(score)}</output
 						>
@@ -144,7 +144,7 @@
 						/>
 					</div>
 					<details open={Boolean(rv.mine?.comment)}>
-						<summary class="link min-h-11 cursor-pointer text-sm link-hover"
+						<summary class="link min-h-12 cursor-pointer text-sm link-hover"
 							>{t(data.locale, 'ratings.add_comment')}</summary
 						>
 						<textarea
@@ -155,7 +155,7 @@
 							class="textarea mt-1 w-full">{rv.mine?.comment ?? ''}</textarea
 						>
 					</details>
-					<button class="btn min-h-11 w-full btn-primary sm:w-auto sm:self-start">
+					<button class="btn min-h-12 w-full btn-primary sm:w-auto sm:self-start">
 						<Star class="size-4" />{t(data.locale, 'ratings.save')}
 					</button>
 				</form>
@@ -169,7 +169,7 @@
 				{#if rateOpen && rv.mine === null && !rv.revealed}
 					<!-- Not rated yet. After a reveal the results lead, and this moves below them. -->
 					{#if data.film}
-						<p class="font-medium">{t(data.locale, 'ratings.ask', { title: data.film.title })}</p>
+						<p class="font-bold">{t(data.locale, 'ratings.ask', { title: data.film.title })}</p>
 					{/if}
 					{@render rateForm()}
 				{:else if rv.mine && !rv.revealed}
@@ -182,13 +182,13 @@
 						<!-- <details>: changing works without JavaScript too. The summary is
 						     only the way in, so it goes once the form is open. -->
 						<details class="group mt-1">
-							<summary class="btn min-h-11 w-full btn-outline group-open:hidden sm:w-auto"
+							<summary class="btn min-h-12 w-full btn-outline group-open:hidden sm:w-auto"
 								>{t(data.locale, 'ratings.change')}</summary
 							>
 							<div class="mt-2 flex flex-col gap-2">
 								{@render rateForm()}
 								<form method="POST" action="?/withdrawRating">
-									<button class="btn min-h-11 w-full btn-ghost sm:w-auto"
+									<button class="btn min-h-12 w-full btn-ghost sm:w-auto"
 										>{t(data.locale, 'ratings.withdraw')}</button
 									>
 								</form>
@@ -202,7 +202,7 @@
 						<ConfirmButton
 							armed={form?.confirm === 'reveal'}
 							armedLabel={t(data.locale, 'confirm.again')}
-							class="btn min-h-11 w-full btn-outline sm:w-auto sm:self-start"
+							class="btn min-h-12 w-full btn-outline sm:w-auto sm:self-start"
 						>
 							<Eye class="size-4" />{t(data.locale, 'ratings.reveal')}
 						</ConfirmButton>
@@ -228,7 +228,7 @@
 							<li class="flex flex-col gap-1 py-2">
 								<div class="flex items-center justify-between gap-2">
 									<span class="min-w-0 truncate">{entry.name}</span>
-									<span class="font-semibold tabular-nums">{fmt(entry.score)}</span>
+									<span class="font-bold tabular-nums">{fmt(entry.score)}</span>
 								</div>
 								{#if entry.comment}
 									<p class="text-sm break-words text-base-content/70">{entry.comment}</p>
@@ -241,7 +241,7 @@
 				{#if rateOpen && rv.mine === null && rv.revealed}
 					<!-- Revealed, but the window is still open for whoever has not rated. -->
 					<details class="group">
-						<summary class="btn min-h-11 w-full btn-outline group-open:hidden sm:w-auto"
+						<summary class="btn min-h-12 w-full btn-outline group-open:hidden sm:w-auto"
 							>{t(data.locale, 'ratings.rate_too')}</summary
 						>
 						<div class="mt-2">{@render rateForm()}</div>
@@ -270,7 +270,7 @@
 						value={answer}
 						aria-pressed={data.night.myResponse === answer}
 						class={[
-							'btn join-item min-h-11 flex-1 gap-1 px-2',
+							'btn join-item min-h-12 flex-1 gap-1 px-2',
 							data.night.myResponse === answer ? 'btn-primary' : 'btn-outline'
 						]}
 					>
@@ -283,7 +283,7 @@
 			{:else}
 				<ul class="divide-y divide-base-300">
 					{#each data.night.responses as r (r.displayName + r.response)}
-						<li class="flex min-h-11 items-center justify-between gap-2 py-2">
+						<li class="flex min-h-12 items-center justify-between gap-2 py-2">
 							<span class="min-w-0 truncate">{r.displayName}</span>
 							<span class="text-sm text-base-content/70"
 								>{t(data.locale, `nights.rsvp.${r.response}`)}</span
@@ -303,10 +303,7 @@
 
 			{#if data.night.status === 'scheduled'}
 				<form method="POST" action="?/draw" class="flex flex-col gap-1">
-					<button
-						class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
-						disabled={!data.canDraw}
-					>
+					<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start">
 						<Dices class="size-4" />{t(data.locale, 'night.draw')}
 					</button>
 					{#if !data.canDraw}
@@ -320,7 +317,7 @@
 					<ConfirmButton
 						armed={form?.confirm === 'markWatched'}
 						armedLabel={t(data.locale, 'confirm.again')}
-						class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
+						class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start"
 					>
 						<CircleCheck class="size-4" />{t(data.locale, 'night.mark_watched')}
 					</ConfirmButton>
@@ -332,7 +329,7 @@
 						<ConfirmButton
 							armed={form?.confirm === 'redraw'}
 							armedLabel={t(data.locale, 'confirm.again')}
-							class="btn btn-outline min-h-11 w-full sm:w-auto sm:self-start"
+							class="btn btn-outline min-h-12 w-full sm:w-auto sm:self-start"
 						>
 							<RotateCcw class="size-4" />{t(data.locale, 'night.redraw')}
 						</ConfirmButton>
@@ -347,7 +344,7 @@
 					armedLabel={t(data.locale, 'confirm.again')}
 					destructive
 					quiet
-					class="btn min-h-11 self-start"
+					class="btn min-h-12 self-start"
 				>
 					<CircleX class="size-4" />{t(data.locale, 'night.cancel')}
 				</ConfirmButton>

@@ -11,7 +11,7 @@
 	<input type="hidden" name="redirectTo" value={pathname} />
 	<select
 		name="locale"
-		class="select min-h-11 w-auto"
+		class="select min-h-12 w-auto"
 		aria-label={t(locale, 'nav.language')}
 		onchange={(e) => e.currentTarget.form?.requestSubmit()}
 	>
@@ -19,5 +19,5 @@
 			<option value={l} selected={l === locale}>{l.toUpperCase()}</option>
 		{/each}
 	</select>
-	<noscript><button class="btn min-h-11">{t(locale, 'common.save')}</button></noscript>
+	<noscript><button class="btn min-h-12">{t(locale, 'common.save')}</button></noscript>
 </form>

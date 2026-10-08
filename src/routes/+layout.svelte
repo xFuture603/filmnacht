@@ -34,7 +34,7 @@
 	<header
 		class="navbar sticky top-0 z-10 min-h-14 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur"
 	>
-		<a class="flex min-h-11 items-center gap-2 text-lg font-semibold" href="/">
+		<a class="flex min-h-12 items-center gap-2 text-lg font-bold" href="/">
 			<!-- The one amber mark in the chrome: a fill with dark ink, never amber on white. -->
 			<span class="grid size-8 place-items-center rounded-field bg-primary text-primary-content">
 				<TvLogo class="size-6" />
@@ -46,7 +46,7 @@
 			<nav class="hidden gap-1 md:flex" aria-label={t(data.locale, 'nav.main')}>
 				{#each sections as s (s.href)}
 					<a
-						class={['btn btn-ghost min-h-11', s.current && 'btn-active']}
+						class={['btn btn-ghost min-h-12', s.current && 'btn-active']}
 						href={s.href}
 						aria-current={s.current ? 'page' : undefined}
 					>
@@ -86,7 +86,7 @@
 			{#each sections as s (s.href)}
 				<a
 					href={s.href}
-					class={['min-h-11', s.current && 'dock-active font-semibold']}
+					class={['min-h-12', s.current && 'dock-active font-bold']}
 					aria-current={s.current ? 'page' : undefined}
 				>
 					<s.icon class="size-5" strokeWidth={s.current ? 2.25 : 1.75} />

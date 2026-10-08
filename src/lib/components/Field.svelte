@@ -10,6 +10,6 @@
      A required control gets an asterisk from app.css. -->
 <label class="fieldset">
 	<span class="fieldset-legend text-sm">{label}</span>
-	{#if hint}<span class="label text-xs whitespace-normal">{hint}</span>{/if}
+	{#if hint}<span class="label text-sm whitespace-normal">{hint}</span>{/if}
 	{@render children()}
 </label>

@@ -11,10 +11,6 @@
 	let { data, form } = $props();
 
 	const s = $derived(data.settings);
-	// A checkbox disabled while off keeps a group that never configured mail
-	// from silently flipping this on through a stale, disabled-looking control;
-	// one already on stays editable so the owner can turn it back off.
-	const autoDrawDisabled = $derived(!data.mailConfigured && !s.autoDraw);
 </script>
 
 <PageHeader title={data.group.name} icon={Users} />
@@ -57,13 +53,12 @@
 				     name computation — the toggle would announce as its hint text instead
 				     of "Automatic draw". One label, the setting's name as its only text,
 				     and the hint as a separate paragraph tied on with aria-describedby. -->
-				<label class="flex min-h-11 cursor-pointer items-center gap-3">
+				<label class="flex min-h-12 cursor-pointer items-center gap-3">
 					<input
 						type="checkbox"
 						name="autoDraw"
 						class="toggle toggle-primary"
 						checked={s.autoDraw}
-						disabled={autoDrawDisabled}
 						aria-describedby="auto-draw-hint"
 					/>
 					{t(data.locale, 'settings.auto_draw')}
@@ -94,7 +89,7 @@
 			/>
 
 			<div class="flex flex-col gap-1">
-				<label class="flex min-h-11 cursor-pointer items-center gap-3">
+				<label class="flex min-h-12 cursor-pointer items-center gap-3">
 					<input
 						type="checkbox"
 						name="surprise"
@@ -110,7 +105,7 @@
 			</div>
 
 			<div class="flex flex-col gap-1">
-				<label class="flex min-h-11 cursor-pointer items-center gap-3">
+				<label class="flex min-h-12 cursor-pointer items-center gap-3">
 					<input
 						type="checkbox"
 						name="fairDraw"
@@ -155,7 +150,7 @@
 				}))}
 			/>
 
-			<button class="btn btn-primary min-h-11 w-full sm:w-auto sm:self-start"
+			<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'settings.save')}</button
 			>
 		</form>
@@ -171,9 +166,9 @@
 		<form method="POST" action="?/deleteGroup" class="flex flex-col gap-2">
 			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'settings.delete_label', { group: data.group.name })}>
-				<input name="name" required autocomplete="off" class="input min-h-11 w-full" />
+				<input name="name" required autocomplete="off" class="input min-h-12 w-full" />
 			</Field>
-			<button class="btn btn-error min-h-11 w-full sm:w-auto sm:self-start"
+			<button class="btn btn-outline btn-error min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'settings.delete')}</button
 			>
 		</form>

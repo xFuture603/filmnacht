@@ -18,7 +18,7 @@
 		<input type="hidden" name="redirectTo" value={data.redirectTo} />
 
 		<Field label={t(data.locale, 'auth.username')}>
-			<input name="username" required autocomplete="username" class="input min-h-11 w-full" />
+			<input name="username" required autocomplete="username" class="input min-h-12 w-full" />
 		</Field>
 
 		<Field label={t(data.locale, 'auth.password')}>
@@ -30,11 +30,11 @@
 				type="password"
 				required
 				autocomplete="current-password"
-				class="input min-h-11 w-full"
+				class="input min-h-12 w-full"
 			/>
 		</Field>
 
-		<button class="btn btn-primary mt-2 min-h-11 w-full">{t(data.locale, 'login.submit')}</button>
+		<button class="btn btn-primary mt-2 min-h-12 w-full">{t(data.locale, 'login.submit')}</button>
 	</form>
 
 	<p class="text-sm text-base-content/70">

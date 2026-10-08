@@ -20,14 +20,14 @@
 				<a
 					href="/groups/{group.id}"
 					data-sveltekit-preload-data="off"
-					class="card flex min-h-11 w-full flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
+					class="card flex min-h-12 w-full flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
 				>
 					<span
 						class="grid size-11 shrink-0 place-items-center rounded-field bg-base-200 text-base-content"
 					>
 						<Users class="size-5" />
 					</span>
-					<span class="line-clamp-2 min-w-0 flex-1 font-semibold break-words">{group.name}</span>
+					<span class="line-clamp-2 min-w-0 flex-1 font-bold break-words">{group.name}</span>
 					{#if group.newCount > 0}
 						<NewBadge label={t(data.locale, 'new.count', { count: group.newCount })} />
 					{/if}
@@ -50,9 +50,9 @@
 		<form method="POST" action="?/create" class="flex flex-col gap-2">
 			<RequiredNote locale={data.locale} />
 			<Field label={t(data.locale, 'groups.name')}>
-				<input name="name" required maxlength="60" class="input min-h-11 w-full" />
+				<input name="name" required maxlength="60" class="input min-h-12 w-full" />
 			</Field>
-			<button class="btn btn-primary mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+			<button class="btn btn-primary mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'groups.create')}</button
 			>
 		</form>

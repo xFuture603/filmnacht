@@ -9,7 +9,7 @@
 
 	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
 	// Several equal forms on one page: secondary buttons, no single primary.
-	const submit = 'btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start';
+	const submit = 'btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start';
 </script>
 
 <PageHeader title={t(data.locale, 'profile.title')} />
@@ -44,7 +44,7 @@
 					maxlength="60"
 					autocomplete="nickname"
 					value={data.displayName}
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
 			<button class={submit}>{t(data.locale, 'profile.save_display_name')}</button>
@@ -67,17 +67,17 @@
 					maxlength="254"
 					autocomplete="email"
 					value={data.email ?? ''}
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
 			<button class={submit}>{t(data.locale, 'profile.save_email')}</button>
 		</form>
 		<form method="POST" action="?/setMailPrefs" class="mt-4 flex flex-col gap-1">
-			<label class="flex min-h-11 cursor-pointer items-center gap-3">
+			<label class="flex min-h-12 cursor-pointer items-center gap-3">
 				<input type="checkbox" name="ratingMails" checked={data.ratingMails} class="toggle" />
 				<span>{t(data.locale, 'profile.rating_mails')}</span>
 			</label>
-			<label class="flex min-h-11 cursor-pointer items-center gap-3">
+			<label class="flex min-h-12 cursor-pointer items-center gap-3">
 				<input type="checkbox" name="nightMails" checked={data.nightMails} class="toggle" />
 				<span>{t(data.locale, 'profile.night_mails')}</span>
 			</label>
@@ -99,7 +99,7 @@
 					type="password"
 					required
 					autocomplete="current-password"
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
 			<Field
@@ -113,7 +113,7 @@
 					minlength="8"
 					maxlength="200"
 					autocomplete="new-password"
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
 			<Field label={t(data.locale, 'auth.password_repeat')}>
@@ -124,7 +124,7 @@
 					minlength="8"
 					maxlength="200"
 					autocomplete="new-password"
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
 			<button class={submit}>{t(data.locale, 'profile.change_password')}</button>
@@ -151,17 +151,17 @@
 					required
 					autocomplete="current-password"
 					aria-label={t(data.locale, 'profile.reveal_password')}
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
-			<button class="btn btn-outline mt-2 min-h-11 w-full sm:w-auto sm:self-start"
+			<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
 				>{t(data.locale, 'profile.reveal')}</button
 			>
 		</form>
 
 		{#if form?.loginUrl}
 			<Field label={t(data.locale, 'profile.login_link')}>
-				<input class="input min-h-11 w-full font-mono text-sm" readonly value={form.loginUrl} />
+				<input class="input min-h-12 w-full font-mono text-sm" readonly value={form.loginUrl} />
 			</Field>
 		{/if}
 	</div>
@@ -176,6 +176,6 @@
 </section>
 
 <form method="POST" action="/logout" class="mt-6">
-	<button class="btn btn-ghost min-h-11 w-full sm:w-auto">{t(data.locale, 'profile.logout')}</button
+	<button class="btn btn-ghost min-h-12 w-full sm:w-auto">{t(data.locale, 'profile.logout')}</button
 	>
 </form>

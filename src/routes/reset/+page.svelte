@@ -24,11 +24,11 @@
 					required
 					maxlength="254"
 					autocomplete="email"
-					class="input min-h-11 w-full"
+					class="input min-h-12 w-full"
 				/>
 			</Field>
 
-			<button class="btn btn-primary mt-2 min-h-11 w-full">{t(data.locale, 'reset.submit')}</button>
+			<button class="btn btn-primary mt-2 min-h-12 w-full">{t(data.locale, 'reset.submit')}</button>
 		</form>
 	{:else}
 		<!-- No form at all: this instance has nothing to send, and a form that

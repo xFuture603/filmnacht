@@ -116,3 +116,23 @@
 	content: ' *';
 	content: ' *' / '';
 }
+
+/*
+ * Practical UI typography: two weights only, regular and bold. daisyUI's own
+ * buttons, tabs, card titles and field labels default to 600; bold matches the
+ * rest. The type scale is text-sm 14, text-base 16, text-lg 18, text-xl 20,
+ * text-2xl 24, text-3xl 30, text-4xl 36: nothing smaller than 14.
+ */
+.btn,
+.tab,
+.card-title,
+.fieldset-legend {
+	font-weight: 700;
+}
+
+/* 40 to 80 characters per line read best (Practical UI); paragraphs stop at about 75. */
+@layer base {
+	p {
+		max-width: 75ch;
+	}
+}
