@@ -16,7 +16,7 @@ export const FORMER_MEMBER_USERNAME = 'former-member';
  * Finds or creates the placeholder that owns a departed member's rows.
  *
  * It is a real `users` row rather than a NULL because NULL already means
- * wildcard (PRD §6) — a film belonging to nobody that counts toward no
+ * wildcard — a film belonging to nobody that counts toward no
  * member's fairness window. Folding "this person left" into that meaning would
  * quietly drop their films out of the group's history.
  */

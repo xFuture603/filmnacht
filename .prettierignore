@@ -12,5 +12,4 @@ bun.lockb
 /drizzle/
 
 # Pre-existing project docs, not part of this app's source
-/prd.md
 /docs/

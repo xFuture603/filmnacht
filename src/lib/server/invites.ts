@@ -7,7 +7,7 @@ import { addMember } from './groups';
 export const INVITE_TTL_DAYS = 7;
 
 /**
- * Default cap on redemptions per invite link. PRD §1 sizes a group at 3-12
+ * Default cap on redemptions per invite link. Groups are meant for 3-12
  * people, so this never realistically blocks a legitimate invite — but it
  * bounds the damage of a leaked link, which would otherwise create accounts
  * without limit for its full 7 days. Pass `maxUses: null` for an uncapped one.

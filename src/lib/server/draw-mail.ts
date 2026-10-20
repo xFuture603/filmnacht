@@ -42,7 +42,7 @@ export function composeDrawMail(input: {
 		} else if (film.by) {
 			lines.push(t(locale, 'mail.draw.film', { title: film.title, by: film.by }));
 		} else {
-			// A wildcard suggestion (`suggestedBy IS NULL`, PRD §6) belongs to
+			// A wildcard suggestion (`suggestedBy IS NULL`) belongs to
 			// nobody, so there is no "suggested by" clause to append — never
 			// former, never named, just the title.
 			lines.push(t(locale, 'mail.draw.film_title_only', { title: film.title }));

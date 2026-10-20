@@ -92,7 +92,7 @@ describe('composeDrawMail', () => {
 	});
 
 	it('drops the "suggested by" clause entirely for a wildcard film', () => {
-		// suggestedBy IS NULL (PRD §6): a film belonging to nobody, so there is
+		// suggestedBy IS NULL: a film belonging to nobody, so there is
 		// nobody to name — and, unlike the former-member case, nobody to name as
 		// "since left" either.
 		const { body } = composeDrawMail({

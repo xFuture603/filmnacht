@@ -5,7 +5,7 @@
  * the title has to do the work, so it is normalised hard: diacritics folded,
  * punctuation collapsed, case and spacing ignored. Two people typing "Amélie"
  * and "Amelie" mean the same film, and the pool must say so rather than
- * quietly holding both (PRD §5).
+ * quietly holding both.
  */
 
 /**

@@ -6,7 +6,7 @@ const MAX_WINDOWS = 10_000;
 
 /**
  * ponytail: in-process fixed window. Resets on restart and does not span
- * replicas — correct for the single-container deployment in PRD §11. Swap for a
+ * replicas — correct for the single-container deployment. Swap for a
  * shared store only if filmnacht ever runs more than one instance. IP-keyed
  * limiting is also only as good as the client address: it depends on the
  * reverse proxy being configured not to let clients forge X-Forwarded-For.

@@ -12,7 +12,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, params, url }) => {
 	const user = requireUser(locals);
-	// Membership before anything about the group's nights is read (PRD §12).
+	// Membership before anything about the group's nights is read.
 	const group = requireMember(db, user.id, params.groupId);
 	const { newIds, counts } = visit(db, user.id, params.groupId, 'nights');
 	const timezone = getTimezone(db);
@@ -63,7 +63,7 @@ export const actions: Actions = {
 		const echo = { ...picked, location };
 
 		// The calendar and the slots carry no zone. They mean the instance's wall
-		// clock, not the server's and not the browser's (PRD §6, §12).
+		// clock, not the server's and not the browser's.
 		if (!picked.day) return fail(400, { error: 'nights.error.day', ...echo });
 		const scheduledAt = wallTimeToUtc(`${picked.day}T${picked.time}`, getTimezone(db));
 		if (!scheduledAt) return fail(400, { error: 'nights.error.when', ...echo });

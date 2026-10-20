@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 
 /**
- * PRD §6. Rolling, so founding members are not penalised for years, and so a
+ * Rolling, so founding members are not penalised for years, and so a
  * member the draw has skipped throughout the window carries the same weight as
  * somebody who joined yesterday — as far as the app can tell, both have been
  * waiting.
@@ -12,7 +12,7 @@ export type Candidate = {
 	userId: string;
 	/** Their OPEN suggestions in this group. A candidate with none never wins. */
 	suggestionIds: string[];
-	/** Films of theirs WATCHED in the window — never merely drawn (PRD §6). */
+	/** Films of theirs WATCHED in the window — never merely drawn. */
 	watchedInWindow: number;
 };
 
@@ -35,8 +35,8 @@ export function weightFor(watchedInWindow: number): number {
 }
 
 /**
- * A seed from a cryptographically secure source (PRD §6 names `crypto.randomInt`
- * and rules out `Math.random`). The seed is what gets logged, so the draw has to
+ * A seed from a cryptographically secure source (`crypto.randomInt`,
+ * never `Math.random`). The seed is what gets logged, so the draw has to
  * be reproducible FROM it — which is why the selection below runs a deterministic
  * generator rather than calling randomInt for each choice. Logging randomInt's
  * outputs would record the answer instead of the means.
@@ -57,7 +57,7 @@ function generator(seed: number): () => number {
 }
 
 /**
- * Two stages, and the order is the point (PRD §6): a person is drawn first, then
+ * Two stages, and the order is the point: a person is drawn first, then
  * one of that person's films uniformly. Drawing across all films instead would
  * give somebody who entered ten of them ten times the chance of somebody who
  * entered one, and the per-member cap would have to carry a load it was not

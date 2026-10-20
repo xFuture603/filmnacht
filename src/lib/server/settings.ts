@@ -18,7 +18,7 @@ export function isSetupComplete(db: DB): boolean {
 	return getSetting(db, 'setup_complete') === '1';
 }
 
-/** PRD §12: one timezone for the whole instance. */
+/** One timezone for the whole instance. */
 export function getTimezone(db: DB): string {
 	return getSetting(db, 'timezone') ?? 'UTC';
 }

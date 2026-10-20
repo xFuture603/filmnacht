@@ -85,8 +85,8 @@ describe('POST /login', () => {
 		expect(redirect.status).toBe(303);
 		expect(redirect.location).toBe('/groups');
 		// secure MUST be false here. This project has already shipped this bug
-		// once, as `secure: !dev`: on a plain-HTTP instance — the Pi or Synology
-		// of PRD 11 — the browser silently discards a Secure cookie, so sign-in
+		// once, as `secure: !dev`: on a plain-HTTP instance — a Raspberry Pi
+		// or Synology at home — the browser silently discards a Secure cookie, so sign-in
 		// appears to succeed and then does nothing, forever. Step 6 made /login
 		// the only entry point for a returning user, so a regression here takes
 		// the whole instance down rather than just one route.

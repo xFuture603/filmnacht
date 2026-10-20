@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-/** 16 bytes = 128 bits of entropy (PRD §12), base64url so it is safe in a path. */
+/** 16 bytes = 128 bits of entropy, base64url so it is safe in a path. */
 export function generateToken(): string {
 	return randomBytes(16).toString('base64url');
 }

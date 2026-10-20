@@ -10,7 +10,7 @@ const createdAt = () =>
 		.notNull()
 		.$defaultFn(() => new Date());
 
-/** PRD §4 group settings table. Stored as JSON so adding one costs no migration. */
+/** Group settings. Stored as JSON so adding one costs no migration. */
 export type GroupSettings = {
 	maxOpenSuggestions: number;
 	drawMode: 'fairness' | 'uniform';
@@ -38,7 +38,7 @@ export const users = sqliteTable('users', {
 	displayName: text('display_name').notNull(),
 	avatarUrl: text('avatar_url'),
 	/**
-	 * Optional forever (PRD §9): a member who sets none loses only the emailed
+	 * Optional forever: a member who sets none loses only the emailed
 	 * reset path. Unique because Plan 4 has to resolve an address back to exactly
 	 * one account to send that reset to — two accounts sharing one address has no
 	 * safe answer. UNIQUE on a nullable column permits many NULLs, so "optional"
@@ -51,8 +51,8 @@ export const users = sqliteTable('users', {
 	/** "Night scheduled" and "night cancelled" emails, from the profile. On by default. */
 	nightMails: integer('night_mails', { mode: 'boolean' }).notNull().default(true),
 	/**
-	 * What you sign in with. Deliberately separate from `displayName` (PRD §9,
-	 * decision 20): two friends may both be "Alex" to the group, and either may
+	 * What you sign in with. Deliberately separate from `displayName`:
+	 * two friends may both be "Alex" to the group, and either may
 	 * change what the group calls them without changing how they log in.
 	 */
 	username: text('username').notNull().unique(),
@@ -63,14 +63,14 @@ export const users = sqliteTable('users', {
 	 */
 	passwordHash: text('password_hash').notNull(),
 	loginTokenHash: text('login_token_hash').notNull().unique(),
-	/** PRD §11: the first account created by the setup screen. */
+	/** The first account created by the setup screen. */
 	isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false),
 	createdAt: createdAt()
 });
 
-/** Empty until OIDC lands in v2 (PRD §9). Created now so that is an insert, not a migration. */
+/** Empty until OIDC lands in v2. Created now so that is an insert, not a migration. */
 /**
- * Short-lived, single-use password-reset tokens (PRD §9). Only the SHA-256 hash
+ * Short-lived, single-use password-reset tokens. Only the SHA-256 hash
  * is stored, exactly as for sessions and login links: a leaked database must not
  * yield a working credential. `usedAt` rather than a delete, so a second click
  * on a link that is sitting in a mailbox forever is refused rather than silently
@@ -106,7 +106,7 @@ export const identities = sqliteTable(
 	(table) => [unique('identities_provider_subject').on(table.provider, table.subject)]
 );
 
-/** `id` is the SHA-256 of the cookie token, never the token itself (PRD §12). */
+/** `id` is the SHA-256 of the cookie token, never the token itself. */
 export const sessions = sqliteTable('sessions', {
 	id: text('id').primaryKey(),
 	userId: text('user_id')
@@ -151,7 +151,7 @@ export const memberships = sqliteTable(
 		joinedAt: integer('joined_at', { mode: 'timestamp' })
 			.notNull()
 			.$defaultFn(() => new Date()),
-		/** Set on leaving. History stays, access does not (PRD §4). */
+		/** Set on leaving. History stays, access does not. */
 		leftAt: integer('left_at', { mode: 'timestamp' }),
 		/** Last visit to the Films tab. NULL means "since joining" (new-markers spec). */
 		poolSeenAt: integer('pool_seen_at', { mode: 'timestamp' }),
@@ -174,7 +174,7 @@ export const invites = sqliteTable('invites', {
 	createdAt: createdAt()
 });
 
-/** Global across groups: one row per film, saving TMDB calls (PRD §10). */
+/** Global across groups: one row per film, saving TMDB calls. */
 export const movies = sqliteTable('movies', {
 	id: uuid(),
 	tmdbId: integer('tmdb_id').unique(),
@@ -198,9 +198,9 @@ export const suggestions = sqliteTable(
 			.notNull()
 			.references(() => movies.id),
 		/**
-		 * NULL means WILDCARD and nothing else (PRD §6): a film belonging to nobody,
+		 * NULL means WILDCARD and nothing else: a film belonging to nobody,
 		 * counting toward no member's fairness window. A departed member's films are
-		 * reassigned to the "former member" placeholder (PRD §4, §12), which is a real
+		 * reassigned to the "former member" placeholder, which is a real
 		 * row, so the two states stay distinguishable.
 		 *
 		 * `restrict`, deliberately not `set null`: a delete that reached here would
@@ -230,10 +230,10 @@ export const movieNights = sqliteTable('movie_nights', {
 	suggestionId: text('suggestion_id').references(() => suggestions.id),
 	drawnAt: integer('drawn_at', { mode: 'timestamp' }),
 	drawSeed: text('draw_seed'),
-	/** Append-only: a re-draw adds an entry, it never overwrites one (PRD §6). */
+	/** Append-only: a re-draw adds an entry, it never overwrites one. */
 	drawLog: text('draw_log', { mode: 'json' }).$type<unknown[]>(),
 	/**
-	 * When the scores were revealed (PRD §7): by the last "I'm in" member's
+	 * When the scores were revealed: by the last "I'm in" member's
 	 * rating or by the owner. Set once, never cleared — a reveal cannot
 	 * un-happen. A closed rating window also counts as revealed, derived on read.
 	 */
@@ -241,8 +241,8 @@ export const movieNights = sqliteTable('movie_nights', {
 	/**
 	 * When the owner pressed "We watched it". NULL for nights marked before this
 	 * column existed, and for nights moved to watched by their first rating. An
-	 * early one opens the rating window and lifts the surprise at once (PRD §4:
-	 * watched means the night happened).
+	 * early one opens the rating window and lifts the surprise at once:
+	 * watched means the night happened.
 	 */
 	watchedAt: integer('watched_at', { mode: 'timestamp' }),
 	/** When the "rating is open" email went out (rating-reminders spec). Claimed, then sent. */
@@ -275,7 +275,7 @@ export const attendance = sqliteTable(
  * two years.
  *
  * No unique index on (movie_night_id, user_id): the former-member placeholder
- * (PRD §4, §12) is one row shared by every departed rater, so a second
+ * is one row shared by every departed rater, so a second
  * departure reassigning that night's rating would collide with the first's
  * under such an index (R2). One rating per member is enforced in code
  * instead, by `saveRating` (src/lib/server/ratings.ts), which selects the
@@ -289,17 +289,17 @@ export const ratings = sqliteTable('ratings', {
 		.references(() => movieNights.id, { onDelete: 'cascade' }),
 	/**
 	 * `restrict`, like suggestions.suggested_by: a departed member's ratings
-	 * belong to the "former member" placeholder (PRD §4, §12). Deleting an
+	 * belong to the "former member" placeholder. Deleting an
 	 * account without reassignToFormerMember first must fail loudly.
 	 */
 	userId: text('user_id').references(() => users.id, { onDelete: 'restrict' }),
-	/** 2–20: the 1–10 half-step score doubled. Never a float (PRD §7). */
+	/** 2–20: the 1–10 half-step score doubled. Never a float. */
 	scoreX2: integer('score_x2').notNull(),
 	comment: text('comment'),
 	createdAt: createdAt()
 });
 
-/** Instance-level configuration the admin edits in the UI, timezone first (PRD §10). */
+/** Instance-level configuration the admin edits in the UI, timezone first. */
 export const settings = sqliteTable('settings', {
 	key: text('key').primaryKey(),
 	value: text('value').notNull()

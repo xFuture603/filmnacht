@@ -143,7 +143,7 @@ describe('fairness, by simulation rather than by argument', () => {
 	}
 
 	it('keeps the busiest and quietest of eight members within a fixed ratio over 1000 nights', () => {
-		// PRD Goal 1 asks for "demonstrably, not just by feel". This is that proof.
+		// The draw has to be fair demonstrably, not just by feel. This is that proof.
 		// Eight members, one film each, every night watched, weights recomputed
 		// from a rolling ten-night window exactly as the app does it, averaged
 		// over 5 fixed base seeds (see comment above) to cancel single-run noise.

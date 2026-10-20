@@ -1,7 +1,7 @@
 import type { Locale } from '$lib/i18n';
 
 /**
- * Times are stored in UTC and shown in the ONE instance timezone (PRD §6, §12),
+ * Times are stored in UTC and shown in the ONE instance timezone,
  * never the server's and never the browser's. Both directions live here so the
  * rule has one home.
  */

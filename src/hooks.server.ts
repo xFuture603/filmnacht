@@ -44,6 +44,9 @@ export const init: ServerInit = () => {
  * message, which is how a stack trace reaches a browser.
  */
 export const handleError: HandleServerError = ({ error, event, status }) => {
+	// A public server gets probed for /server-status, /wp-login.php and the
+	// like all day. Those 404s are noise that would bury real errors.
+	if (status === 404) return;
 	console.error(`[${status}] ${event.request.method} ${event.route.id ?? '(unrouted)'}`, error);
 };
 
@@ -62,7 +65,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (token && !session) clearSessionCookie(event.cookies);
 
 	// Until an instance admin exists there is nothing to show and nobody to show
-	// it to, so every path funnels into /setup (PRD §11). /locale is exempt from
+	// it to, so every path funnels into /setup. /locale is exempt from
 	// that funnel (but NOT from the "leave /setup alone once it's done" rule
 	// below) so the language switcher works both on the setup screen and after,
 	// rather than having every post-setup submit bounce to / unprocessed.

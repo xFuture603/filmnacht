@@ -14,7 +14,7 @@ export type AddResult =
 /**
  * What a member may see about a film before the draw. There is deliberately no
  * author field: `mine` is the only thing said about ownership, so no route or
- * component can leak who suggested what. PRD §5 reveals that with the draw.
+ * component can leak who suggested what. The draw reveals that.
  */
 export type PoolEntry = {
 	suggestionId: string;
@@ -73,7 +73,7 @@ export function addSuggestion(
 			.from(suggestions)
 			.where(and(eq(suggestions.groupId, input.groupId), eq(suggestions.dedupeKey, key)))
 			.get();
-		// Deliberately does not say who: PRD §5 rejects duplicates without
+		// Deliberately does not say who: duplicates are rejected without
 		// revealing who added the film first.
 		if (clash && clash.status !== 'withdrawn') return { ok: false, reason: 'duplicate' } as const;
 
@@ -154,7 +154,7 @@ export function listPool(db: DB, groupId: string, viewerId: string): PoolEntry[]
 	// There was a `repeatDrawnFilms` setting here that only ever controlled this
 	// visibility and never made a watched film drawable, so a group with it on saw
 	// entries labelled "already watched" that could not be picked. It appeared
-	// nowhere in the PRD; dropped rather than given a second meaning.
+	// in no spec; dropped rather than given a second meaning.
 	// `withdrawn` is still excluded — that is a member retracting a suggestion,
 	// not something the group watched.
 	const visible = or(eq(suggestions.status, 'open'), eq(suggestions.status, 'drawn'));

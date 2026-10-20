@@ -21,7 +21,7 @@ function cookieSpy() {
 	return { set: vi.fn(), get: vi.fn(), delete: vi.fn() };
 }
 
-// The link is reusable (not consumed on use, per PRD §9 — see profile.test.ts
+// The link is reusable (not consumed on use — see profile.test.ts
 // for the revocation behaviour), so the same token works for both requests
 // below.
 const user = createUser(db, {

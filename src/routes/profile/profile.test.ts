@@ -334,7 +334,7 @@ describe('changeDisplayName', () => {
 	});
 
 	it('allows a name another member already uses', async () => {
-		// Decision 20: two friends may both be "Alex" to the group. A uniqueness
+		// Two friends may both be "Alex" to the group. A uniqueness
 		// check here would quietly undo the reason usernames exist at all.
 		const result = await post('changeDisplayName', { displayName: 'Grace' });
 		expect(result).toEqual({ success: 'profile.display_name_saved' });

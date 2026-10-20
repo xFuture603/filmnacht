@@ -212,8 +212,8 @@ describe('POST /admin?/recover', () => {
 	});
 
 	it('refuses an admin who cannot produce their own password', async () => {
-		// An admin's unlocked laptop must not be a master key. Decision 21 gated
-		// revealing your OWN link; minting one for somebody else is stronger.
+		// An admin's unlocked laptop must not be a master key. The profile page
+		// gates revealing your OWN link; minting one for somebody else is stronger.
 		const result = await post(asAdmin(), {
 			userId: ada.id,
 			currentPassword: 'not the admin password'

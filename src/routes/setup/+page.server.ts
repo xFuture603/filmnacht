@@ -61,7 +61,7 @@ export const actions: Actions = {
 
 		const { token, expiresAt } = createSession(db, admin.id);
 		// A protocol check, not `dev`: `dev` is only true under `vite dev`, so in
-		// production over plain HTTP (the Pi/Synology target of PRD §11) `!dev`
+		// production over plain HTTP (a Raspberry Pi or Synology at home) `!dev`
 		// would mark this cookie secure and the browser would silently drop it.
 		setSessionCookie(cookies, token, expiresAt, url.protocol === 'https:');
 		redirect(303, '/groups');
