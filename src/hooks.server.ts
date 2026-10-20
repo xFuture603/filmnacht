@@ -44,6 +44,9 @@ export const init: ServerInit = () => {
  * message, which is how a stack trace reaches a browser.
  */
 export const handleError: HandleServerError = ({ error, event, status }) => {
+	// A public server gets probed for /server-status, /wp-login.php and the
+	// like all day. Those 404s are noise that would bury real errors.
+	if (status === 404) return;
 	console.error(`[${status}] ${event.request.method} ${event.route.id ?? '(unrouted)'}`, error);
 };
 

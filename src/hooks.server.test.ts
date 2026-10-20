@@ -98,7 +98,7 @@ describe('handleError keeps path tokens out of the log', () => {
 	// request. Same class as the SMTP credentials mail.ts refuses to log.
 	const TOKEN = 'cONuogJsOHRgB07ew8yaoA';
 
-	function logFrom(routeId: string | null, path: string) {
+	function logFrom(routeId: string | null, path: string, status = 500) {
 		const logged: unknown[] = [];
 		vi.spyOn(console, 'error').mockImplementation((...args) => logged.push(...args));
 		handleError({
@@ -108,7 +108,7 @@ describe('handleError keeps path tokens out of the log', () => {
 				url: new URL(`http://localhost${path}`),
 				route: { id: routeId }
 			},
-			status: 500,
+			status,
 			message: 'Internal Error'
 		} as never);
 		vi.restoreAllMocks();
@@ -134,5 +134,10 @@ describe('handleError keeps path tokens out of the log', () => {
 		const logged = logFrom(null, `/login/${TOKEN}`);
 		expect(logged).not.toContain(TOKEN);
 		expect(logged).toContain('unrouted');
+	});
+
+	it('stays silent for a 404, which bots scanning the server cause all day', () => {
+		expect(logFrom(null, '/server-status', 404)).toBe('');
+		expect(logFrom(null, '/server-status', 500)).toContain('unrouted');
 	});
 });
