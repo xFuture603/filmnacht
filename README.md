@@ -102,6 +102,8 @@ Images are published to `ghcr.io/xfuture603/filmnacht` for amd64 and arm64,
 signed with cosign, and come with an SBOM and build provenance. They run as a
 non-root user on a read-only file system, as set in `compose.yaml`.
 
+To check a signature (needs cosign 3 or newer):
+
 ```sh
 cosign verify ghcr.io/xfuture603/filmnacht:0.1.0 \
   --certificate-identity-regexp '^https://github.com/xFuture603/filmnacht/' \
