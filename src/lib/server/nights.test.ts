@@ -82,7 +82,7 @@ describe('scheduleNight', () => {
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		const night = nightDetail(db, id, ada);
 		// Round-trips to the same instant. The display timezone is a render-time
-		// concern; the column is UTC (PRD §6).
+		// concern; the column is UTC.
 		expect(night?.scheduledAt.getTime()).toBe(Math.floor(LATER.getTime() / 1000) * 1000);
 	});
 });
@@ -257,8 +257,8 @@ describe('drawForNight', () => {
 	});
 
 	it('treats a newcomer exactly like a member skipped for the whole window', () => {
-		// PRD §6: "as far as the app can tell both have been waiting, and both
-		// should go next." Ada's one watched film is eleven nights back, outside
+		// As far as the app can tell both have been waiting, and both should
+		// go next. Ada's one watched film is eleven nights back, outside
 		// the ten-night window; Alan joins afterwards with no history at all.
 		for (let i = 0; i <= 10; i++) {
 			openFilm(i === 0 ? ada : grace, `Film ${i}`);
@@ -321,8 +321,7 @@ describe('cancelNight', () => {
 	});
 
 	it('does not cost the member their turn', () => {
-		// PRD §6, in as many words: "A night that never happened must not cost a
-		// member their turn."
+		// A night that never happened must not cost a member their turn.
 		addSuggestion(db, {
 			groupId,
 			userId: ada,

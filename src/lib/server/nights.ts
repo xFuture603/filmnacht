@@ -22,8 +22,8 @@ import { requireMember, requireOwner } from './groups';
 import { FORMER_MEMBER_USERNAME } from './members';
 
 /**
- * PRD §6 says "the owner (optionally any member, per setting)" may schedule a
- * night. `GroupSettings` has no such setting and adding one is not in scope
+ * The owner schedules nights. Letting any member do it, per setting, was
+ * considered. `GroupSettings` has no such setting and adding one is not in scope
  * here — the owner schedules, full stop, and the per-member variant is
  * deferred rather than guessed at.
  *
@@ -234,7 +234,7 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 export function candidatesFor(db: DB, groupId: string): Candidate[] {
 	// The window is the last N nights this group actually WATCHED. Drawn and
 	// cancelled nights are absent by construction, which is what stops a
-	// cancelled night or a re-draw from costing somebody their turn (PRD §6).
+	// cancelled night or a re-draw from costing somebody their turn.
 	const watchedNightIds = db
 		.select({ suggestionId: movieNights.suggestionId })
 		.from(movieNights)
@@ -432,7 +432,7 @@ export function cancelNight(db: DB, nightId: string, ownerId: string): boolean {
 	});
 }
 
-/** Only from 'drawn'. Manual on purpose — PRD §6 defers the automatic move to v1.0. */
+/** Only from 'drawn'. Manual on purpose; there is no automatic move yet. */
 export function markWatched(db: DB, nightId: string, ownerId: string): boolean {
 	const night = db
 		.select({ groupId: movieNights.groupId })
@@ -460,7 +460,7 @@ class RedrawAbort extends Error {
 }
 
 /**
- * Permitted exactly once per night (PRD §6): more than one existing log entry
+ * Permitted exactly once per night: more than one existing log entry
  * means the override is spent. Keeps one implementation of "pick a film"
  * rather than two that can drift — it releases the drawn suggestion, puts the
  * night back to 'scheduled', and calls `drawForNight` unchanged.

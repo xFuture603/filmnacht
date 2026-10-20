@@ -60,7 +60,7 @@ describe('createGroup', () => {
 		expect(requireMember(db, ada, id).role).toBe('owner');
 	});
 
-	it('applies the default settings from the PRD', () => {
+	it('applies the default settings', () => {
 		const id = createGroup(db, { name: 'Movie Club', ownerId: ada });
 		expect(requireMember(db, ada, id).settings).toEqual(DEFAULT_GROUP_SETTINGS);
 	});

@@ -89,7 +89,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 				? { title: drawnTitle, by: drawnBy, byFormer: drawnByFormer, onlyCandidate }
 				: null,
 		filmHidden: !visible && hasFilm,
-		// PRD §6: Draw is disabled, with the reason, when nothing can be drawn.
+		// Draw is disabled, with the reason, when nothing can be drawn.
 		canDraw: candidatesFor(db, params.groupId).length > 0,
 		ratings,
 		ratingTimes: {

@@ -30,3 +30,6 @@ drizzle/*.bak
 # Editor settings and working documents (kept locally, not published)
 .vscode/
 docs/
+
+# Product requirements, kept locally only
+prd.md

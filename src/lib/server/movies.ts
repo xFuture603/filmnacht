@@ -34,11 +34,11 @@ export function safePosterUrl(raw: unknown): string | null {
 /**
  * The `movies` table is a cache, not a catalogue: metadata is fetched from TMDB
  * once and read from SQLite forever after, so a detail view works with no API
- * key and the instance does not phone out on every page load (PRD §5).
+ * key and the instance does not phone out on every page load.
  *
  * One row per `tmdb_id`, shared across groups. A hand-entered film has no id,
  * so it gets its own row — two groups typing the same film by hand hold two
- * rows, which is correct: PRD §10 scopes the uniqueness rule to `tmdb_id`, and
+ * rows, which is correct: the uniqueness rule is scoped to `tmdb_id`, and
  * per-group duplicate protection is the suggestion's `dedupe_key`, not this.
  */
 export function findOrCreateMovie(db: DB, input: MovieInput): string {

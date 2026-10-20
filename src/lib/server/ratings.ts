@@ -15,7 +15,7 @@ import { requireMember, requireOwner } from './groups';
 import { groupSettings } from './group-settings';
 import { FORMER_MEMBER_USERNAME } from './members';
 
-/** PRD §7: an optional comment of at most 500 characters. Longer is refused, not clipped. */
+/** An optional comment of at most 500 characters. Longer is refused, not clipped. */
 export const COMMENT_MAX = 500;
 
 const MINUTE = 60 * 1000;
@@ -28,7 +28,7 @@ export type RatingWindow =
 	| { state: 'closed'; closedAt: Date };
 
 /**
- * Computed on read from the clock and the group's settings (PRD §7): no job
+ * Computed on read from the clock and the group's settings: no job
  * opens or closes anything. A night with no film to rate never opens.
  */
 export function ratingWindow(
@@ -38,7 +38,7 @@ export function ratingWindow(
 ): RatingWindow {
 	if (night.status !== 'drawn' && night.status !== 'watched') return { state: 'not_ratable' };
 	const ends = new Date(night.scheduledAt.getTime() + settings.nightEndsAfterMinutes * MINUTE);
-	// Watched means the night happened (PRD §4): a group that watched early
+	// Watched means the night happened: a group that watched early
 	// rates from then, not from a date that has lost its meaning.
 	const opensAt = night.watchedAt && night.watchedAt < ends ? night.watchedAt : ends;
 	const closesAt = new Date(opensAt.getTime() + settings.ratingWindowDays * DAY);
@@ -47,7 +47,7 @@ export function ratingWindow(
 	return { state: 'closed', closedAt: closesAt };
 }
 
-/** "7.5" → 15. Anything but a half step from 1 to 10 is null (PRD §7 stores 2–20). */
+/** "7.5" → 15. Anything but a half step from 1 to 10 is null (stored as 2–20). */
 export function parseScore(raw: FormDataEntryValue | null): number | null {
 	if (typeof raw !== 'string' || raw.trim() === '') return null;
 	const doubled = Number(raw) * 2;
@@ -272,7 +272,7 @@ export type RatingView = {
 /**
  * What ONE viewer may know about a night's ratings. Before the reveal that is
  * their own rating, how many are in and who — never another member's score or
- * comment. This is the payload, not a hint to the markup (PRD §7).
+ * comment. This is the payload, not a hint to the markup.
  */
 export function ratingView(
 	db: DB,

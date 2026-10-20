@@ -29,7 +29,7 @@ export function createGroup(
 
 /**
  * The only way a route should reach group data. A non-member and a non-existent
- * group produce the identical 404, so a guessed id reveals nothing (PRD §12).
+ * group produce the identical 404, so a guessed id reveals nothing.
  */
 export function requireMember(db: DB, userId: string, groupId: string): GroupMembership {
 	const row = db
@@ -60,7 +60,7 @@ export function requireMember(db: DB, userId: string, groupId: string): GroupMem
 	if (!row) error(404, 'Not found');
 	// Normalised here, once, so every caller reads a row written before a
 	// setting existed — or hand-edited to something invalid — as the defaults,
-	// never as a crash (PRD-adjacent: see group-settings.ts).
+	// never as a crash (see group-settings.ts).
 	return { ...row, settings: groupSettings(row.settings) };
 }
 
@@ -83,7 +83,7 @@ export function deleteGroup(db: DB, groupId: string): void {
 	db.delete(groups).where(eq(groups.id, groupId)).run();
 }
 
-/** Access goes, history stays — name included (PRD §4). */
+/** Access goes, history stays — name included. */
 export function leaveGroup(db: DB, userId: string, groupId: string): void {
 	db.update(memberships)
 		.set({ leftAt: new Date() })

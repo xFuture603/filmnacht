@@ -71,8 +71,8 @@ export const actions: Actions = {
 			setTimeout(() => {
 				try {
 					const token = createReset(db, userId);
-					// ponytail: a floating send on the long-lived node server of PRD
-					// §11. A shutdown between the insert and the send loses one message
+					// ponytail: a floating send on the long-lived node
+					// server. A shutdown between the insert and the send loses one message
 					// and the member asks again. A queue earns its keep only once
 					// delivery has to survive a restart.
 					void sendMail(

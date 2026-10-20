@@ -74,7 +74,7 @@ export const load: PageServerLoad = ({ locals }) => {
 };
 
 export const actions: Actions = {
-	/** PRD §10: the instance setting the admin edits in the UI, timezone first. */
+	/** The instance setting the admin edits in the UI, timezone first. */
 	timezone: async ({ locals, request }) => {
 		requireAdmin(locals);
 		const timezone = String((await request.formData()).get('timezone') ?? '');
@@ -106,13 +106,13 @@ export const actions: Actions = {
 	},
 
 	/**
-	 * The SMTP-free half of recovery, and the reason PRD §12's rule holds: a
+	 * The SMTP-free half of recovery, and the reason login never depends on mail: a
 	 * member who forgot their password, saved no login link and has no email
 	 * address still has a way back that involves no mail server at all.
 	 *
 	 * Requires the admin's own password. Minting a credential for another
-	 * account is at least as powerful as revealing your own, which decision 21
-	 * gated — an admin's unlocked laptop must not be a master key.
+	 * account is at least as powerful as revealing your own, which the
+	 * profile page gates — an admin's unlocked laptop must not be a master key.
 	 *
 	 * Minting changes nothing about the target account. The link is an ordinary
 	 * reset token, so /reset/<token> is what sets the password, sweeps every
@@ -138,7 +138,7 @@ export const actions: Actions = {
 		if (!target) return fail(400, { error: 'admin.error.no_such_member' });
 
 		const token = createReset(db, target.id);
-		// Shown once and never stored in plaintext (PRD §10). The admin hands it
+		// Shown once and never stored in plaintext. The admin hands it
 		// over out of band.
 		return { recoveryUrl: `${url.origin}/reset/${token}`, recoveredName: target.displayName };
 	},

@@ -4,7 +4,7 @@ import { memberships, movieNights, suggestions } from './db/schema';
 
 /**
  * "New since your last visit" for a group's Films and Nights tabs. Nothing is
- * sent anywhere (PRD decision 13): the state is two timestamps per membership,
+ * sent anywhere: the state is two timestamps per membership,
  * and opening a tab moves its timestamp to now.
  */
 

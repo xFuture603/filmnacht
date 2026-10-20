@@ -223,7 +223,7 @@ describe('username validation', () => {
 
 describe('session cookie secure flag', () => {
 	// This project has already shipped `secure: !dev` once — a Secure cookie
-	// on a plain-HTTP instance (the Pi/Synology of PRD §11) is silently
+	// on a plain-HTTP instance (a Raspberry Pi or Synology at home) is silently
 	// dropped by the browser, so sign-in appears to work and then does
 	// nothing, forever. /login pins this; the other cookie-setting sites did
 	// not, including this one.

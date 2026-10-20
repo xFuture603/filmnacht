@@ -91,7 +91,7 @@ function hasTables(sqlite: Database.Database): boolean {
 
 /**
  * Copies the database aside before applying anything, so a bad migration at 2am
- * is recoverable rather than terminal (PRD §11). Runs whether or not the
+ * is recoverable rather than terminal. Runs whether or not the
  * operator remembered the documented backup command.
  */
 export function backupIfPending(

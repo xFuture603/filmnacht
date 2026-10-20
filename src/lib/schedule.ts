@@ -5,7 +5,7 @@ import { wallParts, wallTimeToUtc } from '$lib/time';
  * The schedule form: a month calendar and time slots that follow the chosen
  * day. Shared by the server (first render, defaults) and the browser (month
  * switching, dropping times that have passed) so both apply the same rules.
- * Everything is the instance's wall clock (PRD §6, §12), never the device's.
+ * Everything is the instance's wall clock, never the device's.
  */
 
 const EVENING_FROM = 17 * 60;

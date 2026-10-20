@@ -47,7 +47,7 @@ export const actions: Actions = {
 	 * The username is deliberately NOT editable here. Changing it frees the old
 	 * one for someone else to claim, which is a real impersonation vector in a
 	 * group that identifies people by it, and it invalidates every saved
-	 * credential. Deferred to its own decision (PRD §13 backlog), not dropped.
+	 * credential. Deferred to its own decision, not dropped.
 	 */
 	changePassword: async ({ locals, request, cookies }) => {
 		const user = requireUser(locals);
@@ -94,7 +94,7 @@ export const actions: Actions = {
 		const user = requireUser(locals);
 		const form = await request.formData();
 		const displayName = validateDisplayName(form.get('displayName'));
-		// No uniqueness check, by design (decision 20): two friends may both be
+		// No uniqueness check, by design: two friends may both be
 		// "Alex" to the group. That is what the separate username is for.
 		if (!displayName) return fail(400, { error: 'invite.error.name' });
 		setDisplayName(db, user.id, displayName);
@@ -142,14 +142,14 @@ export const actions: Actions = {
 
 	/**
 	 * Revealing requires the current password too, consistent with
-	 * changePassword directly above (PRD §9, decision 21 — a revised decision,
+	 * changePassword directly above (a revised decision,
 	 * not a bug fix). The link is the MORE powerful of the two credentials: it is
 	 * permanent, reusable, and survives logout and session expiry, so a bare
 	 * session cookie was buying an attacker with thirty seconds at an unlocked
 	 * laptop an access that outlived the session they borrowed. Gating the
 	 * stronger credential behind the same proof as the weaker one is the point.
 	 *
-	 * The cost decision 21 accepted — a member who forgot their password and
+	 * The cost of that gate — a member who forgot their password and
 	 * saved no link in advance has no self-service way back — is no longer open.
 	 * /reset emails a link where the operator configured SMTP, and /admin mints
 	 * the same reset token with no mail server involved where they did not.
@@ -161,9 +161,9 @@ export const actions: Actions = {
 		const refused = await reauthenticate(user.id, form);
 		if (refused) return refused;
 
-		// Past the last await. Only the hash is stored (PRD §10), so the link
+		// Past the last await. Only the hash is stored, so the link
 		// cannot be shown again — revealing mints a fresh one, which is also the
-		// "revoke" of PRD §9. A leaked link may already have been used, so
+		// "revoke" of the login link. A leaked link may already have been used, so
 		// revoking must also kill every session it granted — every session but
 		// this device's own.
 		const token = regenerateLoginToken(db, user.id);
