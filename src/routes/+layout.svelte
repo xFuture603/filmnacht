@@ -30,6 +30,9 @@
 	);
 </script>
 
+<!-- Pages with a heading replace this with "<heading> · Filmnacht". -->
+<svelte:head><title>Filmnacht</title></svelte:head>
+
 <div class="min-h-dvh bg-base-200">
 	<header
 		class="navbar sticky top-0 z-10 min-h-14 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur"

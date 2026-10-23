@@ -42,7 +42,7 @@
 </script>
 
 <a
-	class="btn btn-ghost btn-sm mb-2 min-h-12 gap-1 px-2"
+	class="btn btn-outline mb-2 min-h-12 gap-1"
 	href="/groups/{data.group.groupId}/nights"
 	data-sveltekit-preload-data="off"
 >
@@ -61,7 +61,7 @@
 
 {#if data.night.status !== 'cancelled'}
 	<a
-		class="btn btn-ghost btn-sm mb-4 min-h-12 gap-1 px-2"
+		class="btn btn-outline mb-4 min-h-12 gap-1"
 		href="/groups/{data.group.groupId}/nights/{data.night.id}/calendar.ics"
 		download
 		data-sveltekit-reload
@@ -188,7 +188,7 @@
 							<div class="mt-2 flex flex-col gap-2">
 								{@render rateForm()}
 								<form method="POST" action="?/withdrawRating">
-									<button class="btn min-h-12 w-full btn-ghost sm:w-auto"
+									<button class="btn min-h-12 w-full btn-outline sm:w-auto"
 										>{t(data.locale, 'ratings.withdraw')}</button
 									>
 								</form>

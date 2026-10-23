@@ -3,6 +3,8 @@
 	let { title, intro, children }: { title: string; intro?: string; children: Snippet } = $props();
 </script>
 
+<svelte:head><title>{title} · Filmnacht</title></svelte:head>
+
 <div class="mx-auto w-full max-w-md">
 	<div class="card border border-base-300 bg-base-100 shadow-sm">
 		<div class="card-body gap-4">

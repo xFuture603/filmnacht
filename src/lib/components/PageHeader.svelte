@@ -15,6 +15,8 @@
 	} = $props();
 </script>
 
+<svelte:head><title>{title} · Filmnacht</title></svelte:head>
+
 <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
 	<div class="flex min-w-0 items-center gap-3">
 		{#if HeaderIcon}

@@ -93,7 +93,7 @@
 </section>
 
 <a
-	class="btn btn-ghost min-h-12"
+	class="btn btn-outline min-h-12"
 	href="/groups/{data.group.groupId}"
 	data-sveltekit-preload-data="off"
 >

@@ -181,6 +181,7 @@
 </section>
 
 <form method="POST" action="/logout" class="mt-6">
-	<button class="btn btn-ghost min-h-12 w-full sm:w-auto">{t(data.locale, 'profile.logout')}</button
+	<button class="btn btn-outline min-h-12 w-full sm:w-auto"
+		>{t(data.locale, 'profile.logout')}</button
 	>
 </form>
