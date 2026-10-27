@@ -19,6 +19,9 @@
 		class="flex aspect-[2/3] w-full items-center justify-center rounded-box bg-gradient-to-br from-base-300 to-base-200"
 		aria-hidden="true"
 	>
-		<Film class="size-10 text-base-content/25" strokeWidth={1.5} />
+		<!-- 48px is exactly twice the icon's 24px grid, so 1px strokes become 2px
+		     lines on whole pixels and stay sharp on 1x screens. The fade is on the
+		     whole icon, not the stroke colour, so crossing lines don't darken. -->
+		<Film class="size-12 text-base-content opacity-25" strokeWidth={1} />
 	</div>
 {/if}
