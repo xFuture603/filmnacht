@@ -1,0 +1,1 @@
+ALTER TABLE `movie_nights` ADD `rsvp_reminder_mailed_at` integer;

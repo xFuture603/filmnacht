@@ -249,6 +249,8 @@ export const movieNights = sqliteTable('movie_nights', {
 	ratingOpenMailedAt: integer('rating_open_mailed_at', { mode: 'timestamp' }),
 	/** When the "closes tomorrow" email went out, or was skipped because "open" came late. */
 	ratingReminderMailedAt: integer('rating_reminder_mailed_at', { mode: 'timestamp' }),
+	/** When the "are you coming?" email went out (rsvp-reminder spec). Claimed, then sent. */
+	rsvpReminderMailedAt: integer('rsvp_reminder_mailed_at', { mode: 'timestamp' }),
 	status: text('status', { enum: ['scheduled', 'drawn', 'watched', 'cancelled'] })
 		.notNull()
 		.default('scheduled'),

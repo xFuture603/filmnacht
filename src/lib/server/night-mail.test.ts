@@ -7,11 +7,18 @@ vi.mock('./mail', () => ({
 }));
 import { eq } from 'drizzle-orm';
 import { applyMigrations, createDb, type DB } from './db/client';
-import { users } from './db/schema';
+import { movieNights, users } from './db/schema';
 import { addMember, createGroup, leaveGroup } from './groups';
-import { scheduleNight } from './nights';
+import { respond, scheduleNight } from './nights';
 import { createUser, setEmail } from './users';
-import { nightMailInfo, nightMailRecipients, sendNightMail } from './night-mail';
+import {
+	claimRsvpReminder,
+	dueRsvpReminders,
+	nightMailInfo,
+	nightMailRecipients,
+	rsvpReminderRecipients,
+	sendNightMail
+} from './night-mail';
 
 let db: DB;
 let ada: string; // owner
@@ -127,5 +134,65 @@ describe('sendNightMail', () => {
 		};
 		await sendNightMail(db, nightId, 'scheduled', null, flaky);
 		expect(sent.map((s) => s.to).sort()).toEqual(['ada@example.org', 'lin@example.org']);
+	});
+});
+
+const AT = new Date('2030-07-01T18:00:00Z').getTime();
+const H = 3600_000;
+const setNight = (values: Partial<typeof movieNights.$inferInsert>) =>
+	db.update(movieNights).set(values).where(eq(movieNights.id, nightId)).run();
+
+describe('dueRsvpReminders', () => {
+	it('is due from 48h before until the start', () => {
+		expect(dueRsvpReminders(db, new Date(AT - 48 * H - 60_000))).toEqual([]);
+		expect(dueRsvpReminders(db, new Date(AT - 48 * H))).toEqual([nightId]);
+		expect(dueRsvpReminders(db, new Date(AT - 60_000))).toEqual([nightId]);
+		expect(dueRsvpReminders(db, new Date(AT))).toEqual([]);
+	});
+
+	it('skips a night created less than 48h ahead: its invite only just went out', () => {
+		setNight({ createdAt: new Date(AT - 47 * H) });
+		expect(dueRsvpReminders(db, new Date(AT - H))).toEqual([]);
+	});
+
+	it('counts drawn nights, never cancelled or watched ones', () => {
+		const now = new Date(AT - 24 * H);
+		setNight({ status: 'drawn' });
+		expect(dueRsvpReminders(db, now)).toEqual([nightId]);
+		setNight({ status: 'cancelled' });
+		expect(dueRsvpReminders(db, now)).toEqual([]);
+		setNight({ status: 'watched' });
+		expect(dueRsvpReminders(db, now)).toEqual([]);
+	});
+});
+
+describe('claimRsvpReminder', () => {
+	it('claims once', () => {
+		const now = new Date(AT - 48 * H);
+		expect(claimRsvpReminder(db, nightId, now)).toBe(true);
+		expect(claimRsvpReminder(db, nightId, now)).toBe(false);
+		expect(dueRsvpReminders(db, now)).toEqual([]);
+	});
+});
+
+describe('rsvpReminderRecipients', () => {
+	it('reminds only members who have not answered; maybe counts as an answer', () => {
+		respond(db, nightId, grace, 'yes');
+		respond(db, nightId, ada, 'maybe');
+		expect(rsvpReminderRecipients(db, nightId)).toEqual(['lin@example.org']);
+	});
+
+	it('treats "no" as an answer', () => {
+		respond(db, nightId, lin, 'no');
+		expect(rsvpReminderRecipients(db, nightId).sort()).toEqual([
+			'ada@example.org',
+			'grace@example.org'
+		]);
+	});
+
+	it('leaves out whoever opted out or left', () => {
+		db.update(users).set({ nightMails: false }).where(eq(users.id, grace)).run();
+		leaveGroup(db, lin, groupId);
+		expect(rsvpReminderRecipients(db, nightId)).toEqual(['ada@example.org']);
 	});
 });

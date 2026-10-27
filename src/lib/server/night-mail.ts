@@ -1,9 +1,9 @@
 import { env } from '$env/dynamic/private';
 import { t, type Locale } from '$lib/i18n';
 import { formatWhen } from '$lib/time';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { DB } from './db/client';
-import { groups, memberships, movieNights, users } from './db/schema';
+import { attendance, groups, memberships, movieNights, users } from './db/schema';
 import { groupSettings } from './group-settings';
 import { nightIcs } from './ics';
 import { isMailConfigured, mailFromAddress, sendMail } from './mail';
@@ -53,6 +53,75 @@ export function nightMailRecipients(db: DB, nightId: string): string[] {
 		.from(memberships)
 		.innerJoin(users, eq(users.id, memberships.userId))
 		.where(and(eq(memberships.groupId, night.groupId), isNull(memberships.leftAt)))
+		.all()
+		.filter((u) => u.nightMails)
+		.map((u) => u.email)
+		.filter((email): email is string => email !== null);
+}
+
+const REMIND_BEFORE = 48 * 60 * 60 * 1000;
+
+/**
+ * Nights due their one "are you coming?" email: 2 days before, until the night
+ * starts. A night scheduled less than 2 days ahead gets none, its invite only
+ * just went out.
+ */
+export function dueRsvpReminders(db: DB, now: Date): string[] {
+	return db
+		.select({
+			id: movieNights.id,
+			scheduledAt: movieNights.scheduledAt,
+			createdAt: movieNights.createdAt
+		})
+		.from(movieNights)
+		.where(
+			and(
+				inArray(movieNights.status, ['scheduled', 'drawn']),
+				isNull(movieNights.rsvpReminderMailedAt)
+			)
+		)
+		.all()
+		.filter((n) => {
+			const remindAt = n.scheduledAt.getTime() - REMIND_BEFORE;
+			return (
+				n.createdAt.getTime() < remindAt &&
+				now.getTime() >= remindAt &&
+				now.getTime() < n.scheduledAt.getTime()
+			);
+		})
+		.map((n) => n.id);
+}
+
+/** True only for the caller that took it: the email is theirs to send. */
+export function claimRsvpReminder(db: DB, nightId: string, now: Date): boolean {
+	return (
+		db
+			.update(movieNights)
+			.set({ rsvpReminderMailedAt: now })
+			.where(and(eq(movieNights.id, nightId), isNull(movieNights.rsvpReminderMailedAt)))
+			.run().changes > 0
+	);
+}
+
+/** Like nightMailRecipients, minus everyone who answered: yes, no and maybe alike. */
+export function rsvpReminderRecipients(db: DB, nightId: string): string[] {
+	const night = db
+		.select({ groupId: movieNights.groupId })
+		.from(movieNights)
+		.where(eq(movieNights.id, nightId))
+		.get();
+	if (!night) return [];
+	return db
+		.select({ email: users.email, nightMails: users.nightMails })
+		.from(memberships)
+		.innerJoin(users, eq(users.id, memberships.userId))
+		.leftJoin(
+			attendance,
+			and(eq(attendance.userId, users.id), eq(attendance.movieNightId, nightId))
+		)
+		.where(
+			and(eq(memberships.groupId, night.groupId), isNull(memberships.leftAt), isNull(attendance.id))
+		)
 		.all()
 		.filter((u) => u.nightMails)
 		.map((u) => u.email)
