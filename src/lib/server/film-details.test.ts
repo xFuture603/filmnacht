@@ -78,7 +78,7 @@ describe('filmDetails', () => {
 	it('gives up after 5 seconds', async () => {
 		vi.useFakeTimers();
 		const fetchImpl = vi.fn(
-			(_url: string, init?: RequestInit) =>
+			(_url: string | URL | Request, init?: RequestInit) =>
 				new Promise<Response>((_, reject) =>
 					init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
 				)

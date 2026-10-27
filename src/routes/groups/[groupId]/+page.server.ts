@@ -8,12 +8,13 @@ import {
 } from '$lib/server/groups';
 import { createInvite } from '$lib/server/invites';
 import { rateLimit } from '$lib/server/rate-limit';
-import { nextNight, unrevealedDrawnIds } from '$lib/server/nights';
+import { nextNight } from '$lib/server/nights';
+import { visiblePool } from '$lib/server/pool';
 import { nightsToRate } from '$lib/server/ratings';
 import { visit } from '$lib/server/seen';
 import { getTimezone } from '$lib/server/settings';
 import { formatDay, formatWhen } from '$lib/time';
-import { countOpenSuggestions, listPool, withdrawSuggestion } from '$lib/server/suggestions';
+import { countOpenSuggestions, withdrawSuggestion } from '$lib/server/suggestions';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -31,7 +32,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	return {
 		group,
 		members: listMembers(db, params.groupId),
-		pool: visiblePool(params.groupId, user.id, group.settings.resultVisible).map((entry) => ({
+		pool: visiblePool(db, params.groupId, user.id, group.settings.resultVisible).map((entry) => ({
 			...entry,
 			isNew: newIds.has(entry.suggestionId),
 			drawnFor:
@@ -49,19 +50,6 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		max: group.settings.maxOpenSuggestions
 	};
 };
-
-/**
- * With `resultVisible: 'on_night'` the film drawn for a night still to come is
- * a surprise, and a pool entry badged "drawn" would give it away. It is left
- * out of the pool until the night starts, not merely unbadged: withdrawing it
- * would answer "already drawn" and say the same thing.
- */
-function visiblePool(groupId: string, viewerId: string, resultVisible: 'immediately' | 'on_night') {
-	const pool = listPool(db, groupId, viewerId);
-	if (resultVisible === 'immediately') return pool;
-	const hidden = unrevealedDrawnIds(db, groupId, new Date());
-	return pool.filter((entry) => !hidden.has(entry.suggestionId));
-}
 
 export const actions: Actions = {
 	invite: async ({ locals, params, url }) => {

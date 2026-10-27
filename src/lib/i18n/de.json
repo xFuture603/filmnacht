@@ -324,5 +324,13 @@
 	"mail.night.reminder.body": "Du hast noch nicht gesagt, ob du zur Filmnacht von {group} am {when} kommst.",
 	"mail.night.reminder.link": "Hier antworten: {link}",
 	"mail.reset.subject": "Setze dein Filmnacht-Passwort zurück",
-	"mail.reset.body": "Öffne diesen Link innerhalb einer Stunde, um ein neues Passwort zu wählen:\n\n{link}\n\nWenn du das nicht angefordert hast, hat sich nichts geändert und du kannst diese Nachricht ignorieren."
+	"mail.reset.body": "Öffne diesen Link innerhalb einer Stunde, um ein neues Passwort zu wählen:\n\n{link}\n\nWenn du das nicht angefordert hast, hat sich nichts geändert und du kannst diese Nachricht ignorieren.",
+	"film.back": "Zurück zur Gruppe",
+	"film.director": "Regie",
+	"film.cast": "Besetzung",
+	"film.as": "{name} als {character}",
+	"film.minutes": "{n} Min.",
+	"film.no_details": "Für diesen Film gibt es keine weiteren Details",
+	"film.source": "Filmdetails von TMDB",
+	"film.rating": "TMDB-Bewertung {rating} von 10"
 }

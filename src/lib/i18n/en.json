@@ -326,5 +326,13 @@
 	"mail.night.reminder.body": "You haven't said yet whether you're coming to the {group} movie night on {when}.",
 	"mail.night.reminder.link": "Answer here: {link}",
 	"mail.reset.subject": "Reset your filmnacht password",
-	"mail.reset.body": "Open this link within the hour to choose a new password:\n\n{link}\n\nIf you did not ask for this, nothing has changed and you can ignore this message."
+	"mail.reset.body": "Open this link within the hour to choose a new password:\n\n{link}\n\nIf you did not ask for this, nothing has changed and you can ignore this message.",
+	"film.back": "Back to the group",
+	"film.director": "Director",
+	"film.cast": "Cast",
+	"film.as": "{name} as {character}",
+	"film.minutes": "{n} min",
+	"film.no_details": "More details aren't available for this film",
+	"film.source": "Film details from TMDB",
+	"film.rating": "TMDB rating {rating} of 10"
 }
