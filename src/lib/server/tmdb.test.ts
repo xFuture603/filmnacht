@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fetchMovie, searchMovies } from './tmdb';
+import { fetchMovie, fetchMovieCredits, searchMovies } from './tmdb';
 
 function jsonResponse(body: unknown, status = 200) {
 	return new Response(JSON.stringify(body), { status });
@@ -150,5 +150,75 @@ describe('fetchMovie', () => {
 	it('returns null for a film TMDB does not have', async () => {
 		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({}, 404));
 		expect(await fetchMovie('KEY', 1, fetchImpl)).toBeNull();
+	});
+});
+
+describe('fetchMovieCredits', () => {
+	const cast = Array.from({ length: 8 }, (_, i) => ({
+		name: `Actor ${7 - i}`,
+		character: `Role ${7 - i}`,
+		order: 7 - i
+	}));
+	const FIXTURE = {
+		id: 438631,
+		overview: 'A spice war.',
+		credits: {
+			cast,
+			crew: [
+				{ job: 'Director', name: 'Denis Villeneuve' },
+				{ job: 'Writer', name: 'Jon Spaihts' }
+			]
+		}
+	};
+
+	it('maps the overview, the directors and the first 6 cast in order', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(FIXTURE));
+		expect(await fetchMovieCredits('KEY', 438631, 'de-DE', fetchImpl)).toEqual({
+			overview: 'A spice war.',
+			directors: ['Denis Villeneuve'],
+			cast: [0, 1, 2, 3, 4, 5].map((n) => ({ name: `Actor ${n}`, character: `Role ${n}` }))
+		});
+		const url = String(fetchImpl.mock.calls[0][0]);
+		expect(url).toContain('/movie/438631?');
+		expect(url).toContain('append_to_response=credits');
+		expect(url).toContain('language=de-DE');
+	});
+
+	it('treats missing or malformed credits as empty and an empty overview as null', async () => {
+		const fetchImpl = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ id: 1, overview: '', credits: { cast: 'nope' } }));
+		expect(await fetchMovieCredits('KEY', 1, 'en-US', fetchImpl)).toEqual({
+			overview: null,
+			directors: [],
+			cast: []
+		});
+	});
+
+	it('keeps a cast member without a character, with character null', async () => {
+		const fetchImpl = vi
+			.fn()
+			.mockResolvedValue(
+				jsonResponse({ id: 1, overview: 'x', credits: { cast: [{ name: 'Solo', order: 0 }] } })
+			);
+		expect((await fetchMovieCredits('KEY', 1, 'en-US', fetchImpl))?.cast).toEqual([
+			{ name: 'Solo', character: null }
+		]);
+	});
+
+	it('returns null for an unknown film', async () => {
+		const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({}, 404));
+		expect(await fetchMovieCredits('KEY', 1, 'en-US', fetchImpl)).toBeNull();
+	});
+
+	it('never puts the key into the error', async () => {
+		const fetchImpl = vi.fn().mockRejectedValue(new Error('GET https://x?api_key=SECRETKEY'));
+		await expect(fetchMovieCredits('SECRETKEY', 1, 'en-US', fetchImpl)).rejects.toThrow(
+			/could not be reached/
+		);
+		const refused = vi.fn().mockResolvedValue(jsonResponse({}, 500));
+		await expect(fetchMovieCredits('SECRETKEY', 1, 'en-US', refused)).rejects.not.toThrow(
+			/SECRETKEY/
+		);
 	});
 });

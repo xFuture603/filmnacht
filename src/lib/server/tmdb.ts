@@ -37,9 +37,14 @@ function refuse(what: string, status: number): never {
  * URL into their own error message — so nothing from the transport layer is
  * allowed to propagate unmodified.
  */
-async function request(url: string, what: string, fetchImpl: typeof fetch): Promise<Response> {
+async function request(
+	url: string,
+	what: string,
+	fetchImpl: typeof fetch,
+	signal?: AbortSignal
+): Promise<Response> {
 	try {
-		return await fetchImpl(url);
+		return await fetchImpl(url, signal ? { signal } : undefined);
 	} catch {
 		throw new Error(`TMDB ${what} failed: the service could not be reached`);
 	}
@@ -103,5 +108,48 @@ export async function fetchMovie(
 		tmdbRating: ratingFrom(item.vote_average),
 		runtime: typeof item.runtime === 'number' && item.runtime > 0 ? item.runtime : null,
 		genres
+	};
+}
+
+export type TmdbCredits = {
+	overview: string | null;
+	directors: string[];
+	cast: { name: string; character: string | null }[];
+};
+
+const CAST_SHOWN = 6;
+
+function listOf(value: unknown): Record<string, unknown>[] {
+	return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+}
+
+/** Summary, directors and top-billed cast for the film page, in one request. */
+export async function fetchMovieCredits(
+	apiKey: string,
+	tmdbId: number,
+	language: 'de-DE' | 'en-US',
+	fetchImpl: typeof fetch = fetch,
+	signal?: AbortSignal
+): Promise<TmdbCredits | null> {
+	const url = `${API}/movie/${tmdbId}?api_key=${encodeURIComponent(apiKey)}&append_to_response=credits&language=${language}`;
+	const response = await request(url, 'credits lookup', fetchImpl, signal);
+	if (response.status === 404) return null;
+	if (!response.ok) refuse('credits lookup', response.status);
+	const item = await parse(response, 'credits lookup');
+	const credits = (item.credits ?? {}) as Record<string, unknown>;
+	const overview = typeof item.overview === 'string' && item.overview.trim() ? item.overview : null;
+	return {
+		overview,
+		directors: listOf(credits.crew)
+			.filter((c) => c.job === 'Director' && typeof c.name === 'string')
+			.map((c) => String(c.name)),
+		cast: listOf(credits.cast)
+			.filter((c) => typeof c.name === 'string')
+			.sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
+			.slice(0, CAST_SHOWN)
+			.map((c) => ({
+				name: String(c.name),
+				character: typeof c.character === 'string' && c.character ? c.character : null
+			}))
 	};
 }
