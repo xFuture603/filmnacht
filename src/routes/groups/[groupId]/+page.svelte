@@ -124,7 +124,9 @@
 	{:else}
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 			{#each data.pool as entry (entry.suggestionId)}
-				<li class="flex min-w-0 flex-col gap-2">
+				<!-- The title's link stretches over the whole tile (after:inset-0), so the
+				     poster opens the film too with one tab stop; the withdraw form sits above it. -->
+				<li class="relative flex min-w-0 flex-col gap-2">
 					<div class="relative">
 						<Poster src={entry.posterUrl} />
 						{#if entry.mine}
@@ -142,7 +144,7 @@
 						{/if}
 						{#if entry.mine && entry.status === 'open'}
 							<!-- A 48px tap area around a 32px red dot: easy to hit, small on the poster. -->
-							<form method="POST" action="?/withdraw" class="absolute top-0 right-0">
+							<form method="POST" action="?/withdraw" class="absolute top-0 right-0 z-10">
 								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
 								<button
 									class="group grid size-12 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-error"
@@ -159,7 +161,12 @@
 						{/if}
 					</div>
 					<div class="flex min-w-0 flex-col items-start">
-						<p class="line-clamp-2 font-bold break-words">{entry.title}</p>
+						<p class="line-clamp-2 font-bold break-words">
+							<a
+								class="after:absolute after:inset-0 after:rounded-box hover:underline focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-base-content"
+								href="/groups/{data.group.groupId}/films/{entry.suggestionId}">{entry.title}</a
+							>
+						</p>
 						<p class="text-sm text-base-content/70">
 							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
 						</p>

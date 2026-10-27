@@ -37,52 +37,57 @@
 
 <PageHeader title={film.title} subtitle={facts || undefined} />
 
-<div class="flex flex-col gap-6 sm:flex-row sm:items-start">
-	<div class="w-full max-w-50 shrink-0 sm:w-48">
-		<Poster src={film.posterUrl} />
+<section class="card border border-base-300 bg-base-100 shadow-sm">
+	<div class="card-body flex-col gap-6 text-base sm:flex-row sm:items-start">
+		<div class="w-full max-w-50 shrink-0 sm:w-48">
+			<Poster src={film.posterUrl} />
+		</div>
+
+		<div class="flex min-w-0 flex-col gap-4">
+			{#if rating}
+				<p class="flex items-center gap-1" aria-label={t(data.locale, 'film.rating', { rating })}>
+					<Star class="size-4" aria-hidden="true" />
+					<span
+						><span class="font-bold">{rating}</span><span class="text-base-content/70">/10</span
+						></span
+					>
+				</p>
+			{/if}
+
+			{#if empty}
+				<p class="text-base-content/70">{t(data.locale, 'film.no_details')}</p>
+			{:else if details}
+				{#if details.overview}
+					<p class="leading-relaxed">{details.overview}</p>
+				{/if}
+				{#if details.directors.length > 0}
+					<div>
+						<h2 class="text-sm font-bold">{t(data.locale, 'film.director')}</h2>
+						<p>{details.directors.join(', ')}</p>
+					</div>
+				{/if}
+				{#if details.cast.length > 0}
+					<div>
+						<h2 class="text-sm font-bold">{t(data.locale, 'film.cast')}</h2>
+						<ul>
+							{#each details.cast as person, i (i)}
+								<li>
+									{person.character
+										? t(data.locale, 'film.as', { name: person.name, character: person.character })
+										: person.name}
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
+			{/if}
+
+			{#if data.tmdbUrl}
+				<!-- TMDB's terms ask for this credit. -->
+				<p class="text-sm text-base-content/70">
+					<a class="link" href={data.tmdbUrl} rel="noreferrer">{t(data.locale, 'film.source')}</a>
+				</p>
+			{/if}
+		</div>
 	</div>
-
-	<div class="flex min-w-0 flex-col gap-4">
-		{#if rating}
-			<p class="flex items-center gap-1" aria-label={t(data.locale, 'film.rating', { rating })}>
-				<Star class="size-4" aria-hidden="true" />
-				<span class="font-bold">{rating}</span><span class="text-base-content/70">/10</span>
-			</p>
-		{/if}
-
-		{#if empty}
-			<p class="text-base-content/70">{t(data.locale, 'film.no_details')}</p>
-		{:else if details}
-			{#if details.overview}
-				<p class="leading-relaxed">{details.overview}</p>
-			{/if}
-			{#if details.directors.length > 0}
-				<div>
-					<h2 class="text-sm font-bold">{t(data.locale, 'film.director')}</h2>
-					<p>{details.directors.join(', ')}</p>
-				</div>
-			{/if}
-			{#if details.cast.length > 0}
-				<div>
-					<h2 class="text-sm font-bold">{t(data.locale, 'film.cast')}</h2>
-					<ul>
-						{#each details.cast as person, i (i)}
-							<li>
-								{person.character
-									? t(data.locale, 'film.as', { name: person.name, character: person.character })
-									: person.name}
-							</li>
-						{/each}
-					</ul>
-				</div>
-			{/if}
-		{/if}
-
-		{#if data.tmdbUrl}
-			<!-- TMDB's terms ask for this credit. -->
-			<p class="text-sm text-base-content/70">
-				<a class="link" href={data.tmdbUrl} rel="noreferrer">{t(data.locale, 'film.source')}</a>
-			</p>
-		{/if}
-	</div>
-</div>
+</section>
