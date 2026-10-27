@@ -25,6 +25,11 @@ export type DrawLogEntry = {
 	candidates: Array<{ userId: string; weight: number; suggestions: number }>;
 	pickedUserId: string;
 	pickedSuggestionId: string;
+	/**
+	 * Whose films took part: only the members who said yes to the night, or
+	 * everyone's, because none of them had one. Absent on draws from before the rule.
+	 */
+	from?: 'coming' | 'everyone';
 	/** Only on re-draws from before reasons were dropped; never written now. */
 	reason?: string;
 };

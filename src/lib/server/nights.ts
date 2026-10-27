@@ -321,12 +321,25 @@ export function drawNight(
 			?.settings
 	);
 
-	const candidates = candidatesFor(db, night.groupId)
+	const everyone = candidatesFor(db, night.groupId)
 		.map((c) => ({
 			...c,
 			suggestionIds: c.suggestionIds.filter((id) => id !== excludeSuggestionId)
 		}))
 		.filter((c) => c.suggestionIds.length > 0);
+	// Only the films of members who said yes, read now so a redraw counts later
+	// answers. If none of them has a film, everyone's count: a night always gets one.
+	const coming = new Set(
+		db
+			.select({ userId: attendance.userId })
+			.from(attendance)
+			.where(and(eq(attendance.movieNightId, nightId), eq(attendance.response, 'yes')))
+			.all()
+			.map((r) => r.userId)
+	);
+	const comingOnly = everyone.filter((c) => coming.has(c.userId));
+	const from = comingOnly.length > 0 ? 'coming' : 'everyone';
+	const candidates = from === 'coming' ? comingOnly : everyone;
 	if (candidates.length === 0) return { ok: false, reason: 'no_candidates' };
 
 	const seed = newSeed();
@@ -360,7 +373,8 @@ export function drawNight(
 			mode: settings.drawMode,
 			candidates: picked.candidates,
 			pickedUserId: picked.userId,
-			pickedSuggestionId: picked.suggestionId
+			pickedSuggestionId: picked.suggestionId,
+			from
 		};
 		appendDrawLog(db, nightId, entry);
 

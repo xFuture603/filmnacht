@@ -213,6 +213,7 @@
 	"nights.error.location": "Dieser Ort ist zu lang.",
 	"nights.error.not_owner": "Nur die Gruppenleitung kann das tun.",
 	"night.draw": "Film ziehen",
+	"night.draw_hint": "Gezogen werden nur Filme von Leuten, die zugesagt haben. Hat keiner von ihnen einen, zählen alle Filme",
 	"night.redraw": "Neu ziehen",
 	"night.drawn_one": "Nur ein Film kam infrage, also wird es {title} — gewürfelt wurde nicht.",
 	"night.drawn": "{title}, vorgeschlagen von {name}.",

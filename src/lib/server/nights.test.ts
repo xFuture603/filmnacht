@@ -667,3 +667,84 @@ describe('unrevealedDrawnIds', () => {
 		expect(unrevealedDrawnIds(db, groupId, new Date()).size).toBe(0);
 	});
 });
+
+describe('drawing from the people coming', () => {
+	let lin: string;
+	beforeEach(() => {
+		lin = createUser(db, { username: 'lin', displayName: 'Lin', passwordHash: 'x' }).id;
+		addMember(db, lin, groupId);
+	});
+	const film = (userId: string, title: string) => {
+		const r = addSuggestion(db, {
+			groupId,
+			userId,
+			movie: { title },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		if (!r.ok) throw new Error(r.reason);
+		return r.suggestionId;
+	};
+	const night = () =>
+		scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+	const lastLog = (id: string) =>
+		(
+			db.select({ log: movieNights.drawLog }).from(movieNights).where(eq(movieNights.id, id)).get()
+				?.log as DrawLogEntry[]
+		).at(-1)!;
+
+	it('only draws films of members who said yes; maybe and no are left out', () => {
+		// Twenty draws: without the rule each would pick grace or lin two times in three.
+		// Their films are never drawn, so they stay open across all twenty.
+		film(grace, 'Grace');
+		film(lin, 'Lin');
+		for (let i = 0; i < 20; i++) {
+			film(ada, `Ada ${i}`);
+			const id = night();
+			respond(db, id, ada, 'yes');
+			respond(db, id, grace, 'maybe');
+			respond(db, id, lin, 'no');
+			expect(drawNight(db, id, null)).toMatchObject({ ok: true });
+			expect(lastLog(id)).toMatchObject({ pickedUserId: ada, from: 'coming' });
+			expect(lastLog(id).candidates.map((c) => c.userId)).toEqual([ada]);
+		}
+	});
+
+	it("falls back to everyone's films when nobody coming has one", () => {
+		film(grace, 'Arrival');
+		const id = night();
+		respond(db, id, ada, 'yes');
+		expect(drawNight(db, id, null)).toMatchObject({ ok: true, title: 'Arrival' });
+		expect(lastLog(id)).toMatchObject({ pickedUserId: grace, from: 'everyone' });
+	});
+
+	it('falls back too when nobody answered at all', () => {
+		film(grace, 'Arrival');
+		const id = night();
+		expect(drawNight(db, id, null)).toMatchObject({ ok: true });
+		expect(lastLog(id).from).toBe('everyone');
+	});
+
+	it("falls back on a redraw when the coming member's only film was just released", () => {
+		film(ada, 'Dune');
+		film(grace, 'Arrival');
+		const id = night();
+		respond(db, id, ada, 'yes');
+		drawForNight(db, id, ada);
+		expect(lastLog(id)).toMatchObject({ pickedUserId: ada, from: 'coming' });
+		expect(redraw(db, id, ada)).toMatchObject({ ok: true, title: 'Arrival' });
+		expect(lastLog(id)).toMatchObject({ pickedUserId: grace, from: 'everyone' });
+	});
+
+	it('counts yes answers given after the first draw on a redraw', () => {
+		film(ada, 'Dune');
+		film(grace, 'Arrival');
+		film(grace, 'Solaris');
+		film(lin, 'Heat');
+		const id = night();
+		respond(db, id, ada, 'yes');
+		drawForNight(db, id, ada);
+		respond(db, id, grace, 'yes');
+		expect(redraw(db, id, ada)).toMatchObject({ ok: true });
+		expect(lastLog(id)).toMatchObject({ pickedUserId: grace, from: 'coming' });
+	});
+});

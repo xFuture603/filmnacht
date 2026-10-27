@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { render } from 'svelte/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { DEFAULT_GROUP_SETTINGS, groups, movieNights } from '$lib/server/db/schema';
@@ -26,7 +27,11 @@ vi.mock('$lib/server/night-mail', () => ({
 	notifyNightScheduled: () => {}
 }));
 
+vi.mock('$app/navigation', () => ({ invalidateAll: () => Promise.resolve() }));
+vi.mock('$app/forms', () => ({ enhance: () => ({}) }));
+
 const { load, actions } = await import('./+page.server');
+const { default: Page } = await import('./+page.svelte');
 
 const LATER = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -224,5 +229,34 @@ describe('the cancellation email', () => {
 		await post('cancel', ada, { confirm: 'on' });
 		await post('cancel', ada, { confirm: 'on' });
 		expect(nightMail.cancelled).toEqual([nightId]);
+	});
+});
+
+describe('the draw hint', () => {
+	// The shared setup draws its night and its only film; this night still waits
+	// for a draw, with a film left to draw.
+	const page = async (userId: string) => {
+		addSuggestion(db, {
+			groupId,
+			userId: grace,
+			movie: { title: 'Arrival' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const undrawn = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
+		const data = await view(userId, { groupId, nightId: undrawn });
+		return render(Page, { props: { data: { ...data, locale: 'en' } as never, form: null } }).body;
+	};
+	const HINT =
+		"Only films from people who said yes are drawn. If none of them has one, everyone's films count";
+
+	it('tells the owner, above the Draw button, whose films are drawn', async () => {
+		const html = await page(ada);
+		const hint = html.indexOf(HINT);
+		expect(hint).toBeGreaterThan(-1);
+		expect(hint).toBeLessThan(html.indexOf('Draw a film'));
+	});
+
+	it('is not shown to members who cannot draw', async () => {
+		expect(await page(grace)).not.toContain(HINT);
 	});
 });

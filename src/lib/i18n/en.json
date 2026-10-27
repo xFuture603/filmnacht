@@ -215,6 +215,7 @@
 	"nights.error.location": "That location is too long.",
 	"nights.error.not_owner": "Only the group's owner can do that.",
 	"night.draw": "Draw a film",
+	"night.draw_hint": "Only films from people who said yes are drawn. If none of them has one, everyone's films count",
 	"night.redraw": "Draw again",
 	"night.drawn_one": "Only one film could be drawn, so {title} it is — no dice were rolled.",
 	"night.drawn": "{title}, suggested by {name}.",

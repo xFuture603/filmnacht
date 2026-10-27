@@ -304,11 +304,9 @@
 			{#if data.night.status === 'scheduled'}
 				<!-- Hints above their buttons: read before pressing. -->
 				<form method="POST" action="?/draw" class="flex flex-col gap-2">
-					{#if !data.canDraw}
-						<p class="text-sm text-base-content/70">
-							{t(data.locale, 'night.error.no_candidates')}
-						</p>
-					{/if}
+					<p class="text-sm text-base-content/70">
+						{t(data.locale, data.canDraw ? 'night.draw_hint' : 'night.error.no_candidates')}
+					</p>
 					<button class="btn btn-primary mt-2 min-h-12 w-full sm:w-auto sm:self-start">
 						<Dices class="size-4" />{t(data.locale, 'night.draw')}
 					</button>
