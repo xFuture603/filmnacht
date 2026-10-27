@@ -53,4 +53,17 @@ describe('the pool', () => {
 		// over the sticky header and the phone dock while scrolling.
 		expect(html).toMatch(/<li class="[^"]*\bisolate\b/);
 	});
+
+	it('lifts the poster on hover and on keyboard focus, without amber', () => {
+		const html = body([entry({})]);
+		const poster =
+			html.match(
+				/<div class="([^"]*)">\s*(?:<!--[^>]*-->\s*)*<(?:img|div)[^>]*aspect-\[2\/3\]/
+			)?.[1] ?? '';
+		expect(poster).toContain('group-hover/tile:shadow-md');
+		expect(poster).toContain('group-hover/tile:ring-1');
+		expect(poster).toContain('group-has-[a:focus-visible]/tile:shadow-md');
+		expect(poster).not.toMatch(/primary|warning|amber/);
+		expect(html).toMatch(/<li class="[^"]*\bgroup\/tile\b/);
+	});
 });

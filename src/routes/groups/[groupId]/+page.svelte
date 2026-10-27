@@ -126,8 +126,12 @@
 			{#each data.pool as entry (entry.suggestionId)}
 				<!-- The title's link stretches over the whole tile (after:inset-0), so the
 				     poster opens the film too with one tab stop; the withdraw form sits above it. -->
-				<li class="relative isolate flex min-w-0 flex-col gap-2">
-					<div class="relative">
+				<li class="group/tile relative isolate flex min-w-0 flex-col gap-2">
+					<!-- Hover (only on devices that can hover) and keyboard focus lift the
+					     poster the same way: a shadow and a thin neutral ring, never amber. -->
+					<div
+						class="relative rounded-box transition-shadow duration-150 group-hover/tile:shadow-md group-hover/tile:ring-1 group-hover/tile:ring-base-content/20 group-has-[a:focus-visible]/tile:shadow-md group-has-[a:focus-visible]/tile:ring-1 group-has-[a:focus-visible]/tile:ring-base-content/20"
+					>
 						<Poster src={entry.posterUrl} />
 						{#if entry.mine}
 							<span
