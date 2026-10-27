@@ -197,7 +197,7 @@
 				<li class="flex min-h-12 items-center justify-between gap-2 py-2">
 					<span class="min-w-0 truncate">{member.displayName}</span>
 					{#if member.role === 'owner'}
-						<span class="badge badge-sm">{t(data.locale, 'groups.owner')}</span>
+						<span class="badge badge-sm badge-outline">{t(data.locale, 'groups.owner')}</span>
 					{/if}
 				</li>
 			{/each}

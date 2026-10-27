@@ -32,7 +32,7 @@
 						<NewBadge label={t(data.locale, 'new.count', { count: group.newCount })} />
 					{/if}
 					{#if group.role === 'owner'}
-						<span class="badge badge-sm">{t(data.locale, 'groups.owner')}</span>
+						<span class="badge badge-sm badge-outline">{t(data.locale, 'groups.owner')}</span>
 					{/if}
 					<ChevronRight class="size-4 shrink-0 text-base-content/40" />
 				</a>

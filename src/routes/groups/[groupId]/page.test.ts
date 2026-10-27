@@ -21,13 +21,13 @@ const entry = (over: Record<string, unknown>) => ({
 	...over
 });
 
-function body(pool: unknown[]) {
+function body(pool: unknown[], members: unknown[] = []) {
 	return render(Page, {
 		props: {
 			data: {
 				locale: 'en',
 				group: { groupId: 'g1', name: 'Filmnacht', role: 'member' },
-				members: [],
+				members,
 				pool,
 				newCounts: {},
 				toRate: [],
@@ -99,5 +99,10 @@ describe('the pool', () => {
 			expect(ratio(ring, page)).toBeGreaterThanOrEqual(3);
 			expect(ratio(ring, [255, 255, 255])).toBeGreaterThanOrEqual(3);
 		}
+	});
+
+	it("marks the group's owner with the outlined badge the other info badges use", () => {
+		const html = body([], [{ id: 'u1', displayName: 'Ada', role: 'owner' }]);
+		expect(html).toMatch(/<span class="badge badge-sm badge-outline">Owner<\/span>/);
 	});
 });
