@@ -130,7 +130,7 @@
 					<!-- Hover (only on devices that can hover) and keyboard focus lift the
 					     poster the same way: a shadow and a thin neutral ring, never amber. -->
 					<div
-						class="relative rounded-box transition-shadow duration-150 group-hover/tile:shadow-md group-hover/tile:ring-1 group-hover/tile:ring-base-content/20 group-has-[a:focus-visible]/tile:shadow-md group-has-[a:focus-visible]/tile:ring-1 group-has-[a:focus-visible]/tile:ring-base-content/20"
+						class="relative rounded-box transition-shadow duration-150 group-hover/tile:shadow-md group-hover/tile:ring-1 group-hover/tile:ring-base-content/50 group-has-[a:focus-visible]/tile:shadow-md group-has-[a:focus-visible]/tile:ring-1 group-has-[a:focus-visible]/tile:ring-base-content/50"
 					>
 						<Poster src={entry.posterUrl} />
 						{#if entry.mine}
