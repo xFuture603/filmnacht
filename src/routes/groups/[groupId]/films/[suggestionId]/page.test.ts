@@ -37,12 +37,18 @@ describe('film page', () => {
 		expect(body).not.toContain('keine weiteren Details');
 	});
 
-	it('says once that there are no more details, with no empty sections', () => {
-		const body = page({ details: null, tmdbUrl: null });
+	it('says once that a hand-entered film has no more details, with no empty sections', () => {
+		const body = page({ details: null, tmdbUrl: null, film: { ...film, tmdbId: null } });
 		expect(body).toContain('Für diesen Film gibt es keine weiteren Details');
 		expect(body).not.toContain('Regie');
 		expect(body).not.toContain('Besetzung');
 		expect(body).not.toContain('TMDB<');
+	});
+
+	it('says TMDB is unavailable right now when a TMDB film could not be loaded', () => {
+		const body = page({ details: null });
+		expect(body).toContain('Die Details lassen sich gerade nicht laden');
+		expect(body).not.toContain('keine weiteren Details');
 	});
 
 	it('treats details with nothing in them like no details', () => {

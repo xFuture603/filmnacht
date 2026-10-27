@@ -126,7 +126,7 @@
 			{#each data.pool as entry (entry.suggestionId)}
 				<!-- The title's link stretches over the whole tile (after:inset-0), so the
 				     poster opens the film too with one tab stop; the withdraw form sits above it. -->
-				<li class="relative flex min-w-0 flex-col gap-2">
+				<li class="relative isolate flex min-w-0 flex-col gap-2">
 					<div class="relative">
 						<Poster src={entry.posterUrl} />
 						{#if entry.mine}

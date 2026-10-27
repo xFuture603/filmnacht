@@ -55,7 +55,11 @@
 			{/if}
 
 			{#if empty}
-				<p class="text-base-content/70">{t(data.locale, 'film.no_details')}</p>
+				<!-- A TMDB film whose details failed to load will have them later; a
+			     hand-entered one never will. -->
+				<p class="text-base-content/70">
+					{t(data.locale, film.tmdbId && !details ? 'film.unavailable' : 'film.no_details')}
+				</p>
 			{:else if details}
 				{#if details.overview}
 					<p class="leading-relaxed">{details.overview}</p>

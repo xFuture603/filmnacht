@@ -332,5 +332,6 @@
 	"film.minutes": "{n} Min.",
 	"film.no_details": "Für diesen Film gibt es keine weiteren Details",
 	"film.source": "Filmdetails von TMDB",
-	"film.rating": "TMDB-Bewertung {rating} von 10"
+	"film.rating": "TMDB-Bewertung {rating} von 10",
+	"film.unavailable": "Die Details lassen sich gerade nicht laden"
 }

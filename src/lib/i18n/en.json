@@ -334,5 +334,6 @@
 	"film.minutes": "{n} min",
 	"film.no_details": "More details aren't available for this film",
 	"film.source": "Film details from TMDB",
-	"film.rating": "TMDB rating {rating} of 10"
+	"film.rating": "TMDB rating {rating} of 10",
+	"film.unavailable": "Details can't be loaded right now"
 }

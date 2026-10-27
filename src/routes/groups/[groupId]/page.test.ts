@@ -49,5 +49,8 @@ describe('the pool', () => {
 		const link = html.match(/<a[^>]*href="\/groups\/g1\/films\/s1"[^>]*>[\s\S]*?<\/a>/)?.[0] ?? '';
 		expect(link).not.toContain('<button');
 		expect(html).toMatch(/<form[^>]*action="\?\/withdraw"[^>]*class="[^"]*z-10/);
+		// Its own stacking context per tile: without it the z-10 dot would paint
+		// over the sticky header and the phone dock while scrolling.
+		expect(html).toMatch(/<li class="[^"]*\bisolate\b/);
 	});
 });
