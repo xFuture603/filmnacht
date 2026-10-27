@@ -180,8 +180,13 @@
 	</div>
 </section>
 
-<form method="POST" action="/logout" class="mt-6">
-	<button class="btn btn-outline min-h-12 w-full sm:w-auto"
-		>{t(data.locale, 'profile.logout')}</button
-	>
-</form>
+<!-- In a card like everything above, so its button lines up with theirs. -->
+<section class={card}>
+	<div class="card-body">
+		<form method="POST" action="/logout">
+			<button class="btn btn-outline min-h-12 w-full sm:w-auto"
+				>{t(data.locale, 'profile.logout')}</button
+			>
+		</form>
+	</div>
+</section>
