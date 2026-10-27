@@ -58,7 +58,7 @@ export function redeemInvite(
 	token: string,
 	userId: string,
 	now = Date.now()
-): string | null {
+): { groupId: string; joined: boolean } | null {
 	const invite = lookupInvite(db, token, now);
 	if (!invite) return null;
 
@@ -75,7 +75,7 @@ export function redeemInvite(
 				)
 			)
 			.get();
-		if (existing) return invite.groupId;
+		if (existing) return { groupId: invite.groupId, joined: false };
 
 		// `db`, not a `tx` handle, is correct here: better-sqlite3 is a single
 		// connection, so BEGIN applies to every statement issued through `db`
@@ -86,6 +86,6 @@ export function redeemInvite(
 			.set({ uses: sql`${invites.uses} + 1` })
 			.where(eq(invites.tokenHash, hashToken(token)))
 			.run();
-		return invite.groupId;
+		return { groupId: invite.groupId, joined: true };
 	});
 }

@@ -2,6 +2,7 @@ import { hashPassword, validatePassword } from '$lib/server/auth/password';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
 import { lookupInvite, redeemInvite } from '$lib/server/invites';
+import { notifyNewMember } from '$lib/server/night-mail';
 import { rateLimit } from '$lib/server/rate-limit';
 import {
 	createUser,
@@ -45,9 +46,10 @@ export const actions: Actions = {
 		// different people. redeemInvite does its own lookup internally and
 		// nothing here is async, so there is no race to guard against.
 		if (locals.user) {
-			const joinedGroupId = redeemInvite(db, params.token, locals.user.id);
-			if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
-			redirect(303, `/groups/${joinedGroupId}`);
+			const joined = redeemInvite(db, params.token, locals.user.id);
+			if (!joined) return fail(410, { error: 'invite.invalid' });
+			if (joined.joined) notifyNewMember(db, joined.groupId, locals.user.id);
+			redirect(303, `/groups/${joined.groupId}`);
 		}
 
 		const form = await request.formData();
@@ -99,11 +101,13 @@ export const actions: Actions = {
 			}
 			throw err;
 		}
-		const joinedGroupId = redeemInvite(db, params.token, user.id);
-		if (!joinedGroupId) return fail(410, { error: 'invite.invalid' });
+		const joined = redeemInvite(db, params.token, user.id);
+		if (!joined) return fail(410, { error: 'invite.invalid' });
+		// A brand-new account is always a new member: it gets the nights already planned.
+		notifyNewMember(db, joined.groupId, user.id);
 
 		const { token, expiresAt } = createSession(db, user.id);
 		setSessionCookie(cookies, token, expiresAt, url.protocol === 'https:');
-		redirect(303, `/groups/${joinedGroupId}`);
+		redirect(303, `/groups/${joined.groupId}`);
 	}
 };

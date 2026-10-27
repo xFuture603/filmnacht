@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { applyMigrations, createDb, type DB } from './db/client';
 import { invites, memberships } from './db/schema';
-import { createGroup, listMembers } from './groups';
+import { createGroup, leaveGroup, listMembers } from './groups';
 import {
 	createInvite,
 	INVITE_MAX_USES,
@@ -89,7 +89,7 @@ describe('the default redemption cap', () => {
 				displayName: `Member ${i}`,
 				passwordHash: 'scrypt$placeholder$placeholder'
 			}).id;
-			expect(redeemInvite(db, token, joiner, NOW)).toBe(groupId);
+			expect(redeemInvite(db, token, joiner, NOW)?.groupId).toBe(groupId);
 		}
 		const oneTooMany = createUser(db, {
 			username: 'latecomer',
@@ -108,7 +108,7 @@ describe('the default redemption cap', () => {
 				displayName: `Member ${i}`,
 				passwordHash: 'scrypt$placeholder$placeholder'
 			}).id;
-			expect(redeemInvite(db, token, joiner, NOW)).toBe(groupId);
+			expect(redeemInvite(db, token, joiner, NOW)?.groupId).toBe(groupId);
 		}
 		expect(lookupInvite(db, token, NOW)).not.toBeNull();
 	});
@@ -117,7 +117,7 @@ describe('the default redemption cap', () => {
 describe('redeemInvite', () => {
 	it('adds the member and counts the use', () => {
 		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
-		expect(redeemInvite(db, token, grace, NOW)).toBe(groupId);
+		expect(redeemInvite(db, token, grace, NOW)?.groupId).toBe(groupId);
 		expect(listMembers(db, groupId)).toHaveLength(2);
 		expect(db.select().from(invites).get()?.uses).toBe(1);
 	});
@@ -137,11 +137,24 @@ describe('redeemInvite', () => {
 	it('does not count a second use for someone already in the group', () => {
 		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
 		redeemInvite(db, token, grace, NOW);
-		expect(redeemInvite(db, token, grace, NOW)).toBe(groupId);
+		expect(redeemInvite(db, token, grace, NOW)?.groupId).toBe(groupId);
 		expect(db.select().from(invites).get()?.uses).toBe(1);
 		expect(db.select().from(memberships).where(eq(memberships.userId, grace)).all()).toHaveLength(
 			1
 		);
+	});
+
+	it('reports a new join, and a repeat visit as not joined', () => {
+		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
+		expect(redeemInvite(db, token, grace, NOW)).toEqual({ groupId, joined: true });
+		expect(redeemInvite(db, token, grace, NOW)).toEqual({ groupId, joined: false });
+	});
+
+	it('reports a former member coming back as joined', () => {
+		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
+		redeemInvite(db, token, grace, NOW);
+		leaveGroup(db, grace, groupId);
+		expect(redeemInvite(db, token, grace, NOW)).toEqual({ groupId, joined: true });
 	});
 
 	it('refuses an expired token without touching membership', () => {

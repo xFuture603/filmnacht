@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { t, type Locale } from '$lib/i18n';
 import { formatWhen } from '$lib/time';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull } from 'drizzle-orm';
 import type { DB } from './db/client';
 import { attendance, groups, memberships, movieNights, users } from './db/schema';
 import { groupSettings } from './group-settings';
@@ -41,7 +41,8 @@ export function nightMailInfo(db: DB, nightId: string) {
 	};
 }
 
-export function nightMailRecipients(db: DB, nightId: string): string[] {
+/** `onlyUserId` narrows it to one member: a late joiner's own invite. */
+export function nightMailRecipients(db: DB, nightId: string, onlyUserId?: string): string[] {
 	const night = db
 		.select({ groupId: movieNights.groupId })
 		.from(movieNights)
@@ -52,7 +53,13 @@ export function nightMailRecipients(db: DB, nightId: string): string[] {
 		.select({ email: users.email, nightMails: users.nightMails })
 		.from(memberships)
 		.innerJoin(users, eq(users.id, memberships.userId))
-		.where(and(eq(memberships.groupId, night.groupId), isNull(memberships.leftAt)))
+		.where(
+			and(
+				eq(memberships.groupId, night.groupId),
+				isNull(memberships.leftAt),
+				onlyUserId ? eq(users.id, onlyUserId) : undefined
+			)
+		)
 		.all()
 		.filter((u) => u.nightMails)
 		.map((u) => u.email)
@@ -161,7 +168,8 @@ export function sendNightMail(
 	nightId: string,
 	kind: 'scheduled' | 'cancelled',
 	origin: string | null,
-	send: typeof sendMail = sendMail
+	send: typeof sendMail = sendMail,
+	onlyUserId?: string
 ): Promise<number> {
 	if (!isMailConfigured()) return Promise.resolve(0);
 	const info = nightMailInfo(db, nightId);
@@ -192,7 +200,7 @@ export function sendNightMail(
 			organizer,
 			attendee
 		});
-	const sends = nightMailRecipients(db, nightId).map((to) =>
+	const sends = nightMailRecipients(db, nightId, onlyUserId).map((to) =>
 		// Each send isolated: a throwing one must not cost the rest their email.
 		Promise.resolve()
 			.then(() => send(to, subject, body, { method, content: contentFor(to) }))
@@ -255,6 +263,36 @@ export function runRsvpReminders(
 	});
 }
 
+/**
+ * Someone who joins after a night was scheduled missed its invite: send them
+ * the "night scheduled" email for every night still ahead, to them alone.
+ */
+export async function sendInvitesToNewMember(
+	db: DB,
+	groupId: string,
+	userId: string,
+	origin: string | null,
+	now: Date,
+	send: typeof sendMail = sendMail
+): Promise<number> {
+	const upcoming = db
+		.select({ id: movieNights.id })
+		.from(movieNights)
+		.where(
+			and(
+				eq(movieNights.groupId, groupId),
+				inArray(movieNights.status, ['scheduled', 'drawn']),
+				gt(movieNights.scheduledAt, now)
+			)
+		)
+		.all();
+	let count = 0;
+	for (const night of upcoming) {
+		count += await sendNightMail(db, night.id, 'scheduled', origin, send, userId);
+	}
+	return count;
+}
+
 function later(fn: () => Promise<unknown>) {
 	if (!isMailConfigured()) return;
 	setTimeout(() => {
@@ -276,4 +314,13 @@ export function notifyNightCancelled(
 	origin: string | null = env.ORIGIN ?? null
 ): void {
 	later(() => sendNightMail(db, nightId, 'cancelled', origin));
+}
+
+export function notifyNewMember(
+	db: DB,
+	groupId: string,
+	userId: string,
+	origin: string | null = env.ORIGIN ?? null
+): void {
+	later(() => sendInvitesToNewMember(db, groupId, userId, origin, new Date()));
 }

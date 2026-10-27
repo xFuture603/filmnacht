@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm';
 import { applyMigrations, createDb, type DB } from './db/client';
 import { movieNights, users } from './db/schema';
 import { addMember, createGroup, leaveGroup } from './groups';
-import { respond, scheduleNight } from './nights';
+import { cancelNight, respond, scheduleNight } from './nights';
 import { createUser, setEmail } from './users';
 import {
 	claimRsvpReminder,
@@ -18,6 +18,7 @@ import {
 	nightMailRecipients,
 	rsvpReminderRecipients,
 	runRsvpReminders,
+	sendInvitesToNewMember,
 	sendNightMail
 } from './night-mail';
 
@@ -227,5 +228,46 @@ describe('runRsvpReminders', () => {
 		};
 		await runRsvpReminders(db, new Date(AT - 48 * H), null, flaky);
 		expect(sent.map((s) => s.to).sort()).toEqual(['ada@example.org', 'lin@example.org']);
+	});
+});
+
+describe('sendInvitesToNewMember', () => {
+	const JUNE = new Date('2030-06-01T00:00:00Z');
+	let kim: string;
+	beforeEach(() => {
+		kim = person('kim', 'kim@example.org');
+		addMember(db, kim, groupId);
+	});
+
+	it('sends the invite for each upcoming night to them only, calendar attached', async () => {
+		const cancelled = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date('2030-08-01T18:00:00Z'),
+			location: null
+		});
+		cancelNight(db, cancelled, ada);
+		scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date('2030-05-01T18:00:00Z'),
+			location: null
+		});
+		expect(await sendInvitesToNewMember(db, groupId, kim, null, JUNE, send)).toBe(1);
+		expect(sent).toHaveLength(1);
+		expect(sent[0]).toMatchObject({ to: 'kim@example.org', calendar: { method: 'REQUEST' } });
+		expect(sent[0].calendar?.content).toContain('UID:night-' + nightId + '@filmnacht');
+	});
+
+	it('includes a night whose film is already drawn', async () => {
+		setNight({ status: 'drawn' });
+		expect(await sendInvitesToNewMember(db, groupId, kim, null, JUNE, send)).toBe(1);
+	});
+
+	it('sends nothing to a new member without an address or with night mails off', async () => {
+		expect(await sendInvitesToNewMember(db, groupId, alan, null, JUNE, send)).toBe(0);
+		db.update(users).set({ nightMails: false }).where(eq(users.id, kim)).run();
+		expect(await sendInvitesToNewMember(db, groupId, kim, null, JUNE, send)).toBe(0);
+		expect(sent).toEqual([]);
 	});
 });
