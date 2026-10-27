@@ -205,6 +205,56 @@ export function sendNightMail(
 	});
 }
 
+/**
+ * One scheduler tick's worth of "are you coming?" emails. No calendar file:
+ * they have the invite already, and a second REQUEST duplicates the entry in
+ * some clients. Claims are synchronous; sends are awaited only by tests.
+ */
+export function runRsvpReminders(
+	db: DB,
+	now: Date,
+	origin: string | null,
+	send: (to: string, subject: string, body: string) => Promise<boolean> | boolean = sendMail
+): Promise<number> {
+	// Without mail nothing is claimed: the reminder goes out once it is set up.
+	if (!isMailConfigured()) return Promise.resolve(0);
+	const locale = getEmailLocale(db);
+	const timezone = getTimezone(db);
+	const sends: Promise<boolean>[] = [];
+	for (const nightId of dueRsvpReminders(db, now)) {
+		if (!claimRsvpReminder(db, nightId, now)) continue;
+		const info = nightMailInfo(db, nightId);
+		if (!info) continue;
+		const vars = { group: info.groupName, when: formatWhen(info.scheduledAt, timezone, locale) };
+		const lines = [t(locale, 'mail.night.reminder.body', vars)];
+		if (info.location) lines.push(t(locale, 'mail.night.where', { location: info.location }));
+		if (origin) {
+			const link = `${origin}/groups/${info.groupId}/nights/${nightId}`;
+			lines.push(t(locale, 'mail.night.reminder.link', { link }));
+		}
+		lines.push(
+			origin
+				? t(locale, 'mail.night.opt_out_link', { link: `${origin}/profile` })
+				: t(locale, 'mail.night.opt_out')
+		);
+		const subject = t(locale, 'mail.night.reminder.subject', vars);
+		const body = lines.join('\n\n');
+		for (const to of rsvpReminderRecipients(db, nightId)) {
+			// Each send isolated: a throwing one must not cost the rest their email.
+			sends.push(
+				Promise.resolve()
+					.then(() => send(to, subject, body))
+					.catch(() => false)
+			);
+		}
+	}
+	return Promise.all(sends).then((results) => {
+		const failed = results.filter((ok) => !ok).length;
+		if (failed > 0) console.error(`[filmnacht] RSVP reminder: ${failed}/${results.length} failed`);
+		return results.length;
+	});
+}
+
 function later(fn: () => Promise<unknown>) {
 	if (!isMailConfigured()) return;
 	setTimeout(() => {

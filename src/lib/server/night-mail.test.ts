@@ -17,6 +17,7 @@ import {
 	nightMailInfo,
 	nightMailRecipients,
 	rsvpReminderRecipients,
+	runRsvpReminders,
 	sendNightMail
 } from './night-mail';
 
@@ -194,5 +195,37 @@ describe('rsvpReminderRecipients', () => {
 		db.update(users).set({ nightMails: false }).where(eq(users.id, grace)).run();
 		leaveGroup(db, lin, groupId);
 		expect(rsvpReminderRecipients(db, nightId)).toEqual(['ada@example.org']);
+	});
+});
+
+describe('runRsvpReminders', () => {
+	it('sends one reminder per unanswered member, without a calendar, once', async () => {
+		expect(await runRsvpReminders(db, new Date(AT - 48 * H), 'https://f.example', send)).toBe(3);
+		expect(sent.map((s) => s.to).sort()).toEqual([
+			'ada@example.org',
+			'grace@example.org',
+			'lin@example.org'
+		]);
+		expect(sent[0].subject).toContain('Filmnacht: are you coming on');
+		expect(sent[0].body).toContain(`https://f.example/groups/${groupId}/nights/${nightId}`);
+		expect(sent[0].body).toContain('Place: Sofa');
+		expect(sent.every((m) => m.calendar === undefined)).toBe(true);
+		expect(await runRsvpReminders(db, new Date(AT - 47 * H), 'https://f.example', send)).toBe(0);
+	});
+
+	it('claims nothing without SMTP, so the reminder goes out once mail is set up', async () => {
+		mailConfigured = false;
+		expect(await runRsvpReminders(db, new Date(AT - 48 * H), null, send)).toBe(0);
+		mailConfigured = true;
+		expect(await runRsvpReminders(db, new Date(AT - 47 * H), null, send)).toBe(3);
+	});
+
+	it('keeps sending when one recipient throws', async () => {
+		const flaky: typeof send = (to, subject, body) => {
+			if (to === 'grace@example.org') throw new Error('smtp exploded');
+			return send(to, subject, body);
+		};
+		await runRsvpReminders(db, new Date(AT - 48 * H), null, flaky);
+		expect(sent.map((s) => s.to).sort()).toEqual(['ada@example.org', 'lin@example.org']);
 	});
 });

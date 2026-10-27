@@ -88,7 +88,7 @@
 	"profile.save_email": "E-Mail-Adresse speichern",
 	"profile.email_saved": "E-Mail-Adresse gespeichert",
 	"profile.rating_mails": "Schick mir eine E-Mail, wenn ich einen Film bewerten kann",
-	"profile.night_mails": "Schick mir eine E-Mail zu neuen Filmnächten",
+	"profile.night_mails": "Schick mir E-Mails zu Filmnächten und erinnere mich ans Antworten",
 	"profile.mail_prefs_hint": "Braucht oben eine E-Mail-Adresse. Neue Filmnächte kommen mit einer Kalendereinladung.",
 	"profile.mail_prefs_saved": "Gespeichert",
 	"profile.save_mail_prefs": "E-Mail-Einstellungen speichern",
@@ -320,6 +320,9 @@
 	"mail.night.calendar_cancel": "Die angehängte Änderung entfernt sie aus deinem Kalender.",
 	"mail.night.opt_out": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus.",
 	"mail.night.opt_out_link": "Keine solchen E-Mails mehr? Schalte sie in deinem Profil aus: {link}",
+	"mail.night.reminder.subject": "{group}: bist du am {when} dabei?",
+	"mail.night.reminder.body": "Du hast noch nicht gesagt, ob du zur Filmnacht von {group} am {when} kommst.",
+	"mail.night.reminder.link": "Hier antworten: {link}",
 	"mail.reset.subject": "Setze dein Filmnacht-Passwort zurück",
 	"mail.reset.body": "Öffne diesen Link innerhalb einer Stunde, um ein neues Passwort zu wählen:\n\n{link}\n\nWenn du das nicht angefordert hast, hat sich nichts geändert und du kannst diese Nachricht ignorieren."
 }

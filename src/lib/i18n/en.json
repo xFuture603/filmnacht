@@ -90,7 +90,7 @@
 	"profile.save_email": "Save email address",
 	"profile.email_saved": "Email address saved",
 	"profile.rating_mails": "Email me when there's a film to rate",
-	"profile.night_mails": "Email me about new movie nights",
+	"profile.night_mails": "Email me about movie nights and remind me to answer",
 	"profile.mail_prefs_hint": "Needs an email address above. New nights come with a calendar invite.",
 	"profile.mail_prefs_saved": "Saved",
 	"profile.save_mail_prefs": "Save email settings",
@@ -322,6 +322,9 @@
 	"mail.night.calendar_cancel": "The attached update removes it from your calendar.",
 	"mail.night.opt_out": "Don't want these emails? Switch them off on your profile.",
 	"mail.night.opt_out_link": "Don't want these emails? Switch them off on your profile: {link}",
+	"mail.night.reminder.subject": "{group}: are you coming on {when}?",
+	"mail.night.reminder.body": "You haven't said yet whether you're coming to the {group} movie night on {when}.",
+	"mail.night.reminder.link": "Answer here: {link}",
 	"mail.reset.subject": "Reset your filmnacht password",
 	"mail.reset.body": "Open this link within the hour to choose a new password:\n\n{link}\n\nIf you did not ask for this, nothing has changed and you can ignore this message."
 }

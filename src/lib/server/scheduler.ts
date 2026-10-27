@@ -3,6 +3,7 @@ import type { DB } from './db/client';
 import { groups, movieNights } from './db/schema';
 import { groupSettings } from './group-settings';
 import { drawNight } from './nights';
+import { runRsvpReminders } from './night-mail';
 import { runRatingMails } from './rating-mail';
 
 const HOUR = 60 * 60 * 1000;
@@ -66,6 +67,7 @@ export function startScheduler(
 		try {
 			runDueDraws(db, new Date(), onDrawn);
 			void runRatingMails(db, new Date(), origin);
+			void runRsvpReminders(db, new Date(), origin);
 		} catch (err) {
 			// A tick must never take the server down; the next minute tries again.
 			console.error('[filmnacht] automatic draw tick failed', err);
