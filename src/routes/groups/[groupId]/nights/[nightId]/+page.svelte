@@ -79,7 +79,9 @@
 		<h2 class="card-title text-lg">{t(data.locale, 'night.film')}</h2>
 		{#if data.film}
 			<div class="flex items-center gap-3">
-				<Film class="size-8 shrink-0 text-base-content/50" strokeWidth={1.5} />
+				<!-- 48px with 1px strokes, like the poster placeholder: twice the 24px grid,
+				     so every line lands on whole pixels. -->
+				<Film class="size-12 shrink-0 text-base-content opacity-50" strokeWidth={1} />
 				<p class="text-lg font-bold break-words">
 					{#if data.film.onlyCandidate}
 						{t(data.locale, 'night.drawn_one', { title: data.film.title })}

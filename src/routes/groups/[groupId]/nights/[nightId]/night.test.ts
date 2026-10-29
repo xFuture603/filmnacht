@@ -274,3 +274,24 @@ describe('the answer buttons on narrow phones', () => {
 		for (const b of buttons) expect(b).toMatch(/\bh-auto\b.*\bmax-sm:flex-col\b/);
 	});
 });
+
+describe('the drawn film', () => {
+	const html = async () => {
+		const data = await view(ada);
+		return render(Page, { props: { data: { ...data, locale: 'de' } as never, form: null } }).body;
+	};
+
+	// The shared setup draws the night's only film, so this is the one-film case.
+	it('says in plain German that there was only one film to choose from', async () => {
+		expect(await html()).toContain(
+			'Es gab nur einen Film zur Auswahl, also wird Dune geschaut. Eine Auslosung war nicht nötig.'
+		);
+	});
+
+	// At 32px a 24px icon's lines fall between pixels and blur on 1x screens.
+	it('draws the film icon at exactly 2x with 1px strokes, so lines land on whole pixels', async () => {
+		const svg = (await html()).match(/<svg[^>]*lucide-film\b[^>]*>/)![0];
+		expect(svg).toMatch(/\bsize-12\b/);
+		expect(svg).toContain('stroke-width="1"');
+	});
+});

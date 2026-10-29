@@ -215,7 +215,7 @@
 	"night.draw": "Film ziehen",
 	"night.draw_hint": "Gezogen werden nur Filme von Leuten, die zugesagt haben. Hat keiner von ihnen einen, zählen alle Filme",
 	"night.redraw": "Neu ziehen",
-	"night.drawn_one": "Nur ein Film kam infrage, also wird es {title} — gewürfelt wurde nicht.",
+	"night.drawn_one": "Es gab nur einen Film zur Auswahl, also wird {title} geschaut. Eine Auslosung war nicht nötig.",
 	"night.drawn": "{title}, vorgeschlagen von {name}.",
 	"night.drawn_former": "{title}, vorgeschlagen von einem Mitglied, das die Gruppe verlassen hat.",
 	"night.error.no_candidates": "Gerade hat niemand einen Film, der gezogen werden kann.",
