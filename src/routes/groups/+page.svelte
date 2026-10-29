@@ -35,7 +35,7 @@
 					{#if group.role === 'owner'}
 						<span class="badge badge-sm badge-outline">{t(data.locale, 'groups.owner')}</span>
 					{/if}
-					<ChevronRight class="size-4 shrink-0 text-base-content/30" strokeWidth={2.5} />
+					<ChevronRight class="size-4 shrink-0 text-base-content/50" strokeWidth={2.5} />
 				</a>
 			</li>
 		{/each}

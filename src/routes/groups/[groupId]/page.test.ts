@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { over, ratio, themes, token } from '$lib/theme-contrast';
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -76,26 +76,9 @@ describe('the pool', () => {
 	it('keeps the hover ring at 3:1 or more in both themes, whatever the poster', () => {
 		const html = body([entry({})]);
 		const alpha = Number(html.match(/group-hover\/tile:ring-base-content\/(\d+)/)?.[1]) / 100;
-		const css = readFileSync('src/app.css', 'utf8');
-		const hex = (theme: string, token: string) => {
-			const block = css.slice(css.indexOf(`name: '${theme}'`));
-			const m = block.match(new RegExp(`--color-${token}: #([0-9a-f]{6})`));
-			return [0, 2, 4].map((i) => parseInt(m![1].slice(i, i + 2), 16));
-		};
-		const lum = (c: number[]) => {
-			const [r, g, b] = c.map((v) => {
-				v /= 255;
-				return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-			});
-			return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-		};
-		const ratio = (a: number[], b: number[]) => {
-			const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
-			return (hi + 0.05) / (lo + 0.05);
-		};
-		for (const theme of ['filmnacht-light', 'filmnacht-dark']) {
-			const page = hex(theme, 'base-200');
-			const ring = hex(theme, 'base-content').map((v, i) => v * alpha + page[i] * (1 - alpha));
+		for (const theme of themes) {
+			const page = token(theme, 'base-200');
+			const ring = over(token(theme, 'base-content'), alpha, page);
 			expect(ratio(ring, page)).toBeGreaterThanOrEqual(3);
 			expect(ratio(ring, [255, 255, 255])).toBeGreaterThanOrEqual(3);
 		}

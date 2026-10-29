@@ -26,10 +26,11 @@
 	--color-accent-content: #1c1917;
 	--color-neutral: #3a3a3c;
 	--color-neutral-content: #ffffff;
-	/* Apple's accessible (increased contrast) system colours: all at least 4.5:1 on white. */
+	/* Apple's accessible (increased contrast) system colours, the green darkened to
+	   reach 4.5:1 on the grey page and under white text. */
 	--color-info: #0040dd;
 	--color-info-content: #ffffff;
-	--color-success: #248a3d;
+	--color-success: #1f7a35;
 	--color-success-content: #ffffff;
 	--color-warning: #f59e0b;
 	--color-warning-content: #1c1917;
@@ -169,7 +170,9 @@
 
 /*
  * Phone tab bar: a floating capsule of material, the selected tab marked by a
- * pill behind it. Monochrome: amber glyphs on the light material would be 2.2:1.
+ * pill behind it and daisyUI's bar under it. The pill alone is far below 3:1;
+ * the bar is the cue that counts. Monochrome: amber glyphs on the light
+ * material would be 2.2:1.
  */
 .dock {
 	inset-inline: 1rem;
@@ -185,9 +188,6 @@
 	}
 	> .dock-active {
 		background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);
-		&::after {
-			display: none;
-		}
 	}
 }
 
