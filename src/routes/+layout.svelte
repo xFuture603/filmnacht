@@ -34,9 +34,7 @@
 <svelte:head><title>Filmnacht</title></svelte:head>
 
 <div class="min-h-dvh bg-base-200">
-	<header
-		class="navbar sticky top-0 z-10 min-h-14 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur"
-	>
+	<header class="navbar material sticky top-0 z-10 min-h-14 border-b border-base-content/10 px-4">
 		<a class="flex min-h-12 items-center gap-2 text-lg font-bold" href="/">
 			<!-- The one amber mark in the chrome: a fill with dark ink, never amber on white. -->
 			<span class="grid size-8 place-items-center rounded-field bg-primary text-primary-content">
@@ -49,7 +47,7 @@
 			<nav class="hidden gap-1 md:flex" aria-label={t(data.locale, 'nav.main')}>
 				{#each sections as s (s.href)}
 					<a
-						class={['btn btn-ghost min-h-12', s.current && 'btn-active']}
+						class={['btn btn-ghost min-h-12', s.current && 'bg-base-content/8']}
 						href={s.href}
 						aria-current={s.current ? 'page' : undefined}
 					>
@@ -70,7 +68,7 @@
 	<main
 		class={[
 			'mx-auto max-w-3xl px-4 py-6',
-			data.user && 'pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6'
+			data.user && 'pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-6'
 		]}
 	>
 		{#if wrongOrigin}
@@ -85,7 +83,7 @@
 	</main>
 
 	{#if data.user}
-		<nav class="dock md:hidden" aria-label={t(data.locale, 'nav.main')}>
+		<nav class="dock material md:hidden" aria-label={t(data.locale, 'nav.main')}>
 			{#each sections as s (s.href)}
 				<a
 					href={s.href}

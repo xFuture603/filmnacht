@@ -14,27 +14,28 @@
 {#if data.groups.length === 0}
 	<div class="mb-8"><EmptyState icon={Users} text={t(data.locale, 'groups.empty')} /></div>
 {:else}
-	<ul class="mb-8 grid gap-3">
+	<!-- An inset grouped list: one rounded group, rows split by inset hairlines. -->
+	<ul class="mb-8 divide-y divide-base-content/10 overflow-hidden rounded-box bg-base-100">
 		{#each data.groups as group (group.id)}
 			<li class="min-w-0">
 				<a
 					href="/groups/{group.id}"
 					data-sveltekit-preload-data="off"
-					class="card flex min-h-12 w-full flex-row items-center gap-3 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
+					class="flex min-h-14 w-full items-center gap-3 px-4 py-3 transition-colors hover:bg-base-content/5 active:bg-base-content/10"
 				>
 					<span
-						class="grid size-11 shrink-0 place-items-center rounded-field bg-base-200 text-base-content"
+						class="grid size-8 shrink-0 place-items-center rounded-lg bg-neutral text-neutral-content"
 					>
-						<Users class="size-5" />
+						<Users class="size-4" />
 					</span>
-					<span class="line-clamp-2 min-w-0 flex-1 font-bold break-words">{group.name}</span>
+					<span class="line-clamp-2 min-w-0 flex-1 break-words">{group.name}</span>
 					{#if group.newCount > 0}
 						<NewBadge label={t(data.locale, 'new.count', { count: group.newCount })} />
 					{/if}
 					{#if group.role === 'owner'}
 						<span class="badge badge-sm badge-outline">{t(data.locale, 'groups.owner')}</span>
 					{/if}
-					<ChevronRight class="size-4 shrink-0 text-base-content/40" />
+					<ChevronRight class="size-4 shrink-0 text-base-content/30" strokeWidth={2.5} />
 				</a>
 			</li>
 		{/each}

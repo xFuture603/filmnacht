@@ -7,13 +7,13 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import Toast from '$lib/components/Toast.svelte';
-	import { TriangleAlert, Users } from '@lucide/svelte';
+	import { TriangleAlert } from '@lucide/svelte';
 	let { data, form } = $props();
 
 	const s = $derived(data.settings);
 </script>
 
-<PageHeader title={data.group.name} icon={Users} />
+<PageHeader title={data.group.name} />
 <GroupTabs
 	groupId={data.group.groupId}
 	groupName={data.group.name}

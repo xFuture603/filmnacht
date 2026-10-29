@@ -31,7 +31,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 flex justify-center md:inset-x-auto md:top-18 md:right-4 md:bottom-auto"
+		class="fixed inset-x-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 flex justify-center md:inset-x-auto md:top-18 md:right-4 md:bottom-auto"
 		transition:fly={{ y: reduced ? 0 : 12, duration: reduced ? 0 : 180 }}
 	>
 		<div

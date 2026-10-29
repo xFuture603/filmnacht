@@ -8,7 +8,7 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { CalendarDays, Film, MapPin, Plus, Star, Users, X } from '@lucide/svelte';
+	import { CalendarDays, Film, MapPin, Plus, Star, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
@@ -24,7 +24,7 @@
 	});
 </script>
 
-<PageHeader title={data.group.name} icon={Users} />
+<PageHeader title={data.group.name} />
 <GroupTabs
 	groupId={data.group.groupId}
 	groupName={data.group.name}

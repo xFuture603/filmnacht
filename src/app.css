@@ -13,33 +13,35 @@
 	name: 'filmnacht-light';
 	default: true;
 	color-scheme: light;
+	/* iOS grouped backgrounds: grey page, white grouped content on top. */
 	--color-base-100: #ffffff;
-	--color-base-200: #f4f4f5;
-	--color-base-300: #e4e4e7;
-	--color-base-content: #18181b;
+	--color-base-200: #f2f2f7;
+	--color-base-300: #d1d1d6;
+	--color-base-content: #1c1c1e;
 	--color-primary: #f59e0b;
 	--color-primary-content: #1c1917;
-	--color-secondary: #e4e4e7;
-	--color-secondary-content: #18181b;
+	--color-secondary: #e5e5ea;
+	--color-secondary-content: #1c1c1e;
 	--color-accent: #f59e0b;
 	--color-accent-content: #1c1917;
-	--color-neutral: #27272a;
-	--color-neutral-content: #fafafa;
-	--color-info: #2563eb;
+	--color-neutral: #3a3a3c;
+	--color-neutral-content: #ffffff;
+	/* Apple's accessible (increased contrast) system colours: all at least 4.5:1 on white. */
+	--color-info: #0040dd;
 	--color-info-content: #ffffff;
-	--color-success: #15803d;
+	--color-success: #248a3d;
 	--color-success-content: #ffffff;
 	--color-warning: #f59e0b;
 	--color-warning-content: #1c1917;
-	--color-error: #dc2626;
+	--color-error: #d70015;
 	--color-error-content: #ffffff;
-	--radius-selector: 0.5rem;
-	--radius-field: 0.5rem;
-	--radius-box: 1rem;
+	--radius-selector: 9999px;
+	--radius-field: 0.75rem;
+	--radius-box: 1.25rem;
 	--size-selector: 0.25rem;
 	--size-field: 0.25rem;
 	--border: 1px;
-	--depth: 1;
+	--depth: 0;
 	--noise: 0;
 }
 
@@ -47,46 +49,46 @@
 	name: 'filmnacht-dark';
 	prefersdark: true;
 	color-scheme: dark;
-	--color-base-100: #18181b;
-	--color-base-200: #0f0f11;
-	--color-base-300: #27272a;
-	--color-base-content: #f4f4f5;
+	/* iOS dark grouped backgrounds: black page, elevated grey content. */
+	--color-base-100: #1c1c1e;
+	--color-base-200: #000000;
+	--color-base-300: #3a3a3c;
+	--color-base-content: #f2f2f7;
 	--color-primary: #fbbf24;
 	--color-primary-content: #1c1917;
-	--color-secondary: #27272a;
-	--color-secondary-content: #f4f4f5;
+	--color-secondary: #2c2c2e;
+	--color-secondary-content: #f2f2f7;
 	--color-accent: #fbbf24;
 	--color-accent-content: #1c1917;
-	--color-neutral: #3f3f46;
-	--color-neutral-content: #fafafa;
-	--color-info: #60a5fa;
-	--color-info-content: #0f0f11;
-	--color-success: #4ade80;
-	--color-success-content: #0f0f11;
+	--color-neutral: #48484a;
+	--color-neutral-content: #ffffff;
+	--color-info: #409cff;
+	--color-info-content: #000000;
+	--color-success: #30db5b;
+	--color-success-content: #000000;
 	--color-warning: #fbbf24;
 	--color-warning-content: #1c1917;
-	--color-error: #f87171;
-	--color-error-content: #0f0f11;
-	--radius-selector: 0.5rem;
-	--radius-field: 0.5rem;
-	--radius-box: 1rem;
+	--color-error: #ff6961;
+	--color-error-content: #000000;
+	--radius-selector: 9999px;
+	--radius-field: 0.75rem;
+	--radius-box: 1.25rem;
 	--size-selector: 0.25rem;
 	--size-field: 0.25rem;
 	--border: 1px;
-	--depth: 1;
+	--depth: 0;
 	--noise: 0;
 }
 
 @layer base {
 	html {
-		font-family:
-			ui-sans-serif,
-			system-ui,
-			-apple-system,
-			'Segoe UI',
-			Roboto,
-			sans-serif;
+		font-family: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, sans-serif;
 		-webkit-tap-highlight-color: transparent;
+		-webkit-font-smoothing: antialiased;
+	}
+	h1,
+	h2 {
+		letter-spacing: -0.02em;
 	}
 }
 
@@ -134,5 +136,72 @@
 @layer base {
 	p {
 		max-width: 75ch;
+	}
+}
+
+/*
+ * Apple-style surfaces: grouped content sits flat on the grey page, separated
+ * by colour and corner radius rather than borders and drop shadows. Buttons and
+ * segmented controls are capsules. Unlayered, so it wins over the many
+ * `border shadow-sm` utilities the pages already carry.
+ */
+.card {
+	border-color: transparent;
+	box-shadow: none;
+}
+.btn,
+.tabs-box,
+.tabs-box .tab {
+	--radius-field: 9999px;
+}
+
+/* The floating functional layer: a translucent material over the content. */
+.material {
+	background-color: color-mix(in oklab, var(--color-base-100) 80%, transparent);
+	backdrop-filter: saturate(180%) blur(20px);
+}
+@media (prefers-reduced-transparency: reduce) {
+	.material {
+		background-color: var(--color-base-100);
+		backdrop-filter: none;
+	}
+}
+
+/*
+ * Phone tab bar: a floating capsule of material, the selected tab marked by a
+ * pill behind it. Monochrome: amber glyphs on the light material would be 2.2:1.
+ */
+.dock {
+	inset-inline: 1rem;
+	bottom: calc(0.5rem + env(safe-area-inset-bottom));
+	width: auto;
+	height: 4rem;
+	padding: 0.25rem;
+	border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+	border-radius: 9999px;
+	box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
+	> * {
+		border-radius: 9999px;
+	}
+	> .dock-active {
+		background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		&::after {
+			display: none;
+		}
+	}
+}
+
+/* Unselected segments: daisyUI's 50% ink is 3:1 on the grey track, below 4.5:1. */
+.tabs-box .tab:not(.tab-active) {
+	color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
+}
+
+/* The selected segment lifts off the track: white in light, a lighter grey in dark. */
+.tabs-box > .tab-active {
+	box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+@media (prefers-color-scheme: dark) {
+	.tabs-box > .tab-active {
+		--tab-bg: #636366;
 	}
 }

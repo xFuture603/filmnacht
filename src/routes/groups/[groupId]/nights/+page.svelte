@@ -6,7 +6,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import NightStatus from '$lib/components/NightStatus.svelte';
 	import Scheduler from './Scheduler.svelte';
-	import { CalendarDays, MapPin, Star, Users } from '@lucide/svelte';
+	import { CalendarDays, MapPin, Star } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
@@ -28,7 +28,7 @@
 		}).format(n);
 </script>
 
-<PageHeader title={data.group.name} icon={Users} />
+<PageHeader title={data.group.name} />
 <GroupTabs
 	groupId={data.group.groupId}
 	groupName={data.group.name}
