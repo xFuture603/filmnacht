@@ -30,7 +30,7 @@
 	<div class="join">
 		<button
 			type="button"
-			class="btn join-item min-h-12 min-w-12 text-lg"
+			class="btn btn-outline join-item min-h-12 min-w-12 text-lg"
 			aria-label={decreaseLabel}
 			onclick={() => input.stepDown()}>−</button
 		>
@@ -47,7 +47,7 @@
 		/>
 		<button
 			type="button"
-			class="btn join-item min-h-12 min-w-12 text-lg"
+			class="btn btn-outline join-item min-h-12 min-w-12 text-lg"
 			aria-label={increaseLabel}
 			onclick={() => input.stepUp()}>+</button
 		>

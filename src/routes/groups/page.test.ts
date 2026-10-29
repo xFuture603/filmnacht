@@ -52,4 +52,26 @@ describe('the groups list', () => {
 		}).body;
 		expect(body).toMatch(/<span class="[^"]*\bhyphens-auto\b[^"]*">Donnerstagskino<\/span>/);
 	});
+
+	// The list clips its rows (overflow-hidden for the rounded corners), so the
+	// browser's outside focus ring vanished. Draw it inside the row instead.
+	it('draws the keyboard focus ring inside each row, where the list cannot clip it', () => {
+		const body = render(Page, {
+			props: {
+				data: {
+					locale: 'en',
+					groups: [{ id: 'g1', name: 'Filmnacht', role: 'member', newCount: 0 }]
+				} as never,
+				form: null
+			}
+		}).body;
+		const row = body.match(/<a href="\/groups\/g1"[^>]*class="([^"]*)"/)![1].split(' ');
+		expect(row).toEqual(
+			expect.arrayContaining([
+				'focus-visible:outline-2',
+				'focus-visible:-outline-offset-2',
+				'focus-visible:outline-base-content'
+			])
+		);
+	});
 });

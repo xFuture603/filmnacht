@@ -21,7 +21,7 @@
 				<a
 					href="/groups/{group.id}"
 					data-sveltekit-preload-data="off"
-					class="flex min-h-14 w-full items-center gap-3 px-4 py-3 transition-colors hover:bg-base-content/5 active:bg-base-content/10"
+					class="flex min-h-14 w-full items-center gap-3 px-4 py-3 transition-colors hover:bg-base-content/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-base-content active:bg-base-content/10"
 				>
 					<span
 						class="grid size-8 shrink-0 place-items-center rounded-lg bg-neutral text-neutral-content"

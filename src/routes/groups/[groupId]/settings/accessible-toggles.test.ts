@@ -34,4 +34,10 @@ describe('settings page markup', () => {
 			expect(src).toContain(`id="${hintId}"`);
 		}
 	});
+
+	// The flat-card reset (app.css) clears card borders; the danger zone's red
+	// border must survive it.
+	it('keeps the red border on the delete-group card', () => {
+		expect(src).toMatch(/<section class="card[^"]*\bborder-error\/40!/);
+	});
 });

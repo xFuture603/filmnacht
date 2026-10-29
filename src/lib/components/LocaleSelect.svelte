@@ -19,5 +19,5 @@
 			<option value={l} selected={l === locale}>{l.toUpperCase()}</option>
 		{/each}
 	</select>
-	<noscript><button class="btn min-h-12">{t(locale, 'common.save')}</button></noscript>
+	<noscript><button class="btn btn-outline min-h-12">{t(locale, 'common.save')}</button></noscript>
 </form>

@@ -52,7 +52,8 @@
 		aria-label={label}
 		onfocus={(event) => event.currentTarget.select()}
 	/>
-	<button type="button" class="btn join-item min-h-12" onclick={copy}>
+	<!-- rounded-e-xl matches the field's corner instead of a capsule end. -->
+	<button type="button" class="btn btn-outline join-item min-h-12 rounded-e-xl" onclick={copy}>
 		<span aria-live="polite">{copied ? copiedLabel : copyLabel}</span>
 	</button>
 </div>

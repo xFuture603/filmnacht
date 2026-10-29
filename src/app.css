@@ -155,6 +155,11 @@
 .tabs-box .tab {
 	--radius-field: 9999px;
 }
+/* daisyUI rings a focused button in its own colour: amber on the light page is
+   about 2:1. Ink is clear on every surface. */
+.btn-primary {
+	outline-color: var(--color-base-content);
+}
 
 /* The floating functional layer: a translucent material over the content. */
 .material {
@@ -185,6 +190,8 @@
 	box-shadow: 0 8px 32px rgb(0 0 0 / 0.12);
 	> * {
 		border-radius: 9999px;
+		/* daisyUI lifts dock items with a bottom margin; centred in the capsule here. */
+		margin-bottom: 0;
 	}
 	> .dock-active {
 		background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);

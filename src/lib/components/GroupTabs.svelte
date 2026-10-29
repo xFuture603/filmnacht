@@ -47,7 +47,9 @@
 	{#each tabs as tab (tab.id)}
 		<a
 			class={[
-				'tab min-h-12 flex-1 gap-2 px-2 whitespace-nowrap sm:flex-none sm:px-4',
+				// On phones a new-count badge stacks under its label: side by side they
+				// do not fit three tabs into 320px.
+				'tab min-h-12 flex-1 gap-2 px-2 whitespace-nowrap max-sm:h-auto max-sm:flex-col max-sm:gap-0.5 max-sm:py-1 sm:flex-none sm:px-4',
 				tab.id === active && 'tab-active'
 			]}
 			href={tab.href}

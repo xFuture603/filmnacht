@@ -157,7 +157,8 @@
 	</div>
 </section>
 
-<section class="card mt-6 border border-error/40 bg-base-100 shadow-sm">
+<!-- border-error/40! survives the flat-card reset in app.css. -->
+<section class="card mt-6 border border-error/40! bg-base-100 shadow-sm">
 	<div class="card-body">
 		<h2 class="card-title text-lg text-error">
 			<TriangleAlert class="size-5" />{t(data.locale, 'settings.delete_title')}

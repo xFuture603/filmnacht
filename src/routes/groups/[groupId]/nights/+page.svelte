@@ -44,7 +44,7 @@
 			<li>
 				<a
 					href="/groups/{data.group.groupId}/nights/{night.id}"
-					class="card flex min-h-12 w-full flex-col gap-1 border border-base-300 bg-base-100 p-4 shadow-sm transition hover:shadow-md"
+					class="card flex min-h-12 w-full flex-col gap-1 bg-base-100 p-4 transition-colors hover:bg-base-content/5"
 				>
 					<div class="flex flex-wrap items-center justify-between gap-2">
 						<span class="font-bold">{night.when}</span>

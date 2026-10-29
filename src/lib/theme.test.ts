@@ -22,4 +22,19 @@ describe('the theme', () => {
 		const css = readFileSync('src/app.css', 'utf8');
 		expect(css).not.toMatch(/dock-active[^}]*::after\s*\{\s*display:\s*none/);
 	});
+
+	// daisyUI rings a focused button in its own colour: amber on the light page
+	// is about 2:1. Primary buttons ring in ink instead.
+	it('rings a focused primary button in ink, not amber', () => {
+		const css = readFileSync('src/app.css', 'utf8');
+		expect(css).toMatch(/\.btn-primary\s*\{[^}]*outline-color:\s*var\(--color-base-content\)/);
+	});
+
+	// daisyUI pushes dock items up with a bottom margin, so inside the padded
+	// capsule the selected pill touched the top edge.
+	it('centres the phone tab bar items in the capsule', () => {
+		const css = readFileSync('src/app.css', 'utf8');
+		const dock = css.slice(css.indexOf('.dock {'));
+		expect(dock).toMatch(/>\s*\*\s*\{[^}]*margin-bottom:\s*0/);
+	});
 });
