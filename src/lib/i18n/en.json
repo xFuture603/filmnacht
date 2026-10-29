@@ -191,6 +191,8 @@
 	"add.search_none": "Nothing found. Type it in below instead.",
 	"add.search_disabled": "Search is off because this instance has no TMDB API key. You can still add films by hand.",
 	"add.search_failed": "Search is unavailable right now. You can still add films by hand.",
+	"add.found_one": "1 film found",
+	"add.found": "{count} films found",
 	"add.adopt": "Add this one",
 	"add.adopt_named": "Add {title} to the pool",
 	"add.manual_heading": "Type it in",

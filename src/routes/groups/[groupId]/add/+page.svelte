@@ -4,7 +4,31 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import Field from '$lib/components/Field.svelte';
+	import { liveSearch } from '$lib/live-search';
+	import type { TmdbSearchResult } from '$lib/server/tmdb';
 	let { data, form } = $props();
+
+	// Typed results replace a submitted search's; null falls back to the form's
+	// (the no-JavaScript path, where the Search button posts the page).
+	let live = $state<TmdbSearchResult[] | null>(null);
+	let liveFailed = $state(false);
+	const results = $derived(live ?? form?.results);
+	const search = liveSearch<TmdbSearchResult>({
+		url: (q) => `/groups/${data.group.groupId}/add/search?q=${encodeURIComponent(q)}`,
+		onResults: (r) => ((live = r), (liveFailed = false)),
+		onError: () => (liveFailed = true)
+	});
+	const status = $derived(
+		liveFailed
+			? t(data.locale, 'add.search_failed')
+			: !results
+				? ''
+				: results.length === 0
+					? t(data.locale, 'add.search_none')
+					: results.length === 1
+						? t(data.locale, 'add.found_one')
+						: t(data.locale, 'add.found', { count: results.length })
+	);
 </script>
 
 <PageHeader title={t(data.locale, 'add.title', { group: data.group.name })} />
@@ -22,24 +46,38 @@
 				{t(data.locale, 'add.search_disabled')}
 			</div>
 		{:else}
-			<form method="POST" action="?/search" class="flex gap-2">
+			<form
+				method="POST"
+				action="?/search"
+				class="flex gap-2"
+				onsubmit={(e) => {
+					e.preventDefault();
+					search.now(String(new FormData(e.currentTarget).get('query') ?? ''));
+				}}
+			>
 				<input
 					name="query"
 					required
 					placeholder={t(data.locale, 'add.search_placeholder')}
 					aria-label={t(data.locale, 'add.search_placeholder')}
 					class="input min-h-12 w-full flex-1"
+					autocomplete="off"
+					oninput={(e) => search.type(e.currentTarget.value)}
 				/>
 				<button class="btn btn-primary min-h-12">{t(data.locale, 'add.search_submit')}</button>
 			</form>
 
-			{#if form?.results}
-				{#if form.results.length === 0}
+			<!-- Results change as you type; this says so to a screen reader. -->
+			<p class="sr-only" role="status" aria-live="polite">{status}</p>
+			{#if liveFailed}
+				<p class="text-base-content/70">{t(data.locale, 'add.search_failed')}</p>
+			{:else if results}
+				{#if results.length === 0}
 					<p class="text-base-content/70">{t(data.locale, 'add.search_none')}</p>
 				{:else}
 					<form method="POST" action="?/adopt" class="mt-2">
 						<ul class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-							{#each form.results as result (result.tmdbId)}
+							{#each results as result (result.tmdbId)}
 								<li class="flex min-w-0 flex-col gap-2">
 									<Poster src={result.posterUrl} />
 									<!-- flex-1 + mt-auto: a two-line title or a missing year must not

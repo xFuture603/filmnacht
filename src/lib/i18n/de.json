@@ -189,6 +189,8 @@
 	"add.search_none": "Nichts gefunden. Trag den Film unten selbst ein.",
 	"add.search_disabled": "Die Suche ist aus, weil diese Instanz keinen TMDB-API-Key hat. Du kannst Filme trotzdem selbst eintragen.",
 	"add.search_failed": "Die Suche ist gerade nicht erreichbar. Du kannst Filme trotzdem selbst eintragen.",
+	"add.found_one": "1 Film gefunden",
+	"add.found": "{count} Filme gefunden",
 	"add.adopt": "Diesen hinzufügen",
 	"add.adopt_named": "{title} zum Pool hinzufügen",
 	"add.manual_heading": "Selbst eintragen",
