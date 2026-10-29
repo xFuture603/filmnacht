@@ -102,7 +102,7 @@
 			</div>
 		{:else if data.filmHidden}
 			<div class="flex items-center gap-3">
-				<Dices class="size-8 shrink-0 text-base-content/50" strokeWidth={1.5} />
+				<Dices class="size-12 shrink-0 text-base-content opacity-50" strokeWidth={1} />
 				<p>{t(data.locale, 'night.hidden')}</p>
 			</div>
 		{:else}

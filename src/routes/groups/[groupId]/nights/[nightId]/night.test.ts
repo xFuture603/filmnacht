@@ -294,4 +294,12 @@ describe('the drawn film', () => {
 		expect(svg).toMatch(/\bsize-12\b/);
 		expect(svg).toContain('stroke-width="1"');
 	});
+
+	it('draws the surprise dice at exactly 2x with 1px strokes too', async () => {
+		const data = { ...(await view(ada)), film: null, filmHidden: true, locale: 'de' };
+		const body = render(Page, { props: { data: data as never, form: null } }).body;
+		const svg = body.match(/<svg[^>]*lucide-dices\b[^>]*>/)![0];
+		expect(svg).toMatch(/\bsize-12\b/);
+		expect(svg).toContain('stroke-width="1"');
+	});
 });
