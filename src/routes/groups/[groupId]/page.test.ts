@@ -21,7 +21,7 @@ const entry = (over: Record<string, unknown>) => ({
 	...over
 });
 
-function body(pool: unknown[], members: unknown[] = []) {
+function body(pool: unknown[], members: unknown[] = [], next: unknown = null) {
 	return render(Page, {
 		props: {
 			data: {
@@ -31,7 +31,7 @@ function body(pool: unknown[], members: unknown[] = []) {
 				pool,
 				newCounts: {},
 				toRate: [],
-				next: null,
+				next,
 				used: 0,
 				max: 3
 			} as never,
@@ -87,5 +87,19 @@ describe('the pool', () => {
 	it("marks the group's owner with the outlined badge the other info badges use", () => {
 		const html = body([], [{ id: 'u1', displayName: 'Ada', role: 'owner' }]);
 		expect(html).toMatch(/<span class="badge badge-sm badge-outline">Owner<\/span>/);
+	});
+
+	// With a long German date the calendar icon shrank to a dot.
+	it("keeps the next night's calendar icon full size beside a long date", () => {
+		const next = {
+			id: 'n1',
+			when: 'Freitag, 6. November 2026 um 20:00',
+			location: null,
+			film: null,
+			filmHidden: false,
+			myResponse: null
+		};
+		const html = body([], [], next);
+		expect(html).toMatch(/lucide-calendar-days[^"]*\bshrink-0\b/);
 	});
 });

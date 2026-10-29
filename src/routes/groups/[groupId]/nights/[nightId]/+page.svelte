@@ -270,7 +270,8 @@
 						value={answer}
 						aria-pressed={data.night.myResponse === answer}
 						class={[
-							'btn join-item min-h-12 flex-1 gap-1 px-2',
+							// Grows with its label: in German on a narrow phone it wraps.
+							'btn join-item h-auto min-h-12 flex-1 gap-1 px-2 py-2 leading-tight max-sm:flex-col',
 							data.night.myResponse === answer ? 'btn-primary' : 'btn-outline'
 						]}
 					>

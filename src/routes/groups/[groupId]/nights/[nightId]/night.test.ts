@@ -260,3 +260,17 @@ describe('the draw hint', () => {
 		expect(await page(grace)).not.toContain(HINT);
 	});
 });
+
+describe('the answer buttons on narrow phones', () => {
+	// At 320px in German, "Ich bin dabei" wrapped to three lines and spilled out
+	// of a fixed-height button. They grow with their text and stack the icon.
+	it('grow with their label and stack the icon above it on phones', async () => {
+		const data = await view(ada);
+		const html = render(Page, {
+			props: { data: { ...data, locale: 'de' } as never, form: null }
+		}).body;
+		const buttons = html.match(/<button[^>]*name="response"[^>]*>/g)!;
+		expect(buttons).toHaveLength(3);
+		for (const b of buttons) expect(b).toMatch(/\bh-auto\b.*\bmax-sm:flex-col\b/);
+	});
+});

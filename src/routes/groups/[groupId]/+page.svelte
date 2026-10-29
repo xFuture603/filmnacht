@@ -85,7 +85,7 @@
 				</h2>
 				<p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
 					<span class="inline-flex items-center gap-1"
-						><CalendarDays class="size-4" />{next.when}</span
+						><CalendarDays class="size-4 shrink-0" />{next.when}</span
 					>
 					{#if next.location}
 						<span class="inline-flex min-w-0 items-center gap-1"

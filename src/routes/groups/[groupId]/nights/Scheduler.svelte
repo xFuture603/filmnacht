@@ -102,7 +102,7 @@
 					/>
 					<span
 						class={[
-							'btn btn-ghost min-h-12 w-full px-0 tabular-nums',
+							'btn btn-ghost min-h-12 w-full rounded-xl px-0 tabular-nums',
 							// A fill with dark ink, never amber text: btn-ghost would override
 							// btn-primary's background and leave amber text on white.
 							'peer-checked:bg-primary peer-checked:text-primary-content peer-checked:hover:bg-primary',

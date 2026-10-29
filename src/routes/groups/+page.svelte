@@ -28,7 +28,7 @@
 					>
 						<Users class="size-4" />
 					</span>
-					<span class="line-clamp-2 min-w-0 flex-1 break-words">{group.name}</span>
+					<span class="line-clamp-2 min-w-0 flex-1 break-words hyphens-auto">{group.name}</span>
 					{#if group.newCount > 0}
 						<NewBadge label={t(data.locale, 'new.count', { count: group.newCount })} />
 					{/if}

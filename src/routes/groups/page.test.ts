@@ -38,4 +38,18 @@ describe('the groups list', () => {
 			);
 		}
 	});
+
+	// "Donnerstagskino" broke mid-word ("Donnerstagsk / ino") beside the badge.
+	it('hyphenates long group names instead of breaking them anywhere', () => {
+		const body = render(Page, {
+			props: {
+				data: {
+					locale: 'de',
+					groups: [{ id: 'g1', name: 'Donnerstagskino', role: 'owner', newCount: 0 }]
+				} as never,
+				form: null
+			}
+		}).body;
+		expect(body).toMatch(/<span class="[^"]*\bhyphens-auto\b[^"]*">Donnerstagskino<\/span>/);
+	});
 });

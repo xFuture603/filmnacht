@@ -43,10 +43,13 @@
 <!-- Links, not ARIA tabs: each is its own page and works without JavaScript. -->
 <!-- Labelled with the group's name, not "Main navigation": this is the
      group's own sections, and one page must not carry two identical landmarks. -->
-<nav class="tabs tabs-box mb-6 w-fit flex-nowrap bg-secondary p-1" aria-label={groupName}>
+<nav class="tabs tabs-box mb-6 w-full flex-nowrap bg-secondary p-1 sm:w-fit" aria-label={groupName}>
 	{#each tabs as tab (tab.id)}
 		<a
-			class={['tab min-h-12 gap-2', tab.id === active && 'tab-active']}
+			class={[
+				'tab min-h-12 flex-1 gap-2 px-2 whitespace-nowrap sm:flex-none sm:px-4',
+				tab.id === active && 'tab-active'
+			]}
 			href={tab.href}
 			data-sveltekit-preload-data="off"
 			aria-current={tab.id === active ? 'page' : undefined}
