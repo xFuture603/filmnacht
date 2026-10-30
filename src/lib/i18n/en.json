@@ -193,6 +193,7 @@
 	"add.search_failed": "Search is unavailable right now. You can still add films by hand.",
 	"add.found_one": "1 film found",
 	"add.found": "{count} films found",
+	"add.searching": "Searching…",
 	"add.adopt": "Add this one",
 	"add.adopt_named": "Add {title} to the pool",
 	"add.manual_heading": "Type it in",

@@ -191,6 +191,7 @@
 	"add.search_failed": "Die Suche ist gerade nicht erreichbar. Du kannst Filme trotzdem selbst eintragen.",
 	"add.found_one": "1 Film gefunden",
 	"add.found": "{count} Filme gefunden",
+	"add.searching": "Suche läuft…",
 	"add.adopt": "Diesen hinzufügen",
 	"add.adopt_named": "{title} zum Pool hinzufügen",
 	"add.manual_heading": "Selbst eintragen",

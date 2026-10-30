@@ -29,13 +29,15 @@ function setup() {
 	const { fetchImpl, calls } = controllableFetch();
 	const results: (Hit[] | null)[] = [];
 	const onError = vi.fn();
+	const busy: boolean[] = [];
 	const search = liveSearch<Hit>({
+		onBusy: (b) => busy.push(b),
 		url: (q) => `/search?q=${q}`,
 		onResults: (r) => results.push(r),
 		onError,
 		fetchImpl
 	});
-	return { search, calls, results, onError };
+	return { search, calls, results, onError, busy };
 }
 
 const settle = () => vi.advanceTimersByTimeAsync(0);
@@ -113,5 +115,44 @@ describe('live search', () => {
 		search.now('dune');
 		await settle();
 		expect(calls.map((c) => c.url)).toEqual(['/search?q=dune']);
+	});
+
+	// Typing must show at once that a search is coming, not only once the
+	// request goes out after the pause.
+	it('is busy from the first keystroke until the results arrive', async () => {
+		const { search, calls, busy } = setup();
+		search.type('dune');
+		expect(busy.at(-1)).toBe(true);
+		await vi.advanceTimersByTimeAsync(300);
+		expect(busy.at(-1)).toBe(true);
+		calls[0].resolve({ results: [] });
+		await settle();
+		expect(busy.at(-1)).toBe(false);
+	});
+
+	it('stays busy while a newer search replaces one in flight', async () => {
+		const { search, calls, busy } = setup();
+		search.type('dune');
+		await vi.advanceTimersByTimeAsync(300);
+		search.type('dune part');
+		await settle();
+		expect(busy.at(-1)).toBe(true);
+		await vi.advanceTimersByTimeAsync(300);
+		calls[1].resolve({ results: [] });
+		await settle();
+		expect(busy.at(-1)).toBe(false);
+	});
+
+	it('is no longer busy when the search fails or the text gets too short', async () => {
+		const { search, calls, busy } = setup();
+		search.type('dune');
+		await vi.advanceTimersByTimeAsync(300);
+		calls[0].resolve({}, false);
+		await settle();
+		expect(busy.at(-1)).toBe(false);
+		search.type('dune');
+		search.type('d');
+		await settle();
+		expect(busy.at(-1)).toBe(false);
 	});
 });

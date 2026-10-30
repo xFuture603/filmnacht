@@ -12,22 +12,26 @@
 	// (the no-JavaScript path, where the Search button posts the page).
 	let live = $state<TmdbSearchResult[] | null>(null);
 	let liveFailed = $state(false);
+	let busy = $state(false);
 	const results = $derived(live ?? form?.results);
 	const search = liveSearch<TmdbSearchResult>({
 		url: (q) => `/groups/${data.group.groupId}/add/search?q=${encodeURIComponent(q)}`,
 		onResults: (r) => ((live = r), (liveFailed = false)),
-		onError: () => (liveFailed = true)
+		onError: () => (liveFailed = true),
+		onBusy: (b) => (busy = b)
 	});
 	const status = $derived(
-		liveFailed
-			? t(data.locale, 'add.search_failed')
-			: !results
-				? ''
-				: results.length === 0
-					? t(data.locale, 'add.search_none')
-					: results.length === 1
-						? t(data.locale, 'add.found_one')
-						: t(data.locale, 'add.found', { count: results.length })
+		busy
+			? t(data.locale, 'add.searching')
+			: liveFailed
+				? t(data.locale, 'add.search_failed')
+				: !results
+					? ''
+					: results.length === 0
+						? t(data.locale, 'add.search_none')
+						: results.length === 1
+							? t(data.locale, 'add.found_one')
+							: t(data.locale, 'add.found', { count: results.length })
 	);
 </script>
 
@@ -55,15 +59,17 @@
 					search.now(String(new FormData(e.currentTarget).get('query') ?? ''));
 				}}
 			>
-				<input
-					name="query"
-					required
-					placeholder={t(data.locale, 'add.search_placeholder')}
-					aria-label={t(data.locale, 'add.search_placeholder')}
-					class="input min-h-12 w-full flex-1"
-					autocomplete="off"
-					oninput={(e) => search.type(e.currentTarget.value)}
-				/>
+				<label class="input min-h-12 w-full flex-1">
+					<input
+						name="query"
+						required
+						placeholder={t(data.locale, 'add.search_placeholder')}
+						aria-label={t(data.locale, 'add.search_placeholder')}
+						autocomplete="off"
+						oninput={(e) => search.type(e.currentTarget.value)}
+					/>
+					{#if busy}<span class="loading loading-spinner loading-sm opacity-70"></span>{/if}
+				</label>
 				<button class="btn btn-primary min-h-12">{t(data.locale, 'add.search_submit')}</button>
 			</form>
 
@@ -75,7 +81,13 @@
 				{#if results.length === 0}
 					<p class="text-base-content/70">{t(data.locale, 'add.search_none')}</p>
 				{:else}
-					<form method="POST" action="?/adopt" class="mt-2">
+					<!-- Faded while a newer search runs: these are about to change. -->
+					<form
+						method="POST"
+						action="?/adopt"
+						class={['mt-2 transition-opacity', busy && 'opacity-50']}
+						aria-busy={busy}
+					>
 						<ul class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 							{#each results as result (result.tmdbId)}
 								<li class="flex min-w-0 flex-col gap-2">

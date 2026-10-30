@@ -7,6 +7,7 @@ export function liveSearch<T>({
 	url,
 	onResults,
 	onError,
+	onBusy = () => {},
 	delay = 300,
 	min = 2,
 	fetchImpl = fetch
@@ -15,6 +16,8 @@ export function liveSearch<T>({
 	/** null: the text is too short, so there is nothing to show. */
 	onResults: (results: T[] | null) => void;
 	onError: () => void;
+	/** true from the first keystroke until an answer (or nothing) is due. */
+	onBusy?: (busy: boolean) => void;
 	delay?: number;
 	min?: number;
 	fetchImpl?: typeof fetch;
@@ -30,21 +33,30 @@ export function liveSearch<T>({
 	async function now(text: string) {
 		cancel();
 		const query = text.trim();
-		if (query.length < min) return onResults(null);
+		if (query.length < min) return idle(null);
+		onBusy(true);
 		const controller = (inFlight = new AbortController());
 		try {
 			const response = await fetchImpl(url(query), { signal: controller.signal });
 			if (!response.ok) throw new Error(`search ${response.status}`);
 			const body = (await response.json()) as { results: T[] };
-			if (!controller.signal.aborted) onResults(body.results);
+			if (!controller.signal.aborted) idle(body.results);
 		} catch {
-			if (!controller.signal.aborted) onError();
+			if (controller.signal.aborted) return;
+			onBusy(false);
+			onError();
 		}
+	}
+
+	function idle(results: T[] | null) {
+		onBusy(false);
+		onResults(results);
 	}
 
 	function type(text: string) {
 		cancel();
-		if (text.trim().length < min) return onResults(null);
+		if (text.trim().length < min) return idle(null);
+		onBusy(true);
 		timer = setTimeout(() => now(text), delay);
 	}
 
