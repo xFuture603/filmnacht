@@ -211,7 +211,6 @@ export const suggestions = sqliteTable(
 		 */
 		suggestedBy: text('suggested_by').references(() => users.id, { onDelete: 'restrict' }),
 		dedupeKey: text('dedupe_key').notNull(),
-		note: text('note'),
 		status: text('status', { enum: ['open', 'drawn', 'withdrawn'] })
 			.notNull()
 			.default('open'),

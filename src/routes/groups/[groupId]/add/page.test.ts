@@ -20,7 +20,6 @@ function page(
 			data: {
 				locale,
 				group: { groupId: 'g1', name: 'Kino', role: 'member' },
-				noteMax: 200,
 				tmdbEnabled: true,
 				taken,
 				capped
@@ -84,10 +83,9 @@ describe('with your suggestions used up', () => {
 	});
 });
 
-describe('the note', () => {
-	// Up to 20 results are ten rows on a phone: below them, the note is never seen.
-	it('comes before the results it applies to', () => {
-		const html = page('en', [film(1, 'Dune')]);
-		expect(html.indexOf('name="note"')).toBeLessThan(html.indexOf('value="1"'));
+describe('adding a film', () => {
+	// The note was never shown anywhere and hardly anyone would write one.
+	it('asks for no note', () => {
+		expect(page('en', [film(1, 'Dune')])).not.toContain('textarea');
 	});
 });

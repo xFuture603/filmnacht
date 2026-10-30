@@ -4,7 +4,6 @@ import { movieNights, movies, suggestions, type GroupSettings } from './db/schem
 import { dedupeKey } from './dedupe';
 import { findOrCreateMovie, type MovieInput } from './movies';
 
-export const NOTE_MAX = 200;
 export const TITLE_MAX = 200;
 
 export type AddResult =
@@ -64,7 +63,6 @@ export function addSuggestion(
 		groupId: string;
 		userId: string;
 		movie: MovieInput;
-		note?: string | null;
 		settings: GroupSettings;
 	}
 ): AddResult {
@@ -72,9 +70,6 @@ export function addSuggestion(
 	if (!title || title.length > TITLE_MAX) return { ok: false, reason: 'bad_title' };
 
 	const key = dedupeKey({ ...input.movie, title });
-	// An over-long note is trimmed rather than rejected: losing the film because
-	// someone was chatty is a worse outcome than a clipped sentence.
-	const note = input.note?.trim().slice(0, NOTE_MAX) || null;
 
 	// The cap check and the insert must be one step. Checking before an `await`
 	// in a route would let two tabs both pass a cap of 3 at 3 suggestions.
@@ -109,10 +104,7 @@ export function addSuggestion(
 			// Reattributed to whoever is adding it now — cap accounting keys off
 			// suggestedBy, so leaving the old attribution would charge the film to
 			// the original suggester and show as not-yours to the person who just
-			// added it. The old note is dropped rather than carried: it was written
-			// to be revealed alongside that person's suggestion, and moving it to a
-			// different member's row is an indirect leak of exactly the kind §5 exists
-			// to prevent. `movieId` is deliberately left untouched: the dedupe key
+			// added it. `movieId` is deliberately left untouched: the dedupe key
 			// match guarantees this is the same film, so the revived row keeps
 			// pointing at its existing `movies` row. Calling `findOrCreateMovie` here
 			// would, for a hand-typed film with no `tmdb_id`, insert a brand new
@@ -120,7 +112,7 @@ export function addSuggestion(
 			// branch exists to avoid. `createdAt` is reset because the row now
 			// represents a different member's suggestion, in every other field.
 			db.update(suggestions)
-				.set({ status: 'open', suggestedBy: input.userId, note, createdAt: new Date() })
+				.set({ status: 'open', suggestedBy: input.userId, createdAt: new Date() })
 				.where(eq(suggestions.id, clash.id))
 				.run();
 			return { ok: true, suggestionId: clash.id } as const;
@@ -134,8 +126,7 @@ export function addSuggestion(
 				groupId: input.groupId,
 				movieId,
 				suggestedBy: input.userId,
-				dedupeKey: key,
-				note
+				dedupeKey: key
 			})
 			.run();
 		return { ok: true, suggestionId } as const;

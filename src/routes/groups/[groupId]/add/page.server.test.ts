@@ -56,7 +56,7 @@ beforeEach(() => {
 
 describe('adopt action — authorization happens before the outbound call', () => {
 	it('404s a signed-in non-member without ever calling TMDB', async () => {
-		const request = formRequest({ tmdbId: '438631', note: '' });
+		const request = formRequest({ tmdbId: '438631' });
 		const locals = { user: { id: outsiderId, displayName: 'Grace', isAdmin: false }, locale: 'en' };
 
 		let caught: HttpError | undefined;

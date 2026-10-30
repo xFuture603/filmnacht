@@ -124,14 +124,6 @@ describe('addSuggestion', () => {
 		});
 	});
 
-	it('truncates an over-long note rather than refusing the film', () => {
-		const note = 'x'.repeat(500);
-		const result = addSuggestion(db, { groupId, userId: ada, movie: dune, note, settings });
-		const row = db.select().from(suggestions).get();
-		expect(result.ok).toBe(true);
-		expect(row?.note).toHaveLength(200);
-	});
-
 	it('revives a withdrawn suggestion rather than colliding on the group+dedupeKey unique index', () => {
 		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
@@ -156,27 +148,6 @@ describe('addSuggestion', () => {
 		addSuggestion(db, { groupId, userId: grace, movie: dune, settings: capped });
 		expect(countOpenSuggestions(db, groupId, ada)).toBe(0);
 		expect(countOpenSuggestions(db, groupId, grace)).toBe(1);
-	});
-
-	it('drops the old note when reviving rather than carrying it to the new suggester', () => {
-		const first = addSuggestion(db, {
-			groupId,
-			userId: ada,
-			movie: dune,
-			note: "Ada's private reason",
-			settings
-		});
-		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
-		addSuggestion(db, {
-			groupId,
-			userId: grace,
-			movie: dune,
-			note: "Grace's own reason",
-			settings
-		});
-		const row = db.select().from(suggestions).get();
-		expect(row?.note).toBe("Grace's own reason");
-		expect(row?.note).not.toBe("Ada's private reason");
 	});
 
 	it('refuses to revive a withdrawn suggestion a movie_nights row already references', () => {

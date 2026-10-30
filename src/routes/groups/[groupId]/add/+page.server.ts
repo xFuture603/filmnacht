@@ -1,12 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { requireMember, requireUser } from '$lib/server/groups';
-import {
-	addSuggestion,
-	countOpenSuggestions,
-	NOTE_MAX,
-	takenTmdbIds
-} from '$lib/server/suggestions';
+import { addSuggestion, countOpenSuggestions, takenTmdbIds } from '$lib/server/suggestions';
 import { fetchMovie, searchMovies } from '$lib/server/tmdb';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -16,7 +11,6 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	const group = requireMember(db, user.id, params.groupId);
 	return {
 		group,
-		noteMax: NOTE_MAX,
 		tmdbEnabled: !!env.TMDB_API_KEY,
 		taken: takenTmdbIds(db, params.groupId),
 		capped: countOpenSuggestions(db, params.groupId, user.id) >= group.settings.maxOpenSuggestions
@@ -42,7 +36,6 @@ export const actions: Actions = {
 			// promise that outgoing connections go to TMDB only. A TMDB-adopted
 			// film still carries its poster, which is TMDB's own host.
 			movie: { title: String(form.get('title') ?? ''), posterUrl: null },
-			note: String(form.get('note') ?? ''),
 			settings: group.settings
 		});
 		if (!result.ok) return fail(400, { error: `pool.error.${result.reason}` });
@@ -98,7 +91,6 @@ export const actions: Actions = {
 			groupId: params.groupId,
 			userId: user.id,
 			movie: detail,
-			note: String(form.get('note') ?? ''),
 			settings: group.settings
 		});
 		if (!result.ok) return fail(400, { error: `pool.error.${result.reason}` });

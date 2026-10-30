@@ -89,12 +89,7 @@
 						<p class="text-base-content/70">{t(data.locale, 'add.search_none')}</p>
 					{:else}
 						<form method="POST" action="?/adopt" class="mt-2" aria-busy={busy}>
-							<!-- Above the results: below twenty posters, nobody would see it. -->
-							<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
-								<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"
-								></textarea>
-							</Field>
-							<ul class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+							<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 								{#each results as result (result.tmdbId)}
 									<li class="flex min-w-0 flex-col gap-2">
 										<Poster src={result.posterUrl} />
@@ -137,10 +132,6 @@
 				<RequiredNote locale={data.locale} />
 				<Field label={t(data.locale, 'add.film_title')}>
 					<input name="title" required maxlength="200" class="input min-h-12 w-full" />
-				</Field>
-				<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
-					<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"
-					></textarea>
 				</Field>
 				<!-- The fallback: primary only when search is not available. -->
 				<button
