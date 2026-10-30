@@ -47,3 +47,13 @@ describe('the search results status', () => {
 		expect(status(page('en', []))).toBe('Nothing found. Type it in below instead.');
 	});
 });
+
+describe('the search field', () => {
+	// A real search field: browsers add a clear button, and phone keyboards
+	// label their return key "Search".
+	it('is a search input with a search return key', () => {
+		const input = page('en').match(/<input[^>]*name="query"[^>]*>/)?.[0] ?? '';
+		expect(input).toContain('type="search"');
+		expect(input).toContain('enterkeyhint="search"');
+	});
+});

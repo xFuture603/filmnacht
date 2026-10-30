@@ -62,6 +62,8 @@
 				<label class="input min-h-12 w-full flex-1">
 					<input
 						name="query"
+						type="search"
+						enterkeyhint="search"
 						required
 						placeholder={t(data.locale, 'add.search_placeholder')}
 						aria-label={t(data.locale, 'add.search_placeholder')}
@@ -81,13 +83,7 @@
 				{#if results.length === 0}
 					<p class="text-base-content/70">{t(data.locale, 'add.search_none')}</p>
 				{:else}
-					<!-- Faded while a newer search runs: these are about to change. -->
-					<form
-						method="POST"
-						action="?/adopt"
-						class={['mt-2 transition-opacity', busy && 'opacity-50']}
-						aria-busy={busy}
-					>
+					<form method="POST" action="?/adopt" class="mt-2" aria-busy={busy}>
 						<ul class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 							{#each results as result (result.tmdbId)}
 								<li class="flex min-w-0 flex-col gap-2">
