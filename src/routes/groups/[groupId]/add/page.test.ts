@@ -10,14 +10,20 @@ const film = (tmdbId: number, title: string) => ({
 	tmdbRating: null
 });
 
-function page(locale: 'en' | 'de', results?: unknown[]) {
+function page(
+	locale: 'en' | 'de',
+	results?: unknown[],
+	{ taken = [] as number[], capped = false } = {}
+) {
 	return render(Page, {
 		props: {
 			data: {
 				locale,
 				group: { groupId: 'g1', name: 'Kino', role: 'member' },
 				noteMax: 200,
-				tmdbEnabled: true
+				tmdbEnabled: true,
+				taken,
+				capped
 			} as never,
 			form: results ? ({ results, query: 'x' } as never) : null
 		}
@@ -55,5 +61,33 @@ describe('the search field', () => {
 		const input = page('en').match(/<input[^>]*name="query"[^>]*>/)?.[0] ?? '';
 		expect(input).toContain('type="search"');
 		expect(input).toContain('enterkeyhint="search"');
+	});
+});
+
+describe('a film already suggested', () => {
+	// Found out only after tapping Add, the page reloads and the search is gone.
+	it('says so in place of its Add button', () => {
+		const html = page('en', [film(1, 'Dune'), film(2, 'Heat')], { taken: [1] });
+		expect(html).toContain('Already suggested');
+		expect(html).not.toContain('value="1"');
+		expect(html).toContain('value="2"');
+		expect(page('de', [film(1, 'Dune')], { taken: [1] })).toContain('Schon vorgeschlagen');
+	});
+});
+
+describe('with your suggestions used up', () => {
+	it('says so instead of offering to search or add', () => {
+		const html = page('en', undefined, { capped: true });
+		expect(html).toContain('You have used all your suggestions');
+		expect(html).not.toContain('name="query"');
+		expect(html).not.toContain('name="title"');
+	});
+});
+
+describe('the note', () => {
+	// Up to 20 results are ten rows on a phone: below them, the note is never seen.
+	it('comes before the results it applies to', () => {
+		const html = page('en', [film(1, 'Dune')]);
+		expect(html.indexOf('name="note"')).toBeLessThan(html.indexOf('value="1"'));
 	});
 });

@@ -12,6 +12,7 @@ import {
 	addSuggestion,
 	countOpenSuggestions,
 	listPool,
+	takenTmdbIds,
 	TITLE_MAX,
 	withdrawSuggestion
 } from './suggestions';
@@ -321,5 +322,35 @@ describe('countOpenSuggestions', () => {
 		expect(countOpenSuggestions(db, groupId, ada)).toBe(1);
 		addSuggestion(db, { groupId: other, userId: ada, movie: arrival, settings });
 		expect(countOpenSuggestions(db, groupId, ada)).toBe(1);
+	});
+});
+
+describe('takenTmdbIds', () => {
+	// The add page marks these before anyone taps "Add", so it must refuse
+	// exactly what addSuggestion would refuse as a duplicate, no more and no less.
+	it('lists the TMDB films addSuggestion would refuse as duplicates', () => {
+		const open = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		const drawn = addSuggestion(db, { groupId, userId: ada, movie: arrival, settings });
+		const usedId = (drawn as { suggestionId: string }).suggestionId;
+		db.update(suggestions).set({ status: 'drawn' }).where(eq(suggestions.id, usedId)).run();
+		const withdrawnUsed = { tmdbId: 1, title: 'Heat', year: 1995 };
+		const wu = addSuggestion(db, { groupId, userId: grace, movie: withdrawnUsed, settings });
+		const wuId = (wu as { suggestionId: string }).suggestionId;
+		withdrawSuggestion(db, grace, wuId);
+		db.insert(movieNights).values({ groupId, scheduledAt: new Date(), suggestionId: wuId }).run();
+		const withdrawn = { tmdbId: 2, title: 'Alien', year: 1979 };
+		const w = addSuggestion(db, { groupId, userId: grace, movie: withdrawn, settings });
+		withdrawSuggestion(db, grace, (w as { suggestionId: string }).suggestionId);
+		addSuggestion(db, { groupId, userId: ada, movie: { title: 'Home video' }, settings });
+		const other = createGroup(db, { name: 'Other', ownerId: ada });
+		addSuggestion(db, { groupId: other, userId: ada, movie: { tmdbId: 3, title: 'Up' }, settings });
+
+		expect(open.ok).toBe(true);
+		expect(takenTmdbIds(db, groupId).sort()).toEqual([1, dune.tmdbId, arrival.tmdbId].sort());
+		for (const movie of [dune, arrival, withdrawnUsed]) {
+			const again = addSuggestion(db, { groupId, userId: grace, movie, settings });
+			expect(again).toEqual({ ok: false, reason: 'duplicate' });
+		}
+		expect(addSuggestion(db, { groupId, userId: grace, movie: withdrawn, settings }).ok).toBe(true);
 	});
 });

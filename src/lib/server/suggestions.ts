@@ -42,6 +42,22 @@ export function countOpenSuggestions(db: DB, groupId: string, userId: string): n
 		.all().length;
 }
 
+/**
+ * TMDB films addSuggestion would refuse as duplicates in this group, so the add
+ * page can say so before anyone taps "Add": every suggestion not withdrawn, and
+ * a withdrawn one a night still points at.
+ */
+export function takenTmdbIds(db: DB, groupId: string): number[] {
+	return db
+		.select({ key: suggestions.dedupeKey, status: suggestions.status, night: movieNights.id })
+		.from(suggestions)
+		.leftJoin(movieNights, eq(movieNights.suggestionId, suggestions.id))
+		.where(eq(suggestions.groupId, groupId))
+		.all()
+		.filter((row) => row.key.startsWith('tmdb:') && (row.status !== 'withdrawn' || row.night))
+		.map((row) => Number(row.key.slice('tmdb:'.length)));
+}
+
 export function addSuggestion(
 	db: DB,
 	input: {

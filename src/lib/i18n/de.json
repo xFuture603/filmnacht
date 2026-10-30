@@ -193,6 +193,7 @@
 	"add.found": "{count} Filme gefunden",
 	"add.searching": "Suche läuft…",
 	"add.adopt": "Diesen hinzufügen",
+	"add.taken": "Schon vorgeschlagen",
 	"add.adopt_named": "{title} zum Pool hinzufügen",
 	"add.manual_heading": "Selbst eintragen",
 	"add.film_title": "Titel",

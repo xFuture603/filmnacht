@@ -41,102 +41,118 @@
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
 {/if}
 
-<section class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'add.search_heading')}</h2>
+{#if data.capped}
+	<div class="alert alert-info alert-soft mb-6" role="status">
+		{t(data.locale, 'pool.error.cap_reached')}
+	</div>
+{:else}
+	<section class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
+		<div class="card-body">
+			<h2 class="card-title text-lg">{t(data.locale, 'add.search_heading')}</h2>
 
-		{#if !data.tmdbEnabled}
-			<div class="alert alert-info alert-soft" role="status">
-				{t(data.locale, 'add.search_disabled')}
-			</div>
-		{:else}
-			<form
-				method="POST"
-				action="?/search"
-				class="flex gap-2"
-				onsubmit={(e) => {
-					e.preventDefault();
-					search.now(String(new FormData(e.currentTarget).get('query') ?? ''));
-				}}
-			>
-				<label class="input min-h-12 w-full flex-1">
-					<input
-						name="query"
-						type="search"
-						enterkeyhint="search"
-						required
-						placeholder={t(data.locale, 'add.search_placeholder')}
-						aria-label={t(data.locale, 'add.search_placeholder')}
-						autocomplete="off"
-						oninput={(e) => search.type(e.currentTarget.value)}
-					/>
-					{#if busy}<span class="loading loading-spinner loading-sm opacity-70"></span>{/if}
-				</label>
-				<button class="btn btn-primary min-h-12">{t(data.locale, 'add.search_submit')}</button>
-			</form>
+			{#if !data.tmdbEnabled}
+				<div class="alert alert-info alert-soft" role="status">
+					{t(data.locale, 'add.search_disabled')}
+				</div>
+			{:else}
+				<form
+					method="POST"
+					action="?/search"
+					class="flex gap-2"
+					onsubmit={(e) => {
+						e.preventDefault();
+						search.now(String(new FormData(e.currentTarget).get('query') ?? ''));
+					}}
+				>
+					<label class="input min-h-12 w-full flex-1">
+						<input
+							name="query"
+							type="search"
+							enterkeyhint="search"
+							required
+							placeholder={t(data.locale, 'add.search_placeholder')}
+							aria-label={t(data.locale, 'add.search_placeholder')}
+							autocomplete="off"
+							oninput={(e) => search.type(e.currentTarget.value)}
+						/>
+						{#if busy}<span class="loading loading-spinner loading-sm opacity-70"></span>{/if}
+					</label>
+					<button class="btn btn-primary min-h-12">{t(data.locale, 'add.search_submit')}</button>
+				</form>
 
-			<!-- Results change as you type; this says so to a screen reader. -->
-			<p class="sr-only" role="status" aria-live="polite">{status}</p>
-			{#if liveFailed}
-				<p class="text-base-content/70">{t(data.locale, 'add.search_failed')}</p>
-			{:else if results}
-				{#if results.length === 0}
-					<p class="text-base-content/70">{t(data.locale, 'add.search_none')}</p>
-				{:else}
-					<form method="POST" action="?/adopt" class="mt-2" aria-busy={busy}>
-						<ul class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-							{#each results as result (result.tmdbId)}
-								<li class="flex min-w-0 flex-col gap-2">
-									<Poster src={result.posterUrl} />
-									<!-- flex-1 + mt-auto: a two-line title or a missing year must not
-									     shift this card's button out of line with its neighbours. -->
-									<div class="flex min-w-0 flex-1 flex-col">
-										<p class="line-clamp-2 font-bold break-words">{result.title}</p>
-										<p class="mb-1 text-sm text-base-content/70">{result.year ?? ''}</p>
-										<button
-											name="tmdbId"
-											value={result.tmdbId}
-											class="btn btn-outline btn-sm mt-auto min-h-12 w-full"
-											aria-label={t(data.locale, 'add.adopt_named', { title: result.title })}
-										>
-											{t(data.locale, 'add.adopt')}
-										</button>
-									</div>
-								</li>
-							{/each}
-						</ul>
-						<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
-							<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"
-							></textarea>
-						</Field>
-					</form>
+				<!-- Results change as you type; this says so to a screen reader. -->
+				<p class="sr-only" role="status" aria-live="polite">{status}</p>
+				{#if liveFailed}
+					<p class="text-base-content/70">{t(data.locale, 'add.search_failed')}</p>
+				{:else if results}
+					{#if results.length === 0}
+						<p class="text-base-content/70">{t(data.locale, 'add.search_none')}</p>
+					{:else}
+						<form method="POST" action="?/adopt" class="mt-2" aria-busy={busy}>
+							<!-- Above the results: below twenty posters, nobody would see it. -->
+							<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
+								<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"
+								></textarea>
+							</Field>
+							<ul class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+								{#each results as result (result.tmdbId)}
+									<li class="flex min-w-0 flex-col gap-2">
+										<Poster src={result.posterUrl} />
+										<!-- flex-1 + mt-auto: a two-line title or a missing year must not
+										     shift this card's button out of line with its neighbours. -->
+										<div class="flex min-w-0 flex-1 flex-col">
+											<p class="line-clamp-2 font-bold break-words">{result.title}</p>
+											<p class="mb-1 text-sm text-base-content/70">{result.year ?? ''}</p>
+											{#if data.taken.includes(result.tmdbId)}
+												<p
+													class="mt-auto flex min-h-12 items-center justify-center text-center text-base-content/70"
+												>
+													{t(data.locale, 'add.taken')}
+												</p>
+											{:else}
+												<button
+													name="tmdbId"
+													value={result.tmdbId}
+													class="btn btn-outline btn-sm mt-auto min-h-12 w-full"
+													aria-label={t(data.locale, 'add.adopt_named', { title: result.title })}
+												>
+													{t(data.locale, 'add.adopt')}
+												</button>
+											{/if}
+										</div>
+									</li>
+								{/each}
+							</ul>
+						</form>
+					{/if}
 				{/if}
 			{/if}
-		{/if}
-	</div>
-</section>
+		</div>
+	</section>
 
-<section class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'add.manual_heading')}</h2>
-		<form method="POST" action="?/manual" class="flex flex-col gap-2">
-			<RequiredNote locale={data.locale} />
-			<Field label={t(data.locale, 'add.film_title')}>
-				<input name="title" required maxlength="200" class="input min-h-12 w-full" />
-			</Field>
-			<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
-				<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"></textarea>
-			</Field>
-			<!-- The fallback: primary only when search is not available. -->
-			<button
-				class={[
-					'btn mt-2 min-h-12 w-full sm:w-auto sm:self-start',
-					data.tmdbEnabled ? 'btn-outline' : 'btn-primary'
-				]}>{t(data.locale, 'add.submit')}</button
-			>
-		</form>
-	</div>
-</section>
+	<section class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
+		<div class="card-body">
+			<h2 class="card-title text-lg">{t(data.locale, 'add.manual_heading')}</h2>
+			<form method="POST" action="?/manual" class="flex flex-col gap-2">
+				<RequiredNote locale={data.locale} />
+				<Field label={t(data.locale, 'add.film_title')}>
+					<input name="title" required maxlength="200" class="input min-h-12 w-full" />
+				</Field>
+				<Field label={t(data.locale, 'add.note')} hint={t(data.locale, 'add.note_hint')}>
+					<textarea name="note" maxlength={data.noteMax} rows="2" class="textarea w-full"
+					></textarea>
+				</Field>
+				<!-- The fallback: primary only when search is not available. -->
+				<button
+					class={[
+						'btn mt-2 min-h-12 w-full sm:w-auto sm:self-start',
+						data.tmdbEnabled ? 'btn-outline' : 'btn-primary'
+					]}>{t(data.locale, 'add.submit')}</button
+				>
+			</form>
+		</div>
+	</section>
+{/if}
 
 <a
 	class="btn btn-outline min-h-12"

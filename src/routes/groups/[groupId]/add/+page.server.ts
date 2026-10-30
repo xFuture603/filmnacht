@@ -1,7 +1,12 @@
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { requireMember, requireUser } from '$lib/server/groups';
-import { addSuggestion, NOTE_MAX } from '$lib/server/suggestions';
+import {
+	addSuggestion,
+	countOpenSuggestions,
+	NOTE_MAX,
+	takenTmdbIds
+} from '$lib/server/suggestions';
 import { fetchMovie, searchMovies } from '$lib/server/tmdb';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -9,7 +14,13 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = ({ locals, params }) => {
 	const user = requireUser(locals);
 	const group = requireMember(db, user.id, params.groupId);
-	return { group, noteMax: NOTE_MAX, tmdbEnabled: !!env.TMDB_API_KEY };
+	return {
+		group,
+		noteMax: NOTE_MAX,
+		tmdbEnabled: !!env.TMDB_API_KEY,
+		taken: takenTmdbIds(db, params.groupId),
+		capped: countOpenSuggestions(db, params.groupId, user.id) >= group.settings.maxOpenSuggestions
+	};
 };
 
 export const actions: Actions = {

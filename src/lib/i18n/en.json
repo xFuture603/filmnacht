@@ -195,6 +195,7 @@
 	"add.found": "{count} films found",
 	"add.searching": "Searching…",
 	"add.adopt": "Add this one",
+	"add.taken": "Already suggested",
 	"add.adopt_named": "Add {title} to the pool",
 	"add.manual_heading": "Type it in",
 	"add.film_title": "Title",
