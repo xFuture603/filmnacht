@@ -2,6 +2,7 @@
 	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import { t } from '$lib/i18n';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import { ChevronLeft } from '@lucide/svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import Field from '$lib/components/Field.svelte';
 	import { liveSearch } from '$lib/live-search';
@@ -34,6 +35,14 @@
 							: t(data.locale, 'add.found', { count: results.length })
 	);
 </script>
+
+<a
+	class="btn btn-outline mb-2 min-h-12 gap-1"
+	href="/groups/{data.group.groupId}"
+	data-sveltekit-preload-data="off"
+>
+	<ChevronLeft class="size-4" />{t(data.locale, 'add.back')}
+</a>
 
 <PageHeader title={t(data.locale, 'add.title', { group: data.group.name })} />
 
@@ -144,11 +153,3 @@
 		</div>
 	</section>
 {/if}
-
-<a
-	class="btn btn-outline min-h-12"
-	href="/groups/{data.group.groupId}"
-	data-sveltekit-preload-data="off"
->
-	{t(data.locale, 'add.back')}
-</a>

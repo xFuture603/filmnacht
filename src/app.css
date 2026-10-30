@@ -155,6 +155,27 @@
 .tabs-box .tab {
 	--radius-field: 9999px;
 }
+/*
+ * daisyUI rounds the ends of a .join and overlaps the borders inside @scope,
+ * which Firefox before 146 ignores: there the RSVP row and the steppers had
+ * square corners and doubled borders. The same values without @scope. In the
+ * components layer, so where @scope works daisyUI's identical utilities win,
+ * and a rounded-* utility on an item still wins over both.
+ */
+@layer components {
+	.join > :first-child {
+		--join-ss: var(--radius-field);
+		--join-es: calc(var(--radius-field) * var(--join-h));
+	}
+	.join > :last-child {
+		--join-se: calc(var(--radius-field) * var(--join-h));
+		--join-ee: var(--radius-field);
+	}
+	.join > :not(:first-child) {
+		--join-ml: calc(var(--border, 1px) * -1 * var(--join-h));
+	}
+}
+
 /* daisyUI rings a focused button in its own colour: amber on the light page is
    about 2:1. Ink is clear on every surface. */
 .btn-primary {

@@ -47,6 +47,9 @@ export type NightSummary = {
 export type NightDetail = NightSummary & {
 	groupId: string;
 	drawnTitle: string | null;
+	drawnPosterUrl: string | null;
+	/** The drawn suggestion, for the link to its film details. */
+	drawnSuggestionId: string | null;
 	drawnBy: string | null;
 	/** The drawn film's suggester has left and been replaced by the placeholder. */
 	drawnByFormer: boolean;
@@ -165,6 +168,8 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 			location: movieNights.location,
 			status: movieNights.status,
 			drawnTitle: movies.title,
+			drawnPosterUrl: movies.posterUrl,
+			drawnSuggestionId: movieNights.suggestionId,
 			drawnBy: users.displayName,
 			drawnByUsername: users.username,
 			drawLog: movieNights.drawLog,

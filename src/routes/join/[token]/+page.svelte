@@ -15,6 +15,7 @@
 {:else if !data.invite}
 	<div class="mx-auto w-full max-w-md">
 		<div class="alert alert-error alert-soft" role="alert">{t(data.locale, 'invite.invalid')}</div>
+		<a class="btn btn-outline mt-4 min-h-12" href="/">{t(data.locale, 'error.home')}</a>
 	</div>
 {:else}
 	<FormCard title={t(data.locale, 'invite.join_title', { group: data.invite.groupName })}>

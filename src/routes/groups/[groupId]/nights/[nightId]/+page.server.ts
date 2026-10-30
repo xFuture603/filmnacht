@@ -70,7 +70,15 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	// Withheld from the payload, not hidden in the markup: a title sitting in
 	// `data` is readable in the page source, and the group was promised a surprise.
 	const visible = isResultVisible(group.settings, night, new Date());
-	const { drawnTitle, drawnBy, drawnByFormer, onlyCandidate, ...rest } = night;
+	const {
+		drawnTitle,
+		drawnPosterUrl,
+		drawnSuggestionId,
+		drawnBy,
+		drawnByFormer,
+		onlyCandidate,
+		...rest
+	} = night;
 	// A cancelled night keeps its suggestionId, but its film was released: show none.
 	const hasFilm = drawnTitle !== null && (night.status === 'drawn' || night.status === 'watched');
 
@@ -86,7 +94,14 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		night: { ...rest, when: formatWhen(night.scheduledAt, timezone, locals.locale) },
 		film:
 			visible && hasFilm
-				? { title: drawnTitle, by: drawnBy, byFormer: drawnByFormer, onlyCandidate }
+				? {
+						title: drawnTitle,
+						posterUrl: drawnPosterUrl,
+						suggestionId: drawnSuggestionId,
+						by: drawnBy,
+						byFormer: drawnByFormer,
+						onlyCandidate
+					}
 				: null,
 		filmHidden: !visible && hasFilm,
 		// Draw is disabled, with the reason, when nothing can be drawn.

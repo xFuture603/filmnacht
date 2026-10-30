@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import Poster from '$lib/components/Poster.svelte';
 	import {
 		CalendarPlus,
 		Check,
@@ -11,7 +12,6 @@
 		CircleX,
 		Dices,
 		Eye,
-		Film,
 		MapPin,
 		RotateCcw,
 		Star,
@@ -78,11 +78,16 @@
 	<div class="card-body">
 		<h2 class="card-title text-lg">{t(data.locale, 'night.film')}</h2>
 		{#if data.film}
-			<div class="flex items-center gap-3">
-				<!-- 48px with 1px strokes, like the poster placeholder: twice the 24px grid,
-				     so every line lands on whole pixels. -->
-				<Film class="size-12 shrink-0 text-base-content opacity-50" strokeWidth={1} />
-				<p class="text-lg font-bold break-words">
+			<div class="flex items-center gap-4">
+				<!-- The poster leads to the film's details, as the title does in the pool. -->
+				<a
+					class="w-20 shrink-0 sm:w-24"
+					href="/groups/{data.group.groupId}/films/{data.film.suggestionId}"
+					aria-label={data.film.title}
+				>
+					<Poster src={data.film.posterUrl} />
+				</a>
+				<p class="min-w-0 text-lg font-bold break-words">
 					{#if data.film.onlyCandidate}
 						{t(data.locale, 'night.drawn_one', { title: data.film.title })}
 					{:else if data.film.byFormer}
@@ -106,7 +111,12 @@
 				<p>{t(data.locale, 'night.hidden')}</p>
 			</div>
 		{:else}
-			<p class="text-base-content/70">{t(data.locale, `nights.status.${data.night.status}`)}</p>
+			<!-- The badge in the header already says "Scheduled"; this says what that means for the film. -->
+			<p class="text-base-content/70">
+				{data.night.status === 'scheduled'
+					? t(data.locale, 'next.not_drawn')
+					: t(data.locale, `nights.status.${data.night.status}`)}
+			</p>
 		{/if}
 		{#if data.night.drawnAutomatically}
 			<p class="text-sm text-base-content/70">{t(data.locale, 'night.drawn_auto')}</p>

@@ -147,16 +147,18 @@
 							/>
 						{/if}
 						{#if entry.mine && entry.status === 'open'}
-							<!-- A 48px tap area around a 32px red dot: easy to hit, small on the poster. -->
+							<!-- A 48px tap area around a 32px chip: easy to hit, small on the poster.
+							     Neutral like the "Yours" badge, not red: a trigger stays low-key.
+							     The focus ring has a light gap so it shows on any poster. -->
 							<form method="POST" action="?/withdraw" class="absolute top-0 right-0 z-10">
 								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
 								<button
-									class="group grid size-12 cursor-pointer place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-error"
+									class="group grid size-12 cursor-pointer place-items-center rounded-full focus-visible:outline-none"
 									aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
 									title={t(data.locale, 'pool.withdraw')}
 								>
 									<span
-										class="grid size-8 place-items-center rounded-full bg-error text-error-content shadow-md transition group-hover:scale-110"
+										class="grid size-8 place-items-center rounded-full border border-base-300 bg-base-100 text-base-content shadow-sm transition group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-base-content group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-base-100"
 									>
 										<X class="size-4" strokeWidth={2.5} />
 									</span>
