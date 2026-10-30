@@ -47,3 +47,21 @@ export function startLiveRefresh(
 		win.removeEventListener('focus', onVisibility);
 	};
 }
+
+/**
+ * Runs a background refresh only if the server answers first. Without this, a
+ * refresh that fails on the way (a laptop waking before its Wi-Fi is back, a
+ * proxy or the app restarting) makes SvelteKit replace the page with a 500.
+ * Skipped rounds are simply tried again on the next tick.
+ */
+export function whenReachable(refresh: () => unknown, fetchImpl: typeof fetch = fetch) {
+	return async () => {
+		try {
+			const response = await fetchImpl('/health', { cache: 'no-store' });
+			if (!response.ok) return;
+		} catch {
+			return;
+		}
+		await refresh();
+	};
+}

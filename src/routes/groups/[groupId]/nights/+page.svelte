@@ -10,10 +10,10 @@
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
-	import { startLiveRefresh } from '$lib/live-refresh';
+	import { startLiveRefresh, whenReachable } from '$lib/live-refresh';
 	let { data, form } = $props();
 
-	onMount(() => startLiveRefresh(invalidateAll));
+	onMount(() => startLiveRefresh(whenReachable(invalidateAll)));
 	// Each refresh counts as a visit, so the server stops calling a night new.
 	// Keep its badge for as long as this page stays open.
 	const shownNew = new SvelteSet<string>();
