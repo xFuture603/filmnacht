@@ -44,3 +44,16 @@ describe('the answer picker', () => {
 			expect(b).toMatch(/\bmin-h-12\b[\s\S]*\bh-auto\b|\bh-auto\b[\s\S]*\bmin-h-12\b/);
 	});
 });
+
+// A check on "No" reads as yes: each answer shows its own symbol when chosen.
+describe('the symbol on the chosen answer', () => {
+	it.each([
+		['yes', 'lucide-check'],
+		['maybe', 'lucide-circle-question-mark'],
+		['no', 'lucide-x']
+	] as const)('is the right one for %s', (answer, icon) => {
+		const chosen = buttons(html(answer)).find((b) => b.includes(`value="${answer}"`)) ?? '';
+		expect(chosen).toMatch(new RegExp(`class="[^"]*\\b${icon}\\b`));
+		if (answer !== 'yes') expect(chosen).not.toContain('lucide-check');
+	});
+});
