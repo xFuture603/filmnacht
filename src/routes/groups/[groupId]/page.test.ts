@@ -27,7 +27,7 @@ const entry = (over: Record<string, unknown>) => ({
 	...over
 });
 
-function body(pool: unknown[], members: unknown[] = [], next: unknown = null) {
+function body(pool: unknown[], members: unknown[] = [], next: unknown = null, used = 0) {
 	return render(Page, {
 		props: {
 			data: {
@@ -38,7 +38,7 @@ function body(pool: unknown[], members: unknown[] = [], next: unknown = null) {
 				newCounts: {},
 				toRate: [],
 				next,
-				used: 0,
+				used,
 				max: 3
 			} as never,
 			form: null
@@ -116,5 +116,20 @@ describe('arriving from an invite to a group you are already in', () => {
 		expect(body([])).toContain('You are already in this group');
 		page.url = new URL('http://localhost/groups/g1');
 		expect(body([])).not.toContain('You are already in this group');
+	});
+});
+
+describe('with every suggestion used', () => {
+	it('disables adding a film and says why', () => {
+		const html = body([], [], null, 3);
+		expect(html).not.toContain('href="/groups/g1/add"');
+		expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Add a film/);
+		expect(html).toContain('All 3 suggestions used. Withdraw one to add another');
+	});
+
+	it('still offers it with a slot left', () => {
+		const html = body([], [], null, 2);
+		expect(html).toContain('href="/groups/g1/add"');
+		expect(html).toContain('2 of 3 suggestions used');
 	});
 });

@@ -123,16 +123,27 @@
 
 <section class="mb-8">
 	<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-		<p class="text-sm text-base-content/70">
-			{t(data.locale, 'pool.count', { used: data.used, max: data.max })}
-		</p>
-		<!-- One primary action per screen: a due rating outranks adding a film. -->
-		<a
-			class={['btn min-h-12', data.toRate.length > 0 ? 'btn-outline' : 'btn-primary']}
-			href="/groups/{data.group.groupId}/add"
-		>
-			<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
-		</a>
+		{#if data.used >= data.max}
+			<!-- Disabled, with the reason beside it: a greyed-out button alone
+			     leaves people guessing. -->
+			<p class="text-sm text-base-content/70">
+				{t(data.locale, 'pool.count_full', { max: data.max })}
+			</p>
+			<button type="button" class="btn min-h-12" disabled>
+				<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
+			</button>
+		{:else}
+			<p class="text-sm text-base-content/70">
+				{t(data.locale, 'pool.count', { used: data.used, max: data.max })}
+			</p>
+			<!-- One primary action per screen: a due rating outranks adding a film. -->
+			<a
+				class={['btn min-h-12', data.toRate.length > 0 ? 'btn-outline' : 'btn-primary']}
+				href="/groups/{data.group.groupId}/add"
+			>
+				<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
+			</a>
+		{/if}
 	</div>
 
 	{#if data.pool.length === 0}
