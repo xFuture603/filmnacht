@@ -8,7 +8,16 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { CalendarDays, ChevronDown, Film, MapPin, Plus, Star, X } from '@lucide/svelte';
+	import {
+		CalendarDays,
+		ChevronDown,
+		ChevronRight,
+		Film,
+		MapPin,
+		Plus,
+		Star,
+		X
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { afterNavigate, invalidateAll, replaceState } from '$app/navigation';
@@ -34,6 +43,19 @@
 	// One row on a computer, two on a phone: enough history without the page
 	// growing by a tile every movie night.
 	const DRAWN_SHOWN = 4;
+
+	const answers = ['yes', 'maybe', 'no'] as const;
+	const lists = $derived([
+		{ id: 'pool', label: t(data.locale, 'pool.tab_pool'), count: data.pool.length },
+		{ id: 'drawn', label: t(data.locale, 'pool.tab_drawn'), count: data.drawn.length },
+		{ id: 'members', label: t(data.locale, 'pool.tab_members'), count: data.members.length }
+	]);
+	// An answer from the members list (invite link, leaving) shows that list.
+	const current = $derived(
+		form?.inviteUrl || form?.confirm === 'leave'
+			? 'members'
+			: (lists.find((l) => l.id === page.url.searchParams.get('list'))?.id ?? 'pool')
+	);
 	$effect(() => {
 		for (const entry of data.pool) if (entry.isNew) shownNew.add(entry.suggestionId);
 	});
@@ -83,49 +105,105 @@
 
 {#if data.next}
 	{@const next = data.next}
-	<section class="card mb-8 border border-base-300 bg-base-100 shadow-sm">
-		<div class="card-body flex-row items-center gap-4 sm:gap-6">
-			<div class="w-24 shrink-0 sm:w-32">
-				<Poster src={next.film?.posterUrl ?? null} />
-			</div>
-			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="text-sm text-base-content/70">{t(data.locale, 'next.title')}</p>
-				<h2 class="text-xl font-bold break-words sm:text-2xl">
-					{#if next.film}
-						{next.film.title}
-						{#if next.film.year}
-							<span class="font-normal text-base-content/60">({next.film.year})</span>
-						{/if}
-					{:else if next.filmHidden}
-						{t(data.locale, 'next.surprise')}
-					{:else}
-						{t(data.locale, 'next.not_drawn')}
-					{/if}
-				</h2>
-				<p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-					<span class="inline-flex items-center gap-1"
-						><CalendarDays class="size-4 shrink-0" />{next.when}</span
-					>
-					{#if next.location}
-						<span class="inline-flex min-w-0 items-center gap-1"
-							><MapPin class="size-4 shrink-0" /><span class="truncate">{next.location}</span></span
+	<section class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
+		<div class="card-body gap-4">
+			<div class="flex items-center gap-4 sm:gap-6">
+				<div class="w-20 shrink-0 sm:w-28">
+					<Poster src={next.film?.posterUrl ?? null} />
+				</div>
+				<div class="flex min-w-0 flex-1 flex-col gap-1">
+					<p class="text-sm text-base-content/70">{t(data.locale, 'next.title')}</p>
+					<h2 class="text-xl font-bold break-words sm:text-2xl">
+						<a
+							class="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-base-content"
+							href="/groups/{data.group.groupId}/nights/{next.id}"
 						>
-					{/if}
-				</p>
+							{#if next.film}
+								{next.film.title}
+								{#if next.film.year}
+									<span class="font-normal text-base-content/60">({next.film.year})</span>
+								{/if}
+							{:else if next.filmHidden}
+								{t(data.locale, 'next.surprise')}
+							{:else}
+								{t(data.locale, 'next.not_drawn')}
+							{/if}
+							<ChevronRight class="inline size-5 align-[-0.15em]" />
+						</a>
+					</h2>
+					<p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+						<span class="inline-flex items-center gap-1"
+							><CalendarDays class="size-4 shrink-0" />{next.when}</span
+						>
+						{#if next.location}
+							<span class="inline-flex min-w-0 items-center gap-1"
+								><MapPin class="size-4 shrink-0" /><span class="truncate">{next.location}</span
+								></span
+							>
+						{/if}
+					</p>
+				</div>
+			</div>
+			<!-- Answer in place: the night's own action, so nothing to keep in step.
+			     Without JavaScript the browser lands on the night page, answered. -->
+			<div class="flex flex-col gap-2">
 				<p class="text-sm text-base-content/70">
 					{t(data.locale, `next.you.${next.myResponse ?? 'none'}`)}
 				</p>
-				<a
-					class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
-					href="/groups/{data.group.groupId}/nights/{next.id}">{t(data.locale, 'next.open')}</a
+				<form
+					method="POST"
+					action="/groups/{data.group.groupId}/nights/{next.id}?/respond"
+					class="join w-full"
+					use:enhance={() =>
+						async ({ update }) => {
+							await update({ reset: false });
+						}}
 				>
+					{#each answers as answer (answer)}
+						<button
+							name="response"
+							value={answer}
+							aria-pressed={next.myResponse === answer}
+							class={[
+								'btn join-item h-auto min-h-12 flex-1 px-2 py-2 leading-tight',
+								next.myResponse === answer ? 'btn-primary' : 'btn-outline'
+							]}
+						>
+							{t(data.locale, `nights.rsvp.${answer}`)}
+						</button>
+					{/each}
+				</form>
 			</div>
 		</div>
 	</section>
 {/if}
 
-<section class="mb-8">
-	<h2 class="mb-3 text-lg font-bold">{t(data.locale, 'pool.in_pool')}</h2>
+<!-- One list at a time: the switch is links, so a reload, the back button and a
+     browser without JavaScript all keep the chosen list. -->
+<nav class="mb-4 flex border-b border-base-300" aria-label={t(data.locale, 'pool.lists')}>
+	{#each lists as list (list.id)}
+		<a
+			href="?list={list.id}"
+			data-sveltekit-noscroll
+			data-sveltekit-replacestate
+			aria-current={current === list.id ? 'page' : undefined}
+			class={[
+				'-mb-px flex min-h-12 flex-1 items-center justify-center gap-1.5 border-b-2 px-2 text-center font-bold',
+				'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-base-content',
+				current === list.id
+					? 'border-base-content text-base-content'
+					: 'border-transparent text-base-content/70 hover:text-base-content'
+			]}
+		>
+			{list.label}
+			<span class="text-sm font-normal text-base-content/70">{list.count}</span>
+		</a>
+	{/each}
+</nav>
+
+<section class="mb-8" hidden={current !== 'pool'} aria-labelledby="list-pool">
+	<h2 id="list-pool" class="sr-only">{t(data.locale, 'pool.in_pool')}</h2>
+
 	<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 		{#if data.used >= data.max}
 			<!-- Disabled, with the reason beside it: a greyed-out button alone
@@ -163,10 +241,12 @@
 		</ul>
 	{/if}
 </section>
-<!-- Out of the draw: the film for the next night, then what was watched. -->
-{#if data.drawn.length > 0}
-	<section class="mb-8">
-		<h2 class="mb-3 text-lg font-bold">{t(data.locale, 'pool.drawn_heading')}</h2>
+
+<section class="mb-8" hidden={current !== 'drawn'} aria-labelledby="list-drawn">
+	<h2 id="list-drawn" class="sr-only">{t(data.locale, 'pool.drawn_heading')}</h2>
+	{#if data.drawn.length === 0}
+		<EmptyState icon={Film} text={t(data.locale, 'pool.drawn_none')} />
+	{:else}
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 			{#each data.drawn.slice(0, DRAWN_SHOWN) as entry (entry.suggestionId)}
 				{@render tile(entry)}
@@ -191,8 +271,65 @@
 				</ul>
 			</details>
 		{/if}
+	{/if}
+</section>
+
+<div class="mb-8" hidden={current !== 'members'}>
+	<section class="card border border-base-300 bg-base-100 shadow-sm" aria-labelledby="list-members">
+		<h2 id="list-members" class="sr-only">{t(data.locale, 'groups.members')}</h2>
+		<div class="card-body">
+			<ul class="divide-y divide-base-300">
+				{#each data.members as member (member.id)}
+					<li class="flex min-h-12 items-center justify-between gap-2 py-2">
+						<span class="min-w-0 truncate">{member.displayName}</span>
+						{#if member.role === 'owner'}
+							<span class="badge badge-sm badge-outline">{t(data.locale, 'groups.owner')}</span>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+
+			{#if data.group.role === 'owner'}
+				<!-- Enhanced: the page stays where it is instead of jumping to the top. -->
+				<form method="POST" action="?/invite" class="mt-2" use:enhance>
+					<button class="btn btn-outline min-h-12 w-full sm:w-auto"
+						>{t(data.locale, 'invite.create')}</button
+					>
+				</form>
+				{#if form?.inviteUrl}
+					<p class="mt-2 text-sm">{t(data.locale, 'invite.created')}</p>
+					{#key form.inviteUrl}
+						<CopyField
+							value={form.inviteUrl}
+							label={t(data.locale, 'invite.link_label')}
+							copyLabel={t(data.locale, 'common.copy')}
+							copiedLabel={t(data.locale, 'common.copied')}
+							autoCopy
+						/>
+					{/key}
+				{/if}
+			{:else}
+				<form
+					method="POST"
+					action="?list=members&/leave"
+					class="mt-2 flex flex-col gap-2 border-t border-base-300 pt-4"
+				>
+					<p class="text-sm text-base-content/70">{t(data.locale, 'groups.leave_hint')}</p>
+					<div class="mt-2 flex flex-col gap-2 sm:flex-row">
+						<ConfirmButton
+							destructive
+							armed={form?.confirm === 'leave'}
+							armedLabel={t(data.locale, 'confirm.again')}
+							class="btn btn-outline min-h-12 w-full sm:w-auto "
+						>
+							{t(data.locale, 'groups.leave')}
+						</ConfirmButton>
+					</div>
+				</form>
+			{/if}
+		</div>
 	</section>
-{/if}
+</div>
 
 {#snippet tile(entry: (typeof data.pool)[number])}
 	<!-- The title's link stretches over the whole tile (after:inset-0), so the
@@ -257,58 +394,3 @@
 		</div>
 	</li>
 {/snippet}
-
-<section class="card border border-base-300 bg-base-100 shadow-sm">
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'groups.members')}</h2>
-		<ul class="divide-y divide-base-300">
-			{#each data.members as member (member.id)}
-				<li class="flex min-h-12 items-center justify-between gap-2 py-2">
-					<span class="min-w-0 truncate">{member.displayName}</span>
-					{#if member.role === 'owner'}
-						<span class="badge badge-sm badge-outline">{t(data.locale, 'groups.owner')}</span>
-					{/if}
-				</li>
-			{/each}
-		</ul>
-
-		{#if data.group.role === 'owner'}
-			<!-- Enhanced: the page stays where it is instead of jumping to the top. -->
-			<form method="POST" action="?/invite" class="mt-2" use:enhance>
-				<button class="btn btn-outline min-h-12 w-full sm:w-auto"
-					>{t(data.locale, 'invite.create')}</button
-				>
-			</form>
-			{#if form?.inviteUrl}
-				<p class="mt-2 text-sm">{t(data.locale, 'invite.created')}</p>
-				{#key form.inviteUrl}
-					<CopyField
-						value={form.inviteUrl}
-						label={t(data.locale, 'invite.link_label')}
-						copyLabel={t(data.locale, 'common.copy')}
-						copiedLabel={t(data.locale, 'common.copied')}
-						autoCopy
-					/>
-				{/key}
-			{/if}
-		{:else}
-			<form
-				method="POST"
-				action="?/leave"
-				class="mt-2 flex flex-col gap-2 border-t border-base-300 pt-4"
-			>
-				<p class="text-sm text-base-content/70">{t(data.locale, 'groups.leave_hint')}</p>
-				<div class="mt-2 flex flex-col gap-2 sm:flex-row">
-					<ConfirmButton
-						destructive
-						armed={form?.confirm === 'leave'}
-						armedLabel={t(data.locale, 'confirm.again')}
-						class="btn btn-outline min-h-12 w-full sm:w-auto "
-					>
-						{t(data.locale, 'groups.leave')}
-					</ConfirmButton>
-				</div>
-			</form>
-		{/if}
-	</div>
-</section>

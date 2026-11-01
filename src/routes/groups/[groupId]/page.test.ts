@@ -32,7 +32,8 @@ function body(
 	members: unknown[] = [],
 	next: unknown = null,
 	used = 0,
-	drawn: unknown[] = []
+	drawn: unknown[] = [],
+	form: unknown = null
 ) {
 	return render(Page, {
 		props: {
@@ -48,7 +49,7 @@ function body(
 				used,
 				max: 3
 			} as never,
-			form: null
+			form: form as never
 		}
 	}).body;
 }
@@ -171,8 +172,8 @@ describe('films already drawn', () => {
 		expect(html).toContain('films/d1');
 	});
 
-	it('show no section while nothing has been drawn', () => {
-		expect(body([entry({})])).not.toMatch(/<h2[^>]*>Drawn<\/h2>/);
+	it('say so while nothing has been drawn', () => {
+		expect(body([entry({})])).toContain('No film has been drawn yet');
 	});
 });
 
@@ -197,5 +198,82 @@ describe('a long history of drawn films', () => {
 
 	it('folds nothing away with four or fewer', () => {
 		expect(body([], [], null, 0, drawnFilms(4))).not.toContain('<details');
+	});
+});
+
+// One list at a time: the pool, the drawn films and the members share the
+// space under the next night, switched by links so a reload keeps the list.
+describe('the list switch', () => {
+	const members = [{ id: 'u1', displayName: 'Anna', role: 'owner' }];
+	const panel = (html: string, label: string) =>
+		html.match(
+			new RegExp(`<(section|div)[^>]*>\\s*(?:<section[^>]*>\\s*)?<h2 id="list-${label}"`)
+		)?.[0] ?? '';
+	const isHidden = (html: string, label: string) =>
+		/\bhidden\b/.test(panel(html, label).split('>')[0]);
+
+	it('offers the three lists with their counts', () => {
+		const html = body([entry({})], members, null, 0, [
+			entry({ suggestionId: 'd1', status: 'drawn' })
+		]);
+		for (const [list, name, count] of [
+			['pool', 'Pool', 1],
+			['drawn', 'Drawn', 1],
+			['members', 'Members', 1]
+		]) {
+			expect(html).toMatch(
+				new RegExp(`<a[^>]*href="\\?list=${list}"[^>]*>\\s*${name}\\s*<span[^>]*>${count}</span>`)
+			);
+		}
+	});
+
+	it('shows the pool first and keeps the others out of view', () => {
+		page.url = new URL('http://localhost/groups/g1');
+		const html = body([entry({})], members);
+		expect(isHidden(html, 'pool')).toBe(false);
+		expect(isHidden(html, 'drawn')).toBe(true);
+		expect(isHidden(html, 'members')).toBe(true);
+		expect(html).toMatch(/<a[^>]*href="\?list=pool"[^>]*aria-current="page"/);
+	});
+
+	it('shows the list the address names', () => {
+		page.url = new URL('http://localhost/groups/g1?list=drawn');
+		const html = body([entry({})], members);
+		expect(isHidden(html, 'drawn')).toBe(false);
+		expect(isHidden(html, 'pool')).toBe(true);
+		page.url = new URL('http://localhost/groups/g1');
+	});
+
+	// The invite link and the leave confirmation answer from the members list.
+	it('stays on the members after creating an invite link', () => {
+		const html = body([], members, null, 0, [], { inviteUrl: 'http://x/join/t' });
+		expect(isHidden(html, 'members')).toBe(false);
+	});
+
+	it('comes back to the members after the first click on leave', () => {
+		expect(body([], members)).toContain('action="?list=members&amp;/leave"');
+	});
+});
+
+describe('answering the next night in place', () => {
+	const next = {
+		id: 'n1',
+		when: 'Friday, 6 November 2026 at 20:00',
+		location: null,
+		status: 'scheduled',
+		myResponse: 'maybe',
+		film: null,
+		filmHidden: false
+	};
+
+	it("sends the answer to the night's own action, marking the current one", () => {
+		const html = body([], [], next);
+		const form = html.match(
+			/<form[^>]*action="\/groups\/g1\/nights\/n1\?\/respond"[\s\S]*?<\/form>/
+		)?.[0];
+		expect(form).toBeTruthy();
+		for (const answer of ['yes', 'maybe', 'no']) expect(form).toContain(`value="${answer}"`);
+		expect(form).toMatch(/value="maybe"[^>]*aria-pressed="true"/);
+		expect(form).toMatch(/value="yes"[^>]*aria-pressed="false"/);
 	});
 });
