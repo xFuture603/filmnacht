@@ -23,6 +23,7 @@
 	import { afterNavigate, invalidateAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import Toast from '$lib/components/Toast.svelte';
+	import AnswerPicker from '$lib/components/AnswerPicker.svelte';
 	import { startLiveRefresh, whenReachable } from '$lib/live-refresh';
 	let { data, form } = $props();
 
@@ -44,7 +45,6 @@
 	// growing by a tile every movie night.
 	const DRAWN_SHOWN = 4;
 
-	const answers = ['yes', 'maybe', 'no'] as const;
 	const lists = $derived([
 		{ id: 'pool', label: t(data.locale, 'pool.tab_pool'), count: data.pool.length },
 		{ id: 'drawn', label: t(data.locale, 'pool.tab_drawn'), count: data.drawn.length },
@@ -157,26 +157,13 @@
 				<form
 					method="POST"
 					action="/groups/{data.group.groupId}/nights/{next.id}?/respond"
-					class="join w-full"
+					class="w-full"
 					use:enhance={() =>
 						async ({ update }) => {
 							await update({ reset: false });
 						}}
 				>
-					{#each answers as answer (answer)}
-						<button
-							name="response"
-							value={answer}
-							aria-pressed={next.myResponse === answer}
-							class={[
-								'btn join-item h-auto min-h-12 flex-1 px-2 py-2 leading-tight',
-								// Neutral, not amber: the screen keeps one amber action.
-								next.myResponse === answer ? 'btn-neutral' : 'btn-outline'
-							]}
-						>
-							{t(data.locale, `next.answer.${answer}`)}
-						</button>
-					{/each}
+					<AnswerPicker current={next.myResponse} locale={data.locale} />
 				</form>
 			</div>
 		</div>

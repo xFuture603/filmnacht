@@ -263,15 +263,15 @@ describe('the draw hint', () => {
 
 describe('the answer buttons on narrow phones', () => {
 	// At 320px in German, "Ich bin dabei" wrapped to three lines and spilled out
-	// of a fixed-height button. They grow with their text and stack the icon.
-	it('grow with their label and stack the icon above it on phones', async () => {
+	// of a fixed-height button. They grow with their text.
+	it('grow with their label on phones', async () => {
 		const data = await view(ada);
 		const html = render(Page, {
 			props: { data: { ...data, locale: 'de' } as never, form: null }
 		}).body;
 		const buttons = html.match(/<button[^>]*name="response"[^>]*>/g)!;
 		expect(buttons).toHaveLength(3);
-		for (const b of buttons) expect(b).toMatch(/\bh-auto\b.*\bmax-sm:flex-col\b/);
+		for (const b of buttons) expect(b).toMatch(/\bh-auto\b.*\bwhitespace-normal\b/);
 	});
 });
 
@@ -333,7 +333,7 @@ describe('the chosen answer', () => {
 			props: { data: { ...data, locale: 'en' } as never, form: null }
 		}).body;
 		const pressed = html.match(/<button[^>]*aria-pressed="true"[^>]*>/)?.[0] ?? '';
-		expect(pressed).toContain('btn-neutral');
+		expect(pressed).toContain('tab-active');
 		expect(pressed).not.toContain('btn-primary');
 	});
 });

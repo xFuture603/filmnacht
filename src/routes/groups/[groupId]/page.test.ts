@@ -304,7 +304,7 @@ describe('the next night card, compact', () => {
 	it('marks the chosen answer without amber, so the primary stays the only amber', () => {
 		const form = answerForm(body([], [], next('yes')));
 		expect(form).not.toContain('btn-primary');
-		expect(form).toMatch(/value="yes"[^>]*class="[^"]*btn-neutral/);
+		expect(form).toMatch(/value="yes"[^>]*class="[^"]*tab-active/);
 	});
 
 	it('sets badges at 14px, never the 12px small size', () => {

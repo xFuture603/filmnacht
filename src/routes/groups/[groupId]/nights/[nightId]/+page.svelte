@@ -1,21 +1,19 @@
 <script lang="ts">
+	import AnswerPicker from '$lib/components/AnswerPicker.svelte';
 	import { t } from '$lib/i18n';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import {
 		CalendarPlus,
-		Check,
 		ChevronLeft,
 		CircleCheck,
-		CircleQuestionMark,
 		CircleX,
 		Dices,
 		Eye,
 		MapPin,
 		RotateCcw,
-		Star,
-		X
+		Star
 	} from '@lucide/svelte';
 	import NightStatus from '$lib/components/NightStatus.svelte';
 	import { onMount } from 'svelte';
@@ -27,8 +25,6 @@
 	onMount(() => startLiveRefresh(whenReachable(invalidateAll)));
 
 	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
-	const answers = ['yes', 'maybe', 'no'] as const;
-	const answerIcons = { yes: Check, maybe: CircleQuestionMark, no: X };
 
 	let score = $derived(data.ratings.mine?.score ?? 5);
 	const fmt = (n: number) =>
@@ -275,22 +271,8 @@
 		<div class="card-body">
 			<h2 class="card-title text-lg">{t(data.locale, 'night.responses')}</h2>
 			<p class="text-sm text-base-content/70">{t(data.locale, 'next.ask')}</p>
-			<form method="POST" action="?/respond" class="join w-full">
-				{#each answers as answer (answer)}
-					{@const AnswerIcon = answerIcons[answer]}
-					<button
-						name="response"
-						value={answer}
-						aria-pressed={data.night.myResponse === answer}
-						class={[
-							// Grows with its label: in German on a narrow phone it wraps.
-							'btn join-item h-auto min-h-12 flex-1 gap-1 px-2 py-2 leading-tight max-sm:flex-col',
-							data.night.myResponse === answer ? 'btn-neutral' : 'btn-outline'
-						]}
-					>
-						<AnswerIcon class="size-4 shrink-0" />{t(data.locale, `next.answer.${answer}`)}
-					</button>
-				{/each}
+			<form method="POST" action="?/respond">
+				<AnswerPicker current={data.night.myResponse} locale={data.locale} />
 			</form>
 			{#if data.night.responses.length === 0}
 				<p class="text-sm text-base-content/70">{t(data.locale, 'night.no_responses')}</p>
