@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('$app/forms', () => ({ enhance: () => ({}) }));
 vi.mock('$app/navigation', () => ({
 	invalidateAll: () => Promise.resolve(),
-	replaceState: () => {}
+	replaceState: () => {},
+	afterNavigate: () => {}
 }));
 const page = vi.hoisted(() => ({ url: new URL('http://localhost/groups/g1') }));
 vi.mock('$app/state', () => ({ page }));

@@ -11,7 +11,7 @@
 	import { CalendarDays, Film, MapPin, Plus, Star, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { invalidateAll, replaceState } from '$app/navigation';
+	import { afterNavigate, invalidateAll, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import Toast from '$lib/components/Toast.svelte';
 	import { startLiveRefresh, whenReachable } from '$lib/live-refresh';
@@ -21,8 +21,10 @@
 	// Sent here by an invite to this group: say so once, then drop the marker so
 	// a reload does not say it again.
 	const already = page.url.searchParams.has('already');
-	onMount(() => {
-		if (already) replaceState(page.url.pathname, page.state);
+	// afterNavigate, not onMount: on the first load onMount runs before the
+	// router exists, and replaceState throws there.
+	afterNavigate(() => {
+		if (page.url.searchParams.has('already')) replaceState(page.url.pathname, page.state);
 	});
 	// Each refresh counts as a visit, so the server stops calling a film new.
 	// Keep its badge for as long as this page stays open.
