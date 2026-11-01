@@ -100,7 +100,7 @@ describe('the pool', () => {
 
 	it("marks the group's owner with the outlined badge the other info badges use", () => {
 		const html = body([], [{ id: 'u1', displayName: 'Ada', role: 'owner' }]);
-		expect(html).toMatch(/<span class="badge badge-sm badge-outline">Owner<\/span>/);
+		expect(html).toMatch(/<span class="badge badge-outline">Owner<\/span>/);
 	});
 
 	// With a long German date the calendar icon shrank to a dot.
@@ -275,5 +275,43 @@ describe('answering the next night in place', () => {
 		for (const answer of ['yes', 'maybe', 'no']) expect(form).toContain(`value="${answer}"`);
 		expect(form).toMatch(/value="maybe"[^>]*aria-pressed="true"/);
 		expect(form).toMatch(/value="yes"[^>]*aria-pressed="false"/);
+	});
+});
+
+// From the finish review: a compact card with one amber action per screen.
+describe('the next night card, compact', () => {
+	const next = (myResponse: string | null) => ({
+		id: 'n1',
+		when: 'Fri 6 Nov, 20:00',
+		location: 'Bei Anna',
+		status: 'scheduled',
+		myResponse,
+		film: null,
+		filmHidden: false
+	});
+	const answerForm = (html: string) =>
+		html.match(/<form[^>]*\?\/respond"[\s\S]*?<\/form>/)?.[0] ?? '';
+
+	it('asks with short answers instead of a label above the title', () => {
+		const html = body([], [], next(null));
+		expect(html).not.toContain('>Next movie night<');
+		expect(html).toContain('Are you coming?');
+		const form = answerForm(html);
+		for (const label of ['Yes', 'Maybe', 'No'])
+			expect(form).toMatch(new RegExp(`>\\s*(<[^>]+>\\s*)*${label}\\s*<`));
+	});
+
+	it('marks the chosen answer without amber, so the primary stays the only amber', () => {
+		const form = answerForm(body([], [], next('yes')));
+		expect(form).not.toContain('btn-primary');
+		expect(form).toMatch(/value="yes"[^>]*class="[^"]*btn-neutral/);
+	});
+
+	it('sets badges at 14px, never the 12px small size', () => {
+		const html = body([entry({ mine: true })], [], next(null), 0, [
+			entry({ suggestionId: 'd1', status: 'drawn', watchedOn: '24 Oct' })
+		]);
+		expect(html).toContain('Yours');
+		expect(html).not.toContain('badge-sm');
 	});
 });

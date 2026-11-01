@@ -6,6 +6,6 @@
 	let { label, class: className = '' }: { label: string; class?: string } = $props();
 </script>
 
-<span class={['badge gap-1 badge-sm badge-neutral', className]}>
+<span class={['badge gap-1 badge-neutral', className]}>
 	<span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>{label}
 </span>

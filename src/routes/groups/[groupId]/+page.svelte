@@ -105,14 +105,16 @@
 
 {#if data.next}
 	{@const next = data.next}
-	<section class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
-		<div class="card-body gap-4">
+	<section
+		class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
+		aria-label={t(data.locale, 'next.title')}
+	>
+		<div class="card-body gap-4 p-4 sm:p-6">
 			<div class="flex items-center gap-4 sm:gap-6">
 				<div class="w-20 shrink-0 sm:w-28">
 					<Poster src={next.film?.posterUrl ?? null} />
 				</div>
 				<div class="flex min-w-0 flex-1 flex-col gap-1">
-					<p class="text-sm text-base-content/70">{t(data.locale, 'next.title')}</p>
 					<h2 class="text-xl font-bold break-words sm:text-2xl">
 						<a
 							class="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-base-content"
@@ -148,7 +150,9 @@
 			     Without JavaScript the browser lands on the night page, answered. -->
 			<div class="flex flex-col gap-2">
 				<p class="text-sm text-base-content/70">
-					{t(data.locale, `next.you.${next.myResponse ?? 'none'}`)}
+					{next.myResponse
+						? t(data.locale, `next.you.${next.myResponse}`)
+						: t(data.locale, 'next.ask')}
 				</p>
 				<form
 					method="POST"
@@ -166,10 +170,11 @@
 							aria-pressed={next.myResponse === answer}
 							class={[
 								'btn join-item h-auto min-h-12 flex-1 px-2 py-2 leading-tight',
-								next.myResponse === answer ? 'btn-primary' : 'btn-outline'
+								// Neutral, not amber: the screen keeps one amber action.
+								next.myResponse === answer ? 'btn-neutral' : 'btn-outline'
 							]}
 						>
-							{t(data.locale, `nights.rsvp.${answer}`)}
+							{t(data.locale, `next.answer.${answer}`)}
 						</button>
 					{/each}
 				</form>
@@ -283,7 +288,7 @@
 					<li class="flex min-h-12 items-center justify-between gap-2 py-2">
 						<span class="min-w-0 truncate">{member.displayName}</span>
 						{#if member.role === 'owner'}
-							<span class="badge badge-sm badge-outline">{t(data.locale, 'groups.owner')}</span>
+							<span class="badge badge-outline">{t(data.locale, 'groups.owner')}</span>
 						{/if}
 					</li>
 				{/each}
@@ -342,7 +347,7 @@
 		>
 			<Poster src={entry.posterUrl} />
 			{#if entry.mine}
-				<span class="badge badge-sm absolute top-2 left-2 border-base-300 bg-base-100 shadow-sm">
+				<span class="badge absolute top-2 left-2 border-base-300 bg-base-100 shadow-sm">
 					{t(data.locale, 'pool.yours')}
 				</span>
 			{/if}
@@ -381,15 +386,15 @@
 			</p>
 			{#if entry.drawnFor}
 				<!-- h-auto + whitespace-normal: wrap rather than spill past the column. -->
-				<span class="mt-1 badge h-auto badge-sm py-0.5 whitespace-normal badge-neutral"
+				<span class="mt-1 badge h-auto py-0.5 whitespace-normal badge-neutral"
 					>{t(data.locale, 'pool.drawn_for', { when: entry.drawnFor })}</span
 				>
 			{:else if entry.watchedOn}
-				<span class="mt-1 badge h-auto badge-sm py-0.5 whitespace-normal badge-neutral"
+				<span class="mt-1 badge h-auto py-0.5 whitespace-normal badge-neutral"
 					>{t(data.locale, 'pool.watched_on', { when: entry.watchedOn })}</span
 				>
 			{:else if entry.status === 'drawn'}
-				<span class="mt-1 badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
+				<span class="mt-1 badge badge-neutral">{t(data.locale, 'pool.drawn')}</span>
 			{/if}
 		</div>
 	</li>

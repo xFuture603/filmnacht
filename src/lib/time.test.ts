@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDay, formatWhen, wallTimeToUtc } from './time';
+import { formatDay, formatShortWhen, formatWhen, wallTimeToUtc } from './time';
 
 describe('wallTimeToUtc', () => {
 	it('reads a summer evening in Berlin as CEST (UTC+2)', () => {
@@ -59,5 +59,14 @@ describe('formatDay', () => {
 		const at = new Date('2030-07-01T22:30:00Z');
 		expect(formatDay(at, 'Europe/Berlin', 'en')).toBe('2 Jul');
 		expect(formatDay(at, 'Europe/Berlin', 'de')).toBe('2. Juli');
+	});
+});
+
+// The next night's card on a phone: one short line, no year to wrap.
+describe('formatShortWhen', () => {
+	it('gives weekday, day, month and time, without the year', () => {
+		const at = new Date('2026-11-06T19:00:00Z');
+		expect(formatShortWhen(at, 'Europe/Berlin', 'en')).toBe('Fri 6 Nov, 20:00');
+		expect(formatShortWhen(at, 'Europe/Berlin', 'de')).toBe('Fr., 6. Nov., 20:00');
 	});
 });

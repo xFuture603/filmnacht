@@ -61,6 +61,18 @@ export function formatWhen(at: Date, timeZone: string, locale: Locale): string {
 	}).format(at);
 }
 
+/** Weekday, day, month and time without the year ("Fri 6 Nov, 20:00"): one short line on a phone. */
+export function formatShortWhen(at: Date, timeZone: string, locale: Locale): string {
+	return new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'en-GB', {
+		timeZone,
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		hour: '2-digit',
+		minute: '2-digit'
+	}).format(at);
+}
+
 /** A short day ("7 Oct", "7. Okt.") for tight spots like a badge on a poster. */
 export function formatDay(at: Date, timeZone: string, locale: Locale): string {
 	return new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'en-GB', {

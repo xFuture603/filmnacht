@@ -14,7 +14,7 @@ describe('the groups list', () => {
 				form: null
 			}
 		}).body;
-		expect(body).toMatch(/<span class="badge badge-sm badge-outline">Owner<\/span>/);
+		expect(body).toMatch(/<span class="badge badge-outline">Owner<\/span>/);
 	});
 
 	// The chevron is the row's only sign that it opens something, so it is a

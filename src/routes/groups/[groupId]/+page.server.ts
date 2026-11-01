@@ -13,7 +13,7 @@ import { visiblePool } from '$lib/server/pool';
 import { nightsToRate } from '$lib/server/ratings';
 import { visit } from '$lib/server/seen';
 import { getTimezone } from '$lib/server/settings';
-import { formatDay, formatWhen } from '$lib/time';
+import { formatDay, formatShortWhen } from '$lib/time';
 import { countOpenSuggestions, withdrawSuggestion, type PoolEntry } from '$lib/server/suggestions';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
@@ -47,7 +47,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		toRate,
 		next: next && {
 			...next,
-			when: formatWhen(next.scheduledAt, getTimezone(db), locals.locale)
+			when: formatShortWhen(next.scheduledAt, getTimezone(db), locals.locale)
 		},
 		used: countOpenSuggestions(db, params.groupId, user.id),
 		max: group.settings.maxOpenSuggestions
