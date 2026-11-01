@@ -21,10 +21,12 @@
 	// Sent here by an invite to this group: say so once, then drop the marker so
 	// a reload does not say it again.
 	const already = page.url.searchParams.has('already');
-	// afterNavigate, not onMount: on the first load onMount runs before the
-	// router exists, and replaceState throws there.
+	// On the first load SvelteKit runs afterNavigate just before it marks its
+	// router started, in the same synchronous step, and replaceState throws until
+	// then: one microtask later is the earliest safe moment.
 	afterNavigate(() => {
-		if (page.url.searchParams.has('already')) replaceState(page.url.pathname, page.state);
+		if (!page.url.searchParams.has('already')) return;
+		queueMicrotask(() => replaceState(page.url.pathname, page.state));
 	});
 	// Each refresh counts as a visit, so the server stops calling a film new.
 	// Keep its badge for as long as this page stays open.
