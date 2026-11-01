@@ -25,3 +25,15 @@ describe('the join page when it cannot be used', () => {
 		expect(html).toMatch(/alert-error alert-soft/);
 	});
 });
+
+describe('the join page title', () => {
+	it('names the page in the browser tab when the link cannot be used', () => {
+		const head = render(Page, {
+			props: {
+				data: { locale: 'en', user: null, token: 't', invite: null, rateLimited: false } as never,
+				form: null
+			}
+		}).head;
+		expect(head).toContain('<title>Invite link · Filmnacht</title>');
+	});
+});

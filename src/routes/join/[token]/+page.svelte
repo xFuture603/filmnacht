@@ -6,6 +6,13 @@
 	let { data, form } = $props();
 </script>
 
+<!-- The join form names the page itself (FormCard); the error states need it here. -->
+<svelte:head>
+	{#if data.rateLimited || !data.invite}
+		<title>{t(data.locale, 'invite.heading')} · Filmnacht</title>
+	{/if}
+</svelte:head>
+
 {#if data.rateLimited}
 	<div class="mx-auto w-full max-w-md">
 		<h1 class="mb-4 text-2xl font-bold tracking-tight">{t(data.locale, 'invite.heading')}</h1>

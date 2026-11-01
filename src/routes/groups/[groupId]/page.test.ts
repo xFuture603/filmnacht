@@ -353,3 +353,22 @@ describe('the suggestion count row', () => {
 		expect(div![2]).toMatch(/\bmin-w-0\b/);
 	});
 });
+
+// At 320px the arrow after the film's title wrapped onto a line of its own.
+describe("the next night's title arrow", () => {
+	const next = {
+		id: 'n1',
+		when: 'Fri 6 Nov, 20:00',
+		location: null,
+		status: 'drawn',
+		myResponse: null,
+		film: { title: 'Die Verurteilten', year: null, posterUrl: null },
+		filmHidden: false
+	};
+
+	it('stays on the line of the last word', () => {
+		expect(body([], [], next)).toMatch(
+			/Verurteilten(?:<!--[^>]*-->)*<span class="whitespace-nowrap">\u2060<svg[^>]*lucide-chevron-right/
+		);
+	});
+});

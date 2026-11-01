@@ -44,6 +44,13 @@
 	// One row on a computer, two on a phone: enough history without the page
 	// growing by a tile every movie night.
 	const DRAWN_SHOWN = 4;
+	const nextTitle = $derived(
+		data.next?.film
+			? data.next.film.title
+			: data.next?.filmHidden
+				? t(data.locale, 'next.surprise')
+				: t(data.locale, 'next.not_drawn')
+	);
 
 	const lists = $derived([
 		{ id: 'pool', label: t(data.locale, 'pool.tab_pool'), count: data.pool.length },
@@ -117,17 +124,13 @@
 							class="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-base-content"
 							href="/groups/{data.group.groupId}/nights/{next.id}"
 						>
-							{#if next.film}
-								{next.film.title}
-								{#if next.film.year}
-									<span class="font-normal text-base-content/60">({next.film.year})</span>
-								{/if}
-							{:else if next.filmHidden}
-								{t(data.locale, 'next.surprise')}
-							{:else}
-								{t(data.locale, 'next.not_drawn')}
-							{/if}
-							<ChevronRight class="inline size-5 align-[-0.15em]" />
+							<!-- No space before the arrow, and a word joiner: it must not wrap
+							     onto a line of its own. -->
+							{nextTitle}{#if next.film?.year}&nbsp;<span class="font-normal text-base-content/60"
+									>({next.film.year})</span
+								>{/if}<span class="whitespace-nowrap"
+								>&#8288;<ChevronRight class="inline size-5 align-[-0.15em]" /></span
+							>
 						</a>
 					</h2>
 					<p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
