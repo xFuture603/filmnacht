@@ -47,7 +47,7 @@
 			<nav class="hidden gap-1 md:flex" aria-label={t(data.locale, 'nav.main')}>
 				{#each sections as s (s.href)}
 					<a
-						class={['btn btn-ghost min-h-12', s.current && 'bg-base-content/8']}
+						class={['btn btn-ghost min-h-12', s.current && 'current-bar bg-base-content/8']}
 						href={s.href}
 						aria-current={s.current ? 'page' : undefined}
 					>

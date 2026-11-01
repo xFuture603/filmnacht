@@ -34,4 +34,18 @@ describe('the group tabs', () => {
 			);
 		}
 	});
+
+	// The raised segment alone is far below 3:1 against the track: a bar under
+	// the label marks where you are (WCAG 1.4.11), as the phone tab bar does.
+	it('marks the current tab with a bar, not only the raised segment', () => {
+		const { body } = render(GroupTabs, {
+			props: { groupId: 'g1', groupName: 'Kino', active: 'nights', locale: 'en', isOwner: true }
+		});
+		const tabs = body.match(/<a class="tab [^"]*"[^>]*>/g)!;
+		const current = tabs.filter((t) => t.includes('aria-current="page"'));
+		expect(current).toHaveLength(1);
+		expect(current[0]).toMatch(/\bcurrent-bar\b/);
+		for (const t of tabs.filter((t) => !t.includes('aria-current')))
+			expect(t).not.toMatch(/\bcurrent-bar\b/);
+	});
 });

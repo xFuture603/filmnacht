@@ -210,6 +210,10 @@
  */
 .dock {
 	inset-inline: 1rem;
+	/* daisyUI sets the labels at 11px; nothing here goes below 14px. */
+	.dock-label {
+		font-size: 0.875rem;
+	}
 	bottom: calc(0.5rem + env(safe-area-inset-bottom));
 	width: auto;
 	height: 4rem;
@@ -240,4 +244,23 @@
 	.tabs-box > .tab-active {
 		--tab-bg: #636366;
 	}
+}
+
+/*
+ * Where you are, beyond a faint raised or tinted segment (far below 3:1): a
+ * short bar in the ink colour under the label, like the phone tab bar's.
+ */
+.current-bar {
+	position: relative;
+}
+.current-bar::after {
+	content: '';
+	position: absolute;
+	bottom: 0.25rem;
+	left: 50%;
+	width: 1.5rem;
+	height: 0.1875rem;
+	border-radius: 9999px;
+	background-color: currentColor;
+	transform: translateX(-50%);
 }

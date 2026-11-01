@@ -37,7 +37,7 @@
 
 <PageHeader title={film.title} subtitle={facts || undefined} />
 
-<section class="card border border-base-300 bg-base-100 shadow-sm">
+<section class="card bg-base-100">
 	<div class="card-body flex-col gap-6 text-base sm:flex-row sm:items-start">
 		<div class="w-full max-w-50 shrink-0 sm:w-48">
 			<Poster src={film.posterUrl} />

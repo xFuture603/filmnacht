@@ -8,12 +8,14 @@
 
 {#if data.rateLimited}
 	<div class="mx-auto w-full max-w-md">
-		<div class="alert alert-warning alert-soft" role="alert">
+		<h1 class="mb-4 text-2xl font-bold tracking-tight">{t(data.locale, 'invite.heading')}</h1>
+		<div class="alert alert-error alert-soft" role="alert">
 			{t(data.locale, 'invite.rate_limited')}
 		</div>
 	</div>
 {:else if !data.invite}
 	<div class="mx-auto w-full max-w-md">
+		<h1 class="mb-4 text-2xl font-bold tracking-tight">{t(data.locale, 'invite.heading')}</h1>
 		<div class="alert alert-error alert-soft" role="alert">{t(data.locale, 'invite.invalid')}</div>
 		<a class="btn btn-outline mt-4 min-h-12" href="/">{t(data.locale, 'error.home')}</a>
 	</div>

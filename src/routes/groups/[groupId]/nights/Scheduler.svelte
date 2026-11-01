@@ -67,7 +67,7 @@
 		{#if canGoBack}
 			<a
 				href="?month={shiftMonth(month, -1)}"
-				class="btn btn-ghost btn-square min-h-12"
+				class="btn btn-ghost btn-square size-12 min-h-12"
 				aria-label={t(locale, 'nights.prev_month')}
 				onclick={(e) => go(e, -1)}><ChevronLeft class="size-5" /></a
 			>
@@ -77,7 +77,7 @@
 		<p class="font-bold" aria-live="polite">{monthTitle(month, locale)}</p>
 		<a
 			href="?month={shiftMonth(month, 1)}"
-			class="btn btn-ghost btn-square min-h-12"
+			class="btn btn-ghost btn-square size-12 min-h-12"
 			aria-label={t(locale, 'nights.next_month')}
 			onclick={(e) => go(e, 1)}><ChevronRight class="size-5" /></a
 		>

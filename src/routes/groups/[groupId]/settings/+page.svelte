@@ -43,7 +43,7 @@
 	</div>
 {/if}
 
-<section class="card border border-base-300 bg-base-100 shadow-sm">
+<section class="card bg-base-100">
 	<div class="card-body">
 		<h2 class="card-title text-lg">{t(data.locale, 'settings.title')}</h2>
 		<form method="POST" action="?/save" class="flex flex-col gap-4">
@@ -158,7 +158,7 @@
 </section>
 
 <!-- border-error/40! survives the flat-card reset in app.css. -->
-<section class="card mt-6 border border-error/40! bg-base-100 shadow-sm">
+<section class="card mt-6 border border-error/40! bg-base-100">
 	<div class="card-body">
 		<h2 class="card-title text-lg text-error">
 			<TriangleAlert class="size-5" />{t(data.locale, 'settings.delete_title')}

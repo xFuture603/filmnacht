@@ -55,7 +55,7 @@
 		{t(data.locale, 'pool.error.cap_reached')}
 	</div>
 {:else}
-	<section class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
+	<section class="card mb-4 bg-base-100">
 		<div class="card-body">
 			<h2 class="card-title text-lg">{t(data.locale, 'add.search_heading')}</h2>
 
@@ -117,7 +117,7 @@
 												<button
 													name="tmdbId"
 													value={result.tmdbId}
-													class="btn btn-outline btn-sm mt-auto min-h-12 w-full"
+													class="btn btn-outline mt-auto min-h-12 w-full"
 													aria-label={t(data.locale, 'add.adopt_named', { title: result.title })}
 												>
 													{t(data.locale, 'add.adopt')}
@@ -134,7 +134,7 @@
 		</div>
 	</section>
 
-	<section class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
+	<section class="card mb-6 bg-base-100">
 		<div class="card-body">
 			<h2 class="card-title text-lg">{t(data.locale, 'add.manual_heading')}</h2>
 			<form method="POST" action="?/manual" class="flex flex-col gap-2">

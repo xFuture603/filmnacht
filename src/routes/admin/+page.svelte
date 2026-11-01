@@ -10,7 +10,7 @@
 	import { CircleCheck, CircleX, Globe, Mail, Search, Send } from '@lucide/svelte';
 	let { data, form } = $props();
 
-	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
+	const card = 'card mb-4 bg-base-100';
 	// Each language's own name for itself, not translated: a German speaker
 	// looking for their language in an English-language admin page still reads
 	// "Deutsch", the same way it appears in any other app's language picker.
@@ -155,7 +155,7 @@
 	</div>
 </section>
 
-<section class="card border border-base-300 bg-base-100 shadow-sm">
+<section class="card bg-base-100">
 	<div class="card-body">
 		<h2 class="card-title text-lg">{t(data.locale, 'admin.members')}</h2>
 		<p class="text-sm text-base-content/70">{t(data.locale, 'admin.recover_hint')}</p>
@@ -185,7 +185,7 @@
 							<div class="font-mono text-sm text-base-content/70">{member.username}</div>
 						</div>
 						<button
-							class="btn btn-outline btn-sm min-h-12"
+							class="btn btn-outline min-h-12"
 							name="userId"
 							value={member.id}
 							aria-label={`${t(data.locale, 'admin.recover')} — ${member.username}`}

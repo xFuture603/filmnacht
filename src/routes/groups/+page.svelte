@@ -42,7 +42,7 @@
 	</ul>
 {/if}
 
-<section class="card border border-base-300 bg-base-100 shadow-sm">
+<section class="card bg-base-100">
 	<div class="card-body">
 		<h2 class="card-title text-lg">{t(data.locale, 'groups.create')}</h2>
 		{#if form?.error}

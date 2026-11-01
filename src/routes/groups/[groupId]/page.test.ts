@@ -315,3 +315,41 @@ describe('the next night card, compact', () => {
 		expect(html).not.toContain('badge-sm');
 	});
 });
+
+describe('a film tile in German', () => {
+	it('gives the running time in German', () => {
+		const html = render(Page, {
+			props: {
+				data: {
+					locale: 'de',
+					group: { groupId: 'g1', name: 'Kino', role: 'member' },
+					members: [],
+					pool: [entry({})],
+					drawn: [],
+					newCounts: {},
+					toRate: [],
+					next: null,
+					used: 0,
+					max: 3
+				} as never,
+				form: null
+			}
+		}).body;
+		expect(html).toContain('2021 · 155 Min.');
+		expect(body([entry({})])).toContain('2021 · 155 min');
+	});
+});
+
+// "Film hinzufügen" did not fit beside the count on a German phone and dropped
+// onto its own line. The count wraps inside its own column instead.
+describe('the suggestion count row', () => {
+	it('keeps the add button beside the count', () => {
+		const html = body([entry({})]);
+		const div = html.match(
+			/<div class="([^"]*)">(?:\s|<!--[^>]*-->)*<p class="([^"]*)">\s*0 of 3 suggestions used/
+		);
+		expect(div).toBeTruthy();
+		expect(div![1]).not.toMatch(/\bflex-wrap\b/);
+		expect(div![2]).toMatch(/\bmin-w-0\b/);
+	});
+});

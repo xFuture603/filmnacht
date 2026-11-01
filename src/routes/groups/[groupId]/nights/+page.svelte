@@ -83,7 +83,7 @@
 {/snippet}
 
 {#if data.isOwner}
-	<section class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
+	<section class="card mb-6 bg-base-100">
 		<div class="card-body">
 			<h2 class="card-title text-lg">{t(data.locale, 'nights.schedule')}</h2>
 			{#if form?.error}

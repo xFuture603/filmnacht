@@ -24,7 +24,7 @@
 	// A draw, RSVPs and ratings by others show up without a reload.
 	onMount(() => startLiveRefresh(whenReachable(invalidateAll)));
 
-	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
+	const card = 'card mb-4 bg-base-100';
 
 	let score = $derived(data.ratings.mine?.score ?? 5);
 	const fmt = (n: number) =>

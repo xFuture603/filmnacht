@@ -80,7 +80,7 @@
 {/if}
 
 {#each data.toRate as night, i (night.id)}
-	<section class="card mb-4 border border-base-300 bg-base-100 shadow-sm">
+	<section class="card mb-4 bg-base-100">
 		<div class="card-body flex-row flex-wrap items-center gap-4">
 			<span
 				class="grid size-11 shrink-0 place-items-center rounded-field bg-base-200 text-base-content"
@@ -105,10 +105,7 @@
 
 {#if data.next}
 	{@const next = data.next}
-	<section
-		class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
-		aria-label={t(data.locale, 'next.title')}
-	>
+	<section class="card mb-6 bg-base-100" aria-label={t(data.locale, 'next.title')}>
 		<div class="card-body gap-4 p-4 sm:p-6">
 			<div class="flex items-center gap-4 sm:gap-6">
 				<div class="w-20 shrink-0 sm:w-28">
@@ -196,23 +193,23 @@
 <section class="mb-8" hidden={current !== 'pool'} aria-labelledby="list-pool">
 	<h2 id="list-pool" class="sr-only">{t(data.locale, 'pool.in_pool')}</h2>
 
-	<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+	<div class="mb-4 flex items-center justify-between gap-3">
 		{#if data.used >= data.max}
 			<!-- Disabled, with the reason beside it: a greyed-out button alone
 			     leaves people guessing. -->
-			<p class="text-sm text-base-content/70">
+			<p class="min-w-0 text-sm text-base-content/70">
 				{t(data.locale, 'pool.count_full', { max: data.max })}
 			</p>
-			<button type="button" class="btn min-h-12" disabled>
+			<button type="button" class="btn min-h-12 shrink-0" disabled>
 				<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
 			</button>
 		{:else}
-			<p class="text-sm text-base-content/70">
+			<p class="min-w-0 text-sm text-base-content/70">
 				{t(data.locale, 'pool.count', { used: data.used, max: data.max })}
 			</p>
 			<!-- One primary action per screen: a due rating outranks adding a film. -->
 			<a
-				class={['btn min-h-12', data.toRate.length > 0 ? 'btn-outline' : 'btn-primary']}
+				class={['btn min-h-12 shrink-0', data.toRate.length > 0 ? 'btn-outline' : 'btn-primary']}
 				href="/groups/{data.group.groupId}/add"
 			>
 				<Plus class="size-4" strokeWidth={2.5} />{t(data.locale, 'pool.add')}
@@ -267,7 +264,7 @@
 </section>
 
 <div class="mb-8" hidden={current !== 'members'}>
-	<section class="card border border-base-300 bg-base-100 shadow-sm" aria-labelledby="list-members">
+	<section class="card bg-base-100" aria-labelledby="list-members">
 		<h2 id="list-members" class="sr-only">{t(data.locale, 'groups.members')}</h2>
 		<div class="card-body">
 			<ul class="divide-y divide-base-300">
@@ -369,7 +366,9 @@
 				>
 			</p>
 			<p class="text-sm text-base-content/70">
-				{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
+				{entry.year ?? ''}{entry.runtime
+					? ` · ${t(data.locale, 'pool.minutes', { n: entry.runtime })}`
+					: ''}
 			</p>
 			{#if entry.drawnFor}
 				<!-- h-auto + whitespace-normal: wrap rather than spill past the column. -->

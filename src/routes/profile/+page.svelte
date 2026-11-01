@@ -8,7 +8,7 @@
 	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
 	let { data, form } = $props();
 
-	const card = 'card mb-4 border border-base-300 bg-base-100 shadow-sm';
+	const card = 'card mb-4 bg-base-100';
 	// Several equal forms on one page: secondary buttons, no single primary.
 	const submit = 'btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start';
 </script>
