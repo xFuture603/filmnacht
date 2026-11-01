@@ -38,3 +38,29 @@ describe('the theme', () => {
 		expect(dock).toMatch(/>\s*\*\s*\{[^}]*margin-bottom:\s*0/);
 	});
 });
+
+// iOS rubber-bands past the end of the page and shows the root behind it.
+// daisyUI paints the root in base-100, a grey next to the black page in dark
+// mode; the browser bars are tinted to match the page too.
+describe('behind the page', () => {
+	it('is the page colour, not the card colour', () => {
+		const css = readFileSync('src/app.css', 'utf8');
+		expect(css).toMatch(/:root\s*\{[^}]*--root-bg:\s*var\(--color-base-200\)/);
+	});
+
+	it('tints the browser bars in the page colour', () => {
+		const html = readFileSync('src/app.html', 'utf8');
+		const hex = (rgb: number[]) => '#' + rgb.map((c) => c.toString(16).padStart(2, '0')).join('');
+		for (const [scheme, theme] of [
+			['light', 'filmnacht-light'],
+			['dark', 'filmnacht-dark']
+		]) {
+			const meta = html.match(
+				new RegExp(
+					`theme-color" content="(#[0-9a-f]{6})" media="\\(prefers-color-scheme: ${scheme}\\)`
+				)
+			);
+			expect(meta?.[1], scheme).toBe(hex(token(theme, 'base-200')));
+		}
+	});
+});
