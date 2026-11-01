@@ -372,3 +372,24 @@ describe("the next night's title arrow", () => {
 		);
 	});
 });
+
+// The chosen answer shows in the control itself; a line repeating it is noise.
+describe('the question above the answers', () => {
+	const next = (myResponse: string | null) => ({
+		id: 'n1',
+		when: 'Fri 6 Nov, 20:00',
+		location: null,
+		status: 'scheduled',
+		myResponse,
+		film: null,
+		filmHidden: false
+	});
+
+	it.each(['yes', 'maybe', 'no', null])('stays the question once answered (%s)', (answer) => {
+		const html = body([], [], next(answer));
+		expect(html).toContain('Are you coming?');
+		for (const status of ["You're in", 'You said maybe', "You can't make it"]) {
+			expect(html).not.toContain(status);
+		}
+	});
+});

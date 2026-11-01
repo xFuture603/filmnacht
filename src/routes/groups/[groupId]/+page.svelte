@@ -150,9 +150,7 @@
 			     Without JavaScript the browser lands on the night page, answered. -->
 			<div class="flex flex-col gap-2">
 				<p class="text-sm text-base-content/70">
-					{next.myResponse
-						? t(data.locale, `next.you.${next.myResponse}`)
-						: t(data.locale, 'next.ask')}
+					{t(data.locale, 'next.ask')}
 				</p>
 				<form
 					method="POST"
