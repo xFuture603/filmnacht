@@ -8,7 +8,7 @@
 	import GroupTabs from '$lib/components/GroupTabs.svelte';
 	import Poster from '$lib/components/Poster.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
-	import { CalendarDays, Film, MapPin, Plus, Star, X } from '@lucide/svelte';
+	import { CalendarDays, ChevronDown, Film, MapPin, Plus, Star, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { afterNavigate, invalidateAll, replaceState } from '$app/navigation';
@@ -31,6 +31,9 @@
 	// Each refresh counts as a visit, so the server stops calling a film new.
 	// Keep its badge for as long as this page stays open.
 	const shownNew = new SvelteSet<string>();
+	// One row on a computer, two on a phone: enough history without the page
+	// growing by a tile every movie night.
+	const DRAWN_SHOWN = 4;
 	$effect(() => {
 		for (const entry of data.pool) if (entry.isNew) shownNew.add(entry.suggestionId);
 	});
@@ -165,10 +168,29 @@
 	<section class="mb-8">
 		<h2 class="mb-3 text-lg font-bold">{t(data.locale, 'pool.drawn_heading')}</h2>
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-			{#each data.drawn as entry (entry.suggestionId)}
+			{#each data.drawn.slice(0, DRAWN_SHOWN) as entry (entry.suggestionId)}
 				{@render tile(entry)}
 			{/each}
 		</ul>
+		{#if data.drawn.length > DRAWN_SHOWN}
+			{@const earlier = data.drawn.length - DRAWN_SHOWN}
+			<details class="group mt-4">
+				<summary class="btn btn-outline min-h-12 list-none">
+					<ChevronDown class="size-4 transition-transform group-open:rotate-180" />
+					<span class="group-open:hidden"
+						>{earlier === 1
+							? t(data.locale, 'pool.earlier_one')
+							: t(data.locale, 'pool.earlier', { count: earlier })}</span
+					>
+					<span class="hidden group-open:inline">{t(data.locale, 'pool.earlier_hide')}</span>
+				</summary>
+				<ul class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+					{#each data.drawn.slice(DRAWN_SHOWN) as entry (entry.suggestionId)}
+						{@render tile(entry)}
+					{/each}
+				</ul>
+			</details>
+		{/if}
 	</section>
 {/if}
 

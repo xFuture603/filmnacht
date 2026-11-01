@@ -175,3 +175,27 @@ describe('films already drawn', () => {
 		expect(body([entry({})])).not.toMatch(/<h2[^>]*>Drawn<\/h2>/);
 	});
 });
+
+// One film a week is fifty tiles a year: the latest stay in view, the rest fold away.
+describe('a long history of drawn films', () => {
+	const drawnFilms = (n: number) =>
+		Array.from({ length: n }, (_, i) =>
+			entry({ suggestionId: `d${i}`, title: `Film ${i}`, status: 'drawn', watchedOn: 'x' })
+		);
+	const outsideDetails = (html: string) => html.replace(/<details[\s\S]*?<\/details>/g, '');
+
+	it('shows the latest four and folds the rest away', () => {
+		const html = body([], [], null, 0, drawnFilms(6));
+		const shown = outsideDetails(html);
+		for (const i of [0, 1, 2, 3]) expect(shown).toContain(`films/d${i}"`);
+		for (const i of [4, 5]) {
+			expect(shown).not.toContain(`films/d${i}"`);
+			expect(html).toContain(`films/d${i}"`);
+		}
+		expect(html).toMatch(/<summary[^>]*>[\s\S]*Show 2 earlier films/);
+	});
+
+	it('folds nothing away with four or fewer', () => {
+		expect(body([], [], null, 0, drawnFilms(4))).not.toContain('<details');
+	});
+});
