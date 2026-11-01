@@ -13,3 +13,6 @@ bun.lockb
 
 # Pre-existing project docs, not part of this app's source
 /docs/
+
+# Impeccable design tool files, kept locally only
+.impeccable/
