@@ -14,7 +14,7 @@ import { nightsToRate } from '$lib/server/ratings';
 import { visit } from '$lib/server/seen';
 import { getTimezone } from '$lib/server/settings';
 import { formatDay, formatWhen } from '$lib/time';
-import { countOpenSuggestions, withdrawSuggestion } from '$lib/server/suggestions';
+import { countOpenSuggestions, withdrawSuggestion, type PoolEntry } from '$lib/server/suggestions';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -29,17 +29,20 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		title: n.title,
 		closes: formatDay(n.closesAt, getTimezone(db), locals.locale)
 	}));
+	const day = (at: Date) => formatDay(at, getTimezone(db), locals.locale);
+	const entries = visiblePool(db, params.groupId, user.id, group.settings.resultVisible).map(
+		(entry) => ({
+			...entry,
+			isNew: newIds.has(entry.suggestionId),
+			drawnFor: entry.night && !entry.night.watched ? day(entry.night.scheduledAt) : null,
+			watchedOn: entry.night?.watched ? day(entry.night.scheduledAt) : null
+		})
+	);
 	return {
 		group,
 		members: listMembers(db, params.groupId),
-		pool: visiblePool(db, params.groupId, user.id, group.settings.resultVisible).map((entry) => ({
-			...entry,
-			isNew: newIds.has(entry.suggestionId),
-			drawnFor:
-				entry.night && !entry.night.watched
-					? formatDay(entry.night.scheduledAt, getTimezone(db), locals.locale)
-					: null
-		})),
+		pool: entries.filter((entry) => entry.status === 'open'),
+		drawn: entries.filter((entry) => entry.status === 'drawn').sort(byNight),
 		newCounts: counts,
 		toRate,
 		next: next && {
@@ -87,3 +90,14 @@ export const actions: Actions = {
 		redirect(303, '/groups');
 	}
 };
+
+/**
+ * The film still to come first: it is next. Then the history, latest night
+ * first. A drawn film with no night left sorts last.
+ */
+function byNight(a: PoolEntry, b: PoolEntry): number {
+	const rank = (e: PoolEntry) => (!e.night ? 2 : e.night.watched ? 1 : 0);
+	if (rank(a) !== rank(b)) return rank(a) - rank(b);
+	const at = (e: PoolEntry) => e.night?.scheduledAt.getTime() ?? 0;
+	return rank(a) === 0 ? at(a) - at(b) : at(b) - at(a);
+}

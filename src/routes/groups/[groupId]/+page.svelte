@@ -122,6 +122,7 @@
 {/if}
 
 <section class="mb-8">
+	<h2 class="mb-3 text-lg font-bold">{t(data.locale, 'pool.in_pool')}</h2>
 	<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 		{#if data.used >= data.max}
 			<!-- Disabled, with the reason beside it: a greyed-out button alone
@@ -147,76 +148,93 @@
 	</div>
 
 	{#if data.pool.length === 0}
-		<EmptyState icon={Film} text={t(data.locale, 'pool.empty')} />
+		<EmptyState
+			icon={Film}
+			text={t(data.locale, data.drawn.length > 0 ? 'pool.empty_again' : 'pool.empty')}
+		/>
 	{:else}
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 			{#each data.pool as entry (entry.suggestionId)}
-				<!-- The title's link stretches over the whole tile (after:inset-0), so the
-				     poster opens the film too with one tab stop; the withdraw form sits above it. -->
-				<li class="group/tile relative isolate flex min-w-0 flex-col gap-2">
-					<!-- Hover (only on devices that can hover) and keyboard focus lift the
-					     poster the same way: a shadow and a thin neutral ring, never amber. -->
-					<div
-						class="relative rounded-box transition-shadow duration-150 group-hover/tile:shadow-md group-hover/tile:ring-1 group-hover/tile:ring-base-content/50 group-has-[a:focus-visible]/tile:shadow-md group-has-[a:focus-visible]/tile:ring-1 group-has-[a:focus-visible]/tile:ring-base-content/50"
-					>
-						<Poster src={entry.posterUrl} />
-						{#if entry.mine}
-							<span
-								class="badge badge-sm absolute top-2 left-2 border-base-300 bg-base-100 shadow-sm"
-							>
-								{t(data.locale, 'pool.yours')}
-							</span>
-						{/if}
-						{#if entry.isNew || shownNew.has(entry.suggestionId)}
-							<NewBadge
-								label={t(data.locale, 'new.badge')}
-								class="absolute top-2 right-2 shadow-sm"
-							/>
-						{/if}
-						{#if entry.mine && entry.status === 'open'}
-							<!-- A 48px tap area around a 32px chip: easy to hit, small on the poster.
-							     Neutral like the "Yours" badge, not red: a trigger stays low-key.
-							     The focus ring has a light gap so it shows on any poster. -->
-							<form method="POST" action="?/withdraw" class="absolute top-0 right-0 z-10">
-								<input type="hidden" name="suggestionId" value={entry.suggestionId} />
-								<button
-									class="group grid size-12 cursor-pointer place-items-center rounded-full focus-visible:outline-none"
-									aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
-									title={t(data.locale, 'pool.withdraw')}
-								>
-									<span
-										class="grid size-8 place-items-center rounded-full border border-base-300 bg-base-100 text-base-content shadow-sm transition group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-base-content group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-base-100"
-									>
-										<X class="size-4" strokeWidth={2.5} />
-									</span>
-								</button>
-							</form>
-						{/if}
-					</div>
-					<div class="flex min-w-0 flex-col items-start">
-						<p class="line-clamp-2 font-bold break-words">
-							<a
-								class="after:absolute after:inset-0 after:rounded-box hover:underline focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-base-content"
-								href="/groups/{data.group.groupId}/films/{entry.suggestionId}">{entry.title}</a
-							>
-						</p>
-						<p class="text-sm text-base-content/70">
-							{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
-						</p>
-						{#if entry.drawnFor}
-							<!-- h-auto + whitespace-normal: wrap rather than spill past the column. -->
-							<span class="mt-1 badge h-auto badge-sm py-0.5 whitespace-normal badge-neutral"
-								>{t(data.locale, 'pool.drawn_for', { when: entry.drawnFor })}</span
-							>
-						{:else if entry.status === 'drawn'}
-							<span class="mt-1 badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
-						{/if}
-					</div>
-				</li>
+				{@render tile(entry)}
 			{/each}
 		</ul>
 	{/if}
 </section>
+<!-- Out of the draw: the film for the next night, then what was watched. -->
+{#if data.drawn.length > 0}
+	<section class="mb-8">
+		<h2 class="mb-3 text-lg font-bold">{t(data.locale, 'pool.drawn_heading')}</h2>
+		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+			{#each data.drawn as entry (entry.suggestionId)}
+				{@render tile(entry)}
+			{/each}
+		</ul>
+	</section>
+{/if}
+
+{#snippet tile(entry: (typeof data.pool)[number])}
+	<!-- The title's link stretches over the whole tile (after:inset-0), so the
+		     poster opens the film too with one tab stop; the withdraw form sits above it. -->
+	<li class="group/tile relative isolate flex min-w-0 flex-col gap-2">
+		<!-- Hover (only on devices that can hover) and keyboard focus lift the
+			     poster the same way: a shadow and a thin neutral ring, never amber. -->
+		<div
+			class="relative rounded-box transition-shadow duration-150 group-hover/tile:shadow-md group-hover/tile:ring-1 group-hover/tile:ring-base-content/50 group-has-[a:focus-visible]/tile:shadow-md group-has-[a:focus-visible]/tile:ring-1 group-has-[a:focus-visible]/tile:ring-base-content/50"
+		>
+			<Poster src={entry.posterUrl} />
+			{#if entry.mine}
+				<span class="badge badge-sm absolute top-2 left-2 border-base-300 bg-base-100 shadow-sm">
+					{t(data.locale, 'pool.yours')}
+				</span>
+			{/if}
+			{#if entry.status === 'open' && (entry.isNew || shownNew.has(entry.suggestionId))}
+				<NewBadge label={t(data.locale, 'new.badge')} class="absolute top-2 right-2 shadow-sm" />
+			{/if}
+			{#if entry.mine && entry.status === 'open'}
+				<!-- A 48px tap area around a 32px chip: easy to hit, small on the poster.
+					     Neutral like the "Yours" badge, not red: a trigger stays low-key.
+					     The focus ring has a light gap so it shows on any poster. -->
+				<form method="POST" action="?/withdraw" class="absolute top-0 right-0 z-10">
+					<input type="hidden" name="suggestionId" value={entry.suggestionId} />
+					<button
+						class="group grid size-12 cursor-pointer place-items-center rounded-full focus-visible:outline-none"
+						aria-label={t(data.locale, 'pool.withdraw_named', { title: entry.title })}
+						title={t(data.locale, 'pool.withdraw')}
+					>
+						<span
+							class="grid size-8 place-items-center rounded-full border border-base-300 bg-base-100 text-base-content shadow-sm transition group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-base-content group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-base-100"
+						>
+							<X class="size-4" strokeWidth={2.5} />
+						</span>
+					</button>
+				</form>
+			{/if}
+		</div>
+		<div class="flex min-w-0 flex-col items-start">
+			<p class="line-clamp-2 font-bold break-words">
+				<a
+					class="after:absolute after:inset-0 after:rounded-box hover:underline focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-base-content"
+					href="/groups/{data.group.groupId}/films/{entry.suggestionId}">{entry.title}</a
+				>
+			</p>
+			<p class="text-sm text-base-content/70">
+				{entry.year ?? ''}{entry.runtime ? ` · ${entry.runtime} min` : ''}
+			</p>
+			{#if entry.drawnFor}
+				<!-- h-auto + whitespace-normal: wrap rather than spill past the column. -->
+				<span class="mt-1 badge h-auto badge-sm py-0.5 whitespace-normal badge-neutral"
+					>{t(data.locale, 'pool.drawn_for', { when: entry.drawnFor })}</span
+				>
+			{:else if entry.watchedOn}
+				<span class="mt-1 badge h-auto badge-sm py-0.5 whitespace-normal badge-neutral"
+					>{t(data.locale, 'pool.watched_on', { when: entry.watchedOn })}</span
+				>
+			{:else if entry.status === 'drawn'}
+				<span class="mt-1 badge badge-sm badge-neutral">{t(data.locale, 'pool.drawn')}</span>
+			{/if}
+		</div>
+	</li>
+{/snippet}
 
 <section class="card border border-base-300 bg-base-100 shadow-sm">
 	<div class="card-body">

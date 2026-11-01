@@ -27,7 +27,13 @@ const entry = (over: Record<string, unknown>) => ({
 	...over
 });
 
-function body(pool: unknown[], members: unknown[] = [], next: unknown = null, used = 0) {
+function body(
+	pool: unknown[],
+	members: unknown[] = [],
+	next: unknown = null,
+	used = 0,
+	drawn: unknown[] = []
+) {
 	return render(Page, {
 		props: {
 			data: {
@@ -35,6 +41,7 @@ function body(pool: unknown[], members: unknown[] = [], next: unknown = null, us
 				group: { groupId: 'g1', name: 'Filmnacht', role: 'member' },
 				members,
 				pool,
+				drawn,
 				newCounts: {},
 				toRate: [],
 				next,
@@ -131,5 +138,40 @@ describe('with every suggestion used', () => {
 		const html = body([], [], null, 2);
 		expect(html).toContain('href="/groups/g1/add"');
 		expect(html).toContain('2 of 3 suggestions used');
+	});
+});
+
+// The pool holds what can still be drawn, the films that count toward the
+// limit. Drawn films get their own list below it.
+describe('films already drawn', () => {
+	const drawnOne = entry({
+		suggestionId: 'd1',
+		title: 'Heat',
+		status: 'drawn',
+		watchedOn: '30 October 2026'
+	});
+
+	it('are listed in their own section, after the pool', () => {
+		const html = body([entry({})], [], null, 0, [drawnOne]);
+		expect(html).toMatch(/<h2[^>]*>In the pool<\/h2>/);
+		expect(html).toMatch(/<h2[^>]*>Drawn<\/h2>/);
+		expect(html.indexOf('>In the pool<')).toBeLessThan(html.indexOf('films/s1'));
+		expect(html.indexOf('films/s1')).toBeLessThan(html.indexOf('>Drawn<'));
+		expect(html.indexOf('>Drawn<')).toBeLessThan(html.indexOf('films/d1'));
+	});
+
+	it('say when they were watched', () => {
+		expect(body([], [], null, 0, [drawnOne])).toContain('Watched · 30 October 2026');
+	});
+
+	it('leave the empty pool saying so, with the history still below', () => {
+		const html = body([], [], null, 0, [drawnOne]);
+		expect(html).toContain('The pool is empty. Add the next film');
+		expect(html).not.toContain('No films yet');
+		expect(html).toContain('films/d1');
+	});
+
+	it('show no section while nothing has been drawn', () => {
+		expect(body([entry({})])).not.toMatch(/<h2[^>]*>Drawn<\/h2>/);
 	});
 });

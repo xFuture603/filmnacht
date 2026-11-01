@@ -1,7 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
-import { DEFAULT_GROUP_SETTINGS, groups, memberships, movieNights } from '$lib/server/db/schema';
+import {
+	DEFAULT_GROUP_SETTINGS,
+	groups,
+	memberships,
+	movieNights,
+	suggestions
+} from '$lib/server/db/schema';
 import { addMember, createGroup, listGroupsFor } from '$lib/server/groups';
 import { drawForNight, markWatched, scheduleNight } from '$lib/server/nights';
 import { saveRating } from '$lib/server/ratings';
@@ -55,10 +61,12 @@ beforeEach(() => {
 });
 
 describe('the pool and a surprise draw', () => {
-	it('shows the drawn film, badged, when the group reveals immediately', async () => {
-		const pool = (await poolFor(ada)).pool;
-		expect(pool).toHaveLength(2);
-		expect(pool.filter((e: PoolEntry) => e.status === 'drawn')).toHaveLength(1);
+	it('lists the drawn film apart from the pool when the group reveals immediately', async () => {
+		const data = await poolFor(ada);
+		expect(data.pool).toHaveLength(1);
+		expect(data.pool.every((e: PoolEntry) => e.status === 'open')).toBe(true);
+		expect(data.drawn).toHaveLength(1);
+		expect(data.drawn[0].status).toBe('drawn');
 	});
 
 	it('leaves the drawn film out until the night when the group keeps it a surprise', async () => {
@@ -68,9 +76,9 @@ describe('the pool and a surprise draw', () => {
 			.set({ settings: { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' } })
 			.where(eq(groups.id, groupId))
 			.run();
-		const pool = (await poolFor(ada)).pool;
-		expect(pool).toHaveLength(1);
-		expect(pool.every((e: PoolEntry) => e.status === 'open')).toBe(true);
+		const data = await poolFor(ada);
+		expect(data.pool).toHaveLength(1);
+		expect(data.drawn).toHaveLength(0);
 	});
 });
 
@@ -117,9 +125,7 @@ describe('the next night card', () => {
 });
 
 describe('the label on a drawn film', () => {
-	type Entry = Data['pool'][number];
-	const drawnEntry = async () =>
-		(await poolFor(grace)).pool.find((e: Entry) => e.status === 'drawn') as Entry;
+	const drawnEntry = async () => (await poolFor(grace)).drawn[0];
 
 	it('says when it is on, while its night is still to come', async () => {
 		const entry = await drawnEntry();
@@ -137,6 +143,42 @@ describe('the label on a drawn film', () => {
 		const entry = await drawnEntry();
 		expect(entry.night?.watched).toBe(true);
 		expect(entry.drawnFor).toBeNull();
+		expect(entry.watchedOn).toBeTruthy();
+	});
+});
+
+// Upcoming first: that film is next. Then the history, latest night first.
+describe('the drawn films', () => {
+	it('lists the upcoming one first, then watched ones newest first', async () => {
+		const DAY = 86_400_000;
+		for (const [title, daysAgo] of [
+			['Heat', 20],
+			['Alien', 5]
+		] as const) {
+			const added = addSuggestion(db, {
+				groupId,
+				userId: ada,
+				movie: { title },
+				settings: DEFAULT_GROUP_SETTINGS
+			});
+			const suggestionId = (added as { suggestionId: string }).suggestionId;
+			const night = scheduleNight(db, {
+				groupId,
+				userId: ada,
+				scheduledAt: new Date(Date.now() - daysAgo * DAY),
+				location: null
+			});
+			// A night in the past, drawn by hand: drawForNight only draws ahead.
+			db.update(movieNights)
+				.set({ suggestionId, status: 'drawn' })
+				.where(eq(movieNights.id, night))
+				.run();
+			db.update(suggestions).set({ status: 'drawn' }).where(eq(suggestions.id, suggestionId)).run();
+			markWatched(db, night, ada);
+		}
+		const titles = (await poolFor(ada)).drawn.map((e: PoolEntry) => e.title);
+		expect(titles.slice(1)).toEqual(['Alien', 'Heat']);
+		expect(['Dune', 'Arrival']).toContain(titles[0]);
 	});
 });
 
