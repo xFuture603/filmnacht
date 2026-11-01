@@ -303,3 +303,37 @@ describe('the drawn film', () => {
 		expect(svg).toContain('stroke-width="1"');
 	});
 });
+
+// One wording for the answers: the group page asks the same question with the
+// same three buttons, so the night page must not call them something else.
+describe('the answers', () => {
+	const html = async (locale: 'en' | 'de') => {
+		const data = await view(ada);
+		return render(Page, { props: { data: { ...data, locale } as never, form: null } }).body;
+	};
+	const labels = (body: string) =>
+		[...body.matchAll(/<button[^>]*name="response"[^>]*>([\s\S]*?)<\/button>/g)].map((m) =>
+			m[1].replace(/<[^>]+>/g, '').trim()
+		);
+
+	it('ask the question and name the buttons as the group page does', async () => {
+		const en = await html('en');
+		expect(en).toContain('Are you coming?');
+		expect(labels(en)).toEqual(['Yes', 'Maybe', 'No']);
+		expect(labels(await html('de'))).toEqual(['Ja', 'Vielleicht', 'Nein']);
+	});
+});
+
+describe('the chosen answer', () => {
+	// The same look as on the group page: neutral, so amber stays for actions.
+	it('is marked in neutral, never amber', async () => {
+		await post('respond', ada, { response: 'yes' });
+		const data = await view(ada);
+		const html = render(Page, {
+			props: { data: { ...data, locale: 'en' } as never, form: null }
+		}).body;
+		const pressed = html.match(/<button[^>]*aria-pressed="true"[^>]*>/)?.[0] ?? '';
+		expect(pressed).toContain('btn-neutral');
+		expect(pressed).not.toContain('btn-primary');
+	});
+});

@@ -99,7 +99,7 @@
 						})}
 					{/if}
 					{#if data.night.redrawUsed}
-						<span class="badge align-middle badge-sm badge-neutral"
+						<span class="badge align-middle badge-neutral"
 							>{t(data.locale, 'night.redrawn_badge')}</span
 						>
 					{/if}
@@ -274,6 +274,7 @@
 	<section class={card}>
 		<div class="card-body">
 			<h2 class="card-title text-lg">{t(data.locale, 'night.responses')}</h2>
+			<p class="text-sm text-base-content/70">{t(data.locale, 'next.ask')}</p>
 			<form method="POST" action="?/respond" class="join w-full">
 				{#each answers as answer (answer)}
 					{@const AnswerIcon = answerIcons[answer]}
@@ -284,10 +285,10 @@
 						class={[
 							// Grows with its label: in German on a narrow phone it wraps.
 							'btn join-item h-auto min-h-12 flex-1 gap-1 px-2 py-2 leading-tight max-sm:flex-col',
-							data.night.myResponse === answer ? 'btn-primary' : 'btn-outline'
+							data.night.myResponse === answer ? 'btn-neutral' : 'btn-outline'
 						]}
 					>
-						<AnswerIcon class="size-4 shrink-0" />{t(data.locale, `nights.rsvp.${answer}`)}
+						<AnswerIcon class="size-4 shrink-0" />{t(data.locale, `next.answer.${answer}`)}
 					</button>
 				{/each}
 			</form>
@@ -299,7 +300,7 @@
 						<li class="flex min-h-12 items-center justify-between gap-2 py-2">
 							<span class="min-w-0 truncate">{r.displayName}</span>
 							<span class="text-sm text-base-content/70"
-								>{t(data.locale, `nights.rsvp.${r.response}`)}</span
+								>{t(data.locale, `next.answer.${r.response}`)}</span
 							>
 						</li>
 					{/each}

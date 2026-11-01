@@ -47,7 +47,7 @@
 			{#if hydrated}
 				<button
 					type="button"
-					class="btn btn-ghost btn-sm btn-square -my-1 -mr-2 size-9 min-h-9"
+					class="btn btn-ghost btn-square -my-3 -mr-3 size-12 min-h-12"
 					aria-label={t(locale, 'common.close')}
 					onclick={() => (open = false)}><X class="size-4" /></button
 				>

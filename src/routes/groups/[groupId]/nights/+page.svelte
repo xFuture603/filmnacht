@@ -50,8 +50,8 @@
 						<span class="font-bold">{night.when}</span>
 						<span class="flex items-center gap-2">
 							{#if night.average !== null}
-								<span class="badge badge-sm badge-outline gap-1 tabular-nums">
-									<Star class="size-3" />
+								<span class="badge badge-outline gap-1 tabular-nums">
+									<Star class="size-4" />
 									<span class="sr-only">{t(data.locale, 'ratings.average')}</span>
 									{t(data.locale, 'ratings.average_short', { average: fmt(night.average) })}
 								</span>

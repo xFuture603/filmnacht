@@ -15,4 +15,4 @@
 	} as const;
 </script>
 
-<span class="badge badge-sm {tone[status]}">{t(locale, `nights.status.${status}`)}</span>
+<span class="badge {tone[status]}">{t(locale, `nights.status.${status}`)}</span>
