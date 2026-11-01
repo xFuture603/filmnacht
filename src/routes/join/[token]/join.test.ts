@@ -20,7 +20,7 @@ const { createGroup } = await import('../../../lib/server/groups');
 const { createInvite, redeemInvite } = await import('../../../lib/server/invites');
 const { createUser, userByUsername } = await import('../../../lib/server/users');
 const { resetRateLimits } = await import('$lib/server/rate-limit');
-const { actions } = await import('./+page.server');
+const { actions, load } = await import('./+page.server');
 
 const PLACEHOLDER_HASH = 'scrypt$placeholder$placeholder';
 
@@ -324,5 +324,48 @@ describe('an optional email address on joining', () => {
 			data: { error: 'profile.error.email_taken' }
 		});
 		expect(userCount()).toBe(before);
+	});
+});
+
+describe('opening an invite to a group you are already in', () => {
+	const open = (token: string, user: Caller) =>
+		load({
+			params: { token },
+			locals: { user, locale: 'en' },
+			getClientAddress: () => '9.9.9.9'
+		} as never);
+
+	it('sends a member straight to the group, saying so', () => {
+		const ownerId = createUser(db, {
+			username: `own${Math.random()}`.replace('.', ''),
+			displayName: 'Own',
+			passwordHash: PLACEHOLDER_HASH
+		}).id;
+		const gid = createGroup(db, { name: 'Kino', ownerId });
+		const token = createInvite(db, { groupId: gid, createdBy: ownerId });
+		let thrown: unknown;
+		try {
+			open(token, { id: ownerId, displayName: 'Own', isAdmin: false });
+		} catch (err) {
+			thrown = err;
+		}
+		expect(isRedirect(thrown) && thrown.location).toBe(`/groups/${gid}?already`);
+	});
+
+	it('still shows the invite to someone who is not in the group yet', () => {
+		const ownerId = createUser(db, {
+			username: `own${Math.random()}`.replace('.', ''),
+			displayName: 'Own',
+			passwordHash: PLACEHOLDER_HASH
+		}).id;
+		const guestId = createUser(db, {
+			username: `guest${Math.random()}`.replace('.', ''),
+			displayName: 'Guest',
+			passwordHash: PLACEHOLDER_HASH
+		}).id;
+		const gid = createGroup(db, { name: 'Kino', ownerId });
+		const token = createInvite(db, { groupId: gid, createdBy: ownerId });
+		const data = open(token, { id: guestId, displayName: 'Guest', isAdmin: false });
+		expect((data as { invite: { groupId: string } }).invite.groupId).toBe(gid);
 	});
 });

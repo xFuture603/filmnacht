@@ -67,6 +67,7 @@
 	"admin.recovery_link_label": "Wiederherstellungslink",
 	"invite.join_title": "{group} beitreten",
 	"invite.join_as": "Du bist als {name} angemeldet. Tritt der Gruppe als du selbst bei.",
+	"invite.already_member": "Du bist schon in dieser Gruppe",
 	"invite.join_submit": "Gruppe beitreten",
 	"invite.have_account": "Hast du schon ein Konto? Melde dich stattdessen an.",
 	"invite.invalid": "Dieser Einladungslink ist nicht mehr gültig. Bitte um einen neuen.",

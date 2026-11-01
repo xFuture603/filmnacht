@@ -11,11 +11,19 @@
 	import { CalendarDays, Film, MapPin, Plus, Star, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
+	import Toast from '$lib/components/Toast.svelte';
 	import { startLiveRefresh, whenReachable } from '$lib/live-refresh';
 	let { data, form } = $props();
 
 	onMount(() => startLiveRefresh(whenReachable(invalidateAll)));
+	// Sent here by an invite to this group: say so once, then drop the marker so
+	// a reload does not say it again.
+	const already = page.url.searchParams.has('already');
+	onMount(() => {
+		if (already) replaceState(page.url.pathname, page.state);
+	});
 	// Each refresh counts as a visit, so the server stops calling a film new.
 	// Keep its badge for as long as this page stays open.
 	const shownNew = new SvelteSet<string>();
@@ -23,6 +31,10 @@
 		for (const entry of data.pool) if (entry.isNew) shownNew.add(entry.suggestionId);
 	});
 </script>
+
+{#if already}
+	<Toast message={t(data.locale, 'invite.already_member')} locale={data.locale} />
+{/if}
 
 <PageHeader title={data.group.name} />
 <GroupTabs

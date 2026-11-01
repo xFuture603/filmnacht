@@ -1,7 +1,7 @@
 import { hashPassword, validatePassword } from '$lib/server/auth/password';
 import { createSession, setSessionCookie } from '$lib/server/auth/session';
 import { db } from '$lib/server/db';
-import { lookupInvite, redeemInvite } from '$lib/server/invites';
+import { lookupInvite, memberOfInviteGroup, redeemInvite } from '$lib/server/invites';
 import { notifyNewMember } from '$lib/server/night-mail';
 import { rateLimit } from '$lib/server/rate-limit';
 import {
@@ -21,6 +21,9 @@ import type { Actions, PageServerLoad } from './$types';
 // anything. It must only read. Joining happens in the action below, which is
 // a POST a browser will not issue without the visitor pressing the button.
 export const load: PageServerLoad = ({ params, locals, getClientAddress }) => {
+	// Already in the group: nothing to join, so go there and say so.
+	const home = locals.user && memberOfInviteGroup(db, params.token, locals.user.id);
+	if (home) redirect(303, `/groups/${home}?already`);
 	if (!rateLimit(`join:${getClientAddress()}`, 20, 60_000)) {
 		return { invite: null, rateLimited: true, user: locals.user, token: params.token };
 	}

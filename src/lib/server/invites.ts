@@ -53,6 +53,27 @@ export function lookupInvite(db: DB, token: string, now = Date.now()) {
 	return row ?? null;
 }
 
+/**
+ * The invite's group, if the user is already in it. Expired and used-up
+ * invites count too: an old link in the chat should still take a member home.
+ */
+export function memberOfInviteGroup(db: DB, token: string, userId: string): string | null {
+	const row = db
+		.select({ groupId: invites.groupId })
+		.from(invites)
+		.innerJoin(
+			memberships,
+			and(
+				eq(memberships.groupId, invites.groupId),
+				eq(memberships.userId, userId),
+				isNull(memberships.leftAt)
+			)
+		)
+		.where(eq(invites.tokenHash, hashToken(token)))
+		.get();
+	return row?.groupId ?? null;
+}
+
 export function redeemInvite(
 	db: DB,
 	token: string,

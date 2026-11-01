@@ -69,6 +69,7 @@
 	"admin.recovery_link_label": "Recovery link",
 	"invite.join_title": "Join {group}",
 	"invite.join_as": "You are signed in as {name}. Join this group as yourself.",
+	"invite.already_member": "You are already in this group",
 	"invite.join_submit": "Join the group",
 	"invite.have_account": "Already have an account? Sign in instead.",
 	"invite.invalid": "This invite link is no longer valid. Ask for a new one.",

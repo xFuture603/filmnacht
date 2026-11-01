@@ -8,6 +8,7 @@ import {
 	INVITE_MAX_USES,
 	INVITE_TTL_DAYS,
 	lookupInvite,
+	memberOfInviteGroup,
 	redeemInvite
 } from './invites';
 import { createUser } from './users';
@@ -161,5 +162,32 @@ describe('redeemInvite', () => {
 		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
 		expect(redeemInvite(db, token, grace, NOW + 8 * DAY)).toBeNull();
 		expect(listMembers(db, groupId)).toHaveLength(1);
+	});
+});
+
+describe('memberOfInviteGroup', () => {
+	// Someone already in the group who opens its invite again is sent there.
+	it("gives the group of a member's invite", () => {
+		const token = createInvite(db, { groupId, createdBy: ada, now: NOW });
+		expect(memberOfInviteGroup(db, token, ada)).toBe(groupId);
+	});
+
+	// An old link in the chat: still tells a member where they belong.
+	it('still does once the invite has expired or is used up', () => {
+		const token = createInvite(db, { groupId, createdBy: ada, maxUses: 0, now: NOW - 30 * DAY });
+		expect(memberOfInviteGroup(db, token, ada)).toBe(groupId);
+	});
+
+	it('gives nothing to someone not in the group, or no longer in it', () => {
+		const token = createInvite(db, { groupId, createdBy: ada });
+		expect(memberOfInviteGroup(db, token, grace)).toBeNull();
+		expect(redeemInvite(db, token, grace)?.joined).toBe(true);
+		expect(memberOfInviteGroup(db, token, grace)).toBe(groupId);
+		leaveGroup(db, grace, groupId);
+		expect(memberOfInviteGroup(db, token, grace)).toBeNull();
+	});
+
+	it('gives nothing for a token that does not exist', () => {
+		expect(memberOfInviteGroup(db, 'no-such-token', ada)).toBeNull();
 	});
 });

@@ -3,7 +3,12 @@ import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('$app/forms', () => ({ enhance: () => ({}) }));
-vi.mock('$app/navigation', () => ({ invalidateAll: () => Promise.resolve() }));
+vi.mock('$app/navigation', () => ({
+	invalidateAll: () => Promise.resolve(),
+	replaceState: () => {}
+}));
+const page = vi.hoisted(() => ({ url: new URL('http://localhost/groups/g1') }));
+vi.mock('$app/state', () => ({ page }));
 
 const { default: Page } = await import('./+page.svelte');
 
@@ -101,5 +106,14 @@ describe('the pool', () => {
 		};
 		const html = body([], [], next);
 		expect(html).toMatch(/lucide-calendar-days[^"]*\bshrink-0\b/);
+	});
+});
+
+describe('arriving from an invite to a group you are already in', () => {
+	it('says you are already in it', () => {
+		page.url = new URL('http://localhost/groups/g1?already');
+		expect(body([])).toContain('You are already in this group');
+		page.url = new URL('http://localhost/groups/g1');
+		expect(body([])).not.toContain('You are already in this group');
 	});
 });
