@@ -36,5 +36,6 @@ prd.md
 
 # Impeccable design tool files, kept locally only
 PRODUCT.md
+DESIGN.md
 .github/hooks/
 .impeccable/
