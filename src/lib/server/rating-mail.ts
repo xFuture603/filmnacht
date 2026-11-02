@@ -5,7 +5,7 @@ import type { DB } from './db/client';
 import { groups, memberships, movieNights, movies, ratings, suggestions, users } from './db/schema';
 import { groupSettings } from './group-settings';
 import { isMailConfigured, sendMail } from './mail';
-import { ratingWindow } from './ratings';
+import { declinedIds, ratingWindow } from './ratings';
 import { getEmailLocale, getTimezone } from './settings';
 
 /**
@@ -90,6 +90,8 @@ export function ratingRecipients(db: DB, nightId: string): string[] {
 			.all()
 			.map((r) => r.userId)
 	);
+	// Whoever said "No" was not there: nothing to ask them about.
+	for (const id of declinedIds(db, nightId)) rated.add(id);
 	return db
 		.select({ id: users.id, email: users.email, ratingMails: users.ratingMails })
 		.from(memberships)

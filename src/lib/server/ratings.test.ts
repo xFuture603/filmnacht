@@ -383,4 +383,28 @@ describe('nightsToRate', () => {
 		leaveGroup(db, alan, groupId);
 		expect(nightsToRate(db, groupId, alan, DURING)).toEqual([]);
 	});
+
+	it('lists nothing for someone who said No, until they say Yes', () => {
+		respond(db, nightId, grace, 'no');
+		expect(nightsToRate(db, groupId, grace, DURING)).toEqual([]);
+		respond(db, nightId, grace, 'yes');
+		expect(nightsToRate(db, groupId, grace, DURING)).toHaveLength(1);
+	});
+});
+
+describe('who may rate', () => {
+	it('refuses whoever said No, and takes them once they say Yes', () => {
+		respond(db, nightId, grace, 'no');
+		expect(rate(grace, 7)).toEqual({ ok: false, reason: 'declined' });
+		expect(ratingView(db, nightId, grace, DURING, 'Former')?.declined).toBe(true);
+		respond(db, nightId, grace, 'yes');
+		expect(rate(grace, 7).ok).toBe(true);
+	});
+
+	it('takes a Maybe and no answer at all', () => {
+		respond(db, nightId, grace, 'maybe');
+		expect(rate(grace, 7).ok).toBe(true);
+		expect(rate(alan, 6).ok).toBe(true);
+		expect(ratingView(db, nightId, alan, DURING, 'Former')?.declined).toBe(false);
+	});
 });

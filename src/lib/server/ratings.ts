@@ -94,6 +94,22 @@ function myRating(db: DB, nightId: string, userId: string) {
 }
 
 /**
+ * Who answered "No" to the night. They were not there, so they do not rate it:
+ * no form, no "rate now" card, no rating emails. "Maybe" and no answer still
+ * rate, and switching to "Yes" afterwards lets someone who came anyway rate.
+ */
+export function declinedIds(db: DB, nightId: string): Set<string> {
+	return new Set(
+		db
+			.select({ userId: attendance.userId })
+			.from(attendance)
+			.where(and(eq(attendance.movieNightId, nightId), eq(attendance.response, 'no')))
+			.all()
+			.map((r) => r.userId)
+	);
+}
+
+/**
  * Current members who answered "I'm in" and have no rating yet. The automatic
  * reveal waits for exactly these people; somebody who left is not waited for.
  */
@@ -141,7 +157,7 @@ export function saveRating(
 	input: { nightId: string; userId: string; scoreX2: number; comment: string | null; now: Date }
 ):
 	| { ok: true; revealed: boolean }
-	| { ok: false; reason: 'not_found' | 'window' | 'locked' | 'score' | 'comment' } {
+	| { ok: false; reason: 'not_found' | 'window' | 'declined' | 'locked' | 'score' | 'comment' } {
 	const night = nightRow(db, input.nightId);
 	if (!night) return { ok: false, reason: 'not_found' };
 	// Authorization before anything else is read or written.
@@ -149,6 +165,7 @@ export function saveRating(
 
 	if (ratingWindow(night, settings, input.now).state !== 'open')
 		return { ok: false, reason: 'window' };
+	if (declinedIds(db, input.nightId).has(input.userId)) return { ok: false, reason: 'declined' };
 	if (!Number.isInteger(input.scoreX2) || input.scoreX2 < 2 || input.scoreX2 > 20) {
 		return { ok: false, reason: 'score' };
 	}
@@ -260,6 +277,8 @@ export function revealNow(
 export type RatingView = {
 	window: RatingWindow;
 	revealed: boolean;
+	/** The viewer answered "No": no rating form for them. */
+	declined: boolean;
 	mine: { score: number; comment: string | null } | null;
 	count: number;
 	rated: string[];
@@ -361,6 +380,7 @@ export function ratingView(
 	return {
 		window: ratingWindow(night, settings, now),
 		revealed,
+		declined: declinedIds(db, nightId).has(viewerId),
 		mine: mineRow ? { score: mineRow.scoreX2 / 2, comment: mineRow.comment } : null,
 		count: rows.length,
 		rated: rows.map(nameOf),
@@ -408,7 +428,10 @@ export function averagesFor(
 	return out;
 }
 
-/** The "How was it?" card: open windows this member has not rated, soonest closing first. */
+/**
+ * The "How was it?" card: open windows this member has not rated and did not
+ * say "No" to, soonest closing first.
+ */
 export function nightsToRate(
 	db: DB,
 	groupId: string,
@@ -437,6 +460,12 @@ export function nightsToRate(
 			.all()
 			.map((r) => r.nightId)
 	);
+	for (const r of db
+		.select({ nightId: attendance.movieNightId })
+		.from(attendance)
+		.where(and(eq(attendance.userId, userId), eq(attendance.response, 'no')))
+		.all())
+		rated.add(r.nightId);
 	return db
 		.select({
 			id: movieNights.id,

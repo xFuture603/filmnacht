@@ -9,7 +9,7 @@ vi.mock('./mail', () => ({
 import { applyMigrations, createDb, type DB } from './db/client';
 import { DEFAULT_GROUP_SETTINGS, movieNights, suggestions, users } from './db/schema';
 import { addMember, createGroup, leaveGroup } from './groups';
-import { cancelNight, drawForNight, markWatched, scheduleNight } from './nights';
+import { cancelNight, drawForNight, markWatched, respond, scheduleNight } from './nights';
 import { saveRating } from './ratings';
 import { addSuggestion } from './suggestions';
 import { createUser, setEmail } from './users';
@@ -138,6 +138,13 @@ describe('ratingRecipients', () => {
 		db.update(users).set({ ratingMails: true }).where(eq(users.id, ada)).run();
 		leaveGroup(db, ada, groupId);
 		expect(ratingRecipients(db, nightId)).toEqual([]);
+	});
+});
+
+describe('ratingRecipients and a No', () => {
+	it('leaves out whoever said No to the night', () => {
+		respond(db, nightId, grace, 'no');
+		expect(ratingRecipients(db, nightId)).toEqual(['ada@example.org']);
 	});
 });
 

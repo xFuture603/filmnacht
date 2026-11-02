@@ -327,6 +327,33 @@ describe('the answer buttons', () => {
 	});
 });
 
+describe('a member who said No', () => {
+	it('gets no rating form, but a way back once the answer buttons are gone', async () => {
+		await post('respond', grace, { response: 'no' });
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() - 4 * 60 * 60 * 1000) })
+			.where(eq(movieNights.id, nightId))
+			.run();
+		await post('markWatched', ada, { confirm: 'on' });
+		const html = async () =>
+			render(Page, {
+				props: { data: { ...(await view(grace)), locale: 'en' } as never, form: null }
+			}).body;
+		expect(await html()).toContain('I was there after all');
+		expect(await html()).not.toContain('Save rating');
+		// The night is over: no "Are you coming?" beside the way back.
+		expect(await html()).not.toContain('Are you coming?');
+		expect(await post('rate', grace, { score: '7' })).toMatchObject({
+			status: 400,
+			data: { error: 'ratings.error.declined' }
+		});
+
+		await post('respond', grace, { response: 'yes' });
+		expect(await html()).toContain('Save rating');
+		expect(await html()).not.toContain('I was there after all');
+	});
+});
+
 describe('the answer buttons on narrow phones', () => {
 	// At 320px in German, "Ich bin dabei" wrapped to three lines and spilled out
 	// of a fixed-height button. They grow with their text.

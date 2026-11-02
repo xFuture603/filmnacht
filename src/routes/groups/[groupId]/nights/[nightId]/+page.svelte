@@ -177,7 +177,17 @@
 					{t(data.locale, 'ratings.opens', { when: data.ratingTimes.opens ?? '' })}
 				</p>
 			{:else}
-				{#if rateOpen && rv.mine === null && !rv.revealed}
+				{#if rateOpen && rv.declined && rv.mine === null}
+					<!-- The answer buttons are gone once the night is watched: this is
+					     the way back for someone who said No and came anyway. -->
+					<form method="POST" action="?/respond" class="flex flex-col gap-2">
+						<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.declined')}</p>
+						<input type="hidden" name="response" value="yes" />
+						<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
+							>{t(data.locale, 'ratings.was_there')}</button
+						>
+					</form>
+				{:else if rateOpen && rv.mine === null && !rv.revealed}
 					<!-- Not rated yet. After a reveal the results lead, and this moves below them. -->
 					{#if data.film}
 						<p class="font-bold">{t(data.locale, 'ratings.ask', { title: data.film.title })}</p>
@@ -189,7 +199,7 @@
 						<span class="text-3xl font-bold tabular-nums">{fmt(rv.mine.score)}</span>
 					</p>
 					<p class="text-sm text-base-content/70">{t(data.locale, 'ratings.hidden_until')}</p>
-					{#if rateOpen}
+					{#if rateOpen && !rv.declined}
 						<!-- <details>: changing works without JavaScript too. The summary is
 						     only the way in, so it goes once the form is open. -->
 						<details class="group mt-1">
@@ -249,7 +259,7 @@
 					</ul>
 				{/if}
 
-				{#if rateOpen && rv.mine === null && rv.revealed}
+				{#if rateOpen && rv.mine === null && rv.revealed && !rv.declined}
 					<!-- Revealed, but the window is still open for whoever has not rated. -->
 					<details class="group">
 						<summary class="btn min-h-12 w-full btn-outline group-open:hidden sm:w-auto"
