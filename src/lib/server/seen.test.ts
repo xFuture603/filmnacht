@@ -65,10 +65,18 @@ describe('newCounts', () => {
 		expect(newCounts(db, lin, groupId)).toEqual({ pool: 0, nights: 0 });
 	});
 
-	it('counts new nights for members, never for the owner', () => {
+	it('counts new nights for members, never for their organizer', () => {
 		night();
 		expect(newCounts(db, grace, groupId).nights).toBe(1);
 		expect(newCounts(db, ada, groupId).nights).toBe(0);
+		scheduleNight(db, {
+			groupId,
+			userId: grace,
+			scheduledAt: new Date(Date.now() + 86_400_000),
+			location: null
+		});
+		expect(newCounts(db, grace, groupId).nights).toBe(1);
+		expect(newCounts(db, ada, groupId).nights).toBe(1);
 	});
 
 	it('leaves out withdrawn and drawn films and cancelled nights', () => {
@@ -144,7 +152,7 @@ describe('visit', () => {
 		expect(newCounts(db, ada, groupId).pool).toBe(1);
 	});
 
-	it('marks new nights for a member, none for the owner', () => {
+	it('marks new nights for a member, none for their organizer', () => {
 		const id = night();
 		expect(visit(db, grace, groupId, 'nights').newIds).toEqual(new Set([id]));
 		expect(visit(db, ada, groupId, 'nights').newIds).toEqual(new Set());

@@ -263,23 +263,23 @@ describe('withdrawRating', () => {
 
 describe('revealNow', () => {
 	it('lets the owner reveal once there is a rating, once', () => {
-		expect(revealNow(db, { nightId, ownerId: ada, now: DURING })).toBe('no_ratings');
+		expect(revealNow(db, { nightId, userId: ada, now: DURING })).toBe('no_ratings');
 		rate(grace, 7);
-		expect(revealNow(db, { nightId, ownerId: ada, now: DURING })).toBe('ok');
-		expect(revealNow(db, { nightId, ownerId: ada, now: DURING })).toBe('already');
+		expect(revealNow(db, { nightId, userId: ada, now: DURING })).toBe('ok');
+		expect(revealNow(db, { nightId, userId: ada, now: DURING })).toBe('already');
 	});
 
-	it('refuses a member who is not the owner, and before the night has ended', () => {
+	it('refuses a member who neither organized the night nor owns the group, and before the night has ended', () => {
 		rate(grace, 7);
-		expect(() => revealNow(db, { nightId, ownerId: grace, now: DURING })).toThrow();
-		expect(revealNow(db, { nightId, ownerId: ada, now: new Date(OPENS.getTime() - 1000) })).toBe(
+		expect(() => revealNow(db, { nightId, userId: grace, now: DURING })).toThrow();
+		expect(revealNow(db, { nightId, userId: ada, now: new Date(OPENS.getTime() - 1000) })).toBe(
 			'window'
 		);
 	});
 
 	it('treats a closed window as already revealed, and does not stamp it', () => {
 		rate(grace, 7);
-		expect(revealNow(db, { nightId, ownerId: ada, now: CLOSES })).toBe('already');
+		expect(revealNow(db, { nightId, userId: ada, now: CLOSES })).toBe('already');
 		expect(db.select({ at: movieNights.revealedAt }).from(movieNights).get()?.at).toBeNull();
 	});
 });
@@ -308,7 +308,7 @@ describe('ratingView', () => {
 		rate(grace, 7);
 		rate(alan, 3, 'not for me');
 		rate(ada, 7);
-		revealNow(db, { nightId, ownerId: ada, now: DURING });
+		revealNow(db, { nightId, userId: ada, now: DURING });
 		const results = ratingView(db, nightId, ada, DURING, 'Former member')?.results;
 		expect(results?.average).toBeCloseTo(17 / 3);
 		expect(results?.lowest).toEqual({ score: 3, names: ['Alan'] });
@@ -355,7 +355,7 @@ describe('averagesFor', () => {
 	it('lists only revealed nights', () => {
 		rate(grace, 7);
 		expect(averagesFor(db, groupId, DEFAULT_GROUP_SETTINGS, DURING).size).toBe(0);
-		revealNow(db, { nightId, ownerId: ada, now: DURING });
+		revealNow(db, { nightId, userId: ada, now: DURING });
 		expect(averagesFor(db, groupId, DEFAULT_GROUP_SETTINGS, DURING).get(nightId)).toBe(7);
 	});
 });

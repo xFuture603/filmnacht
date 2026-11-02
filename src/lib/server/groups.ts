@@ -134,3 +134,21 @@ export function requireOwner(db: DB, userId: string, groupId: string): GroupMemb
 	if (membership.role !== 'owner') error(403, 'Only the owner can do that');
 	return membership;
 }
+
+/**
+ * A night is run by the member who organized it, and the owner can always step
+ * in. Same 404/403 split as `requireOwner`. An organizer who has left fails the
+ * membership check, so their nights fall to the owner.
+ */
+export function requireOrganizerOrOwner(
+	db: DB,
+	userId: string,
+	groupId: string,
+	organizerId: string | null
+): GroupMembership {
+	const membership = requireMember(db, userId, groupId);
+	if (membership.role !== 'owner' && organizerId !== userId) {
+		error(403, 'Only the organizer or the owner can do that');
+	}
+	return membership;
+}

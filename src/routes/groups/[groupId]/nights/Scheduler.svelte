@@ -32,7 +32,7 @@
 	} = $props();
 
 	// Overridable deriveds: they follow the server's data (a failed submit
-	// echoes the owner's choice back) and the owner's taps overwrite them.
+	// echoes the member's choice back) and their taps overwrite them.
 	let month = $derived(initialMonth);
 	let day = $derived(echo?.day ?? defaults.day ?? '');
 	let time = $derived(echo?.time ?? defaults.time);

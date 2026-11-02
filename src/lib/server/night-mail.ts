@@ -12,7 +12,7 @@ import { getEmailLocale, getTimezone } from './settings';
 /**
  * "Night scheduled" and "night cancelled" emails, each with a calendar file
  * (ics.ts). Sent right after the action, like the draw email, to every member
- * with an address, the owner who acted included: they want the entry too.
+ * with an address, the member who acted included: they want the entry too.
  */
 
 export function nightMailInfo(db: DB, nightId: string) {

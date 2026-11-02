@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import {
 	drawFrom,
 	newSeed,
@@ -18,14 +18,14 @@ import {
 	type GroupSettings
 } from './db/schema';
 import { groupSettings } from './group-settings';
-import { requireMember, requireOwner } from './groups';
+import { requireMember, requireOrganizerOrOwner } from './groups';
 import { FORMER_MEMBER_USERNAME } from './members';
 
 /**
- * The owner schedules nights. Letting any member do it, per setting, was
- * considered. `GroupSettings` has no such setting and adding one is not in scope
- * here — the owner schedules, full stop, and the per-member variant is
- * deferred rather than guessed at.
+ * Any member schedules a night and becomes its organizer, who runs it: draw,
+ * re-draw, cancel, mark watched, reveal. The owner can run every night too, so
+ * a night whose organizer is gone is never stuck. No group setting turns this
+ * off.
  *
  * RSVP does not affect the draw: answering "no" still leaves a member's
  * suggestions in the running. §6 never ties attendance to eligibility, and
@@ -57,8 +57,11 @@ export type NightDetail = NightSummary & {
 	onlyCandidate: boolean;
 	/** The one permitted re-draw has been used (§6). */
 	redrawUsed: boolean;
-	/** The latest draw's log entry has `by: null`: the scheduler drew it, not the owner. */
+	/** The latest draw's log entry has `by: null`: the scheduler drew it, not a person. */
 	drawnAutomatically: boolean;
+	organizerId: string | null;
+	/** `null` once the organizer has left the group or deleted their account. */
+	organizerName: string | null;
 	myResponse: 'yes' | 'no' | 'maybe' | null;
 	responses: Array<{ displayName: string; response: 'yes' | 'no' | 'maybe' }>;
 };
@@ -75,7 +78,7 @@ export function scheduleNight(
 	input: { groupId: string; userId: string; scheduledAt: Date; location: string | null }
 ): string {
 	// Authorization before anything else touches or reveals state.
-	requireOwner(db, input.userId, input.groupId);
+	requireMember(db, input.userId, input.groupId);
 
 	const location = input.location?.trim() || null;
 	if (location && location.length > LOCATION_MAX) {
@@ -87,7 +90,13 @@ export function scheduleNight(
 
 	const id = crypto.randomUUID();
 	db.insert(movieNights)
-		.values({ id, groupId: input.groupId, scheduledAt: input.scheduledAt, location })
+		.values({
+			id,
+			groupId: input.groupId,
+			organizerId: input.userId,
+			scheduledAt: input.scheduledAt,
+			location
+		})
 		.run();
 	return id;
 }
@@ -137,6 +146,27 @@ function responseCount(response: 'yes' | 'no' | 'maybe') {
 	)`;
 }
 
+/**
+ * Where this member last held a night in this group, for the schedule form.
+ * The group's latest night may have been at somebody else's place. A night
+ * planned without a place does not wipe out the one they used before.
+ */
+export function lastLocationOf(db: DB, groupId: string, userId: string): string {
+	const row = db
+		.select({ location: movieNights.location })
+		.from(movieNights)
+		.where(
+			and(
+				eq(movieNights.groupId, groupId),
+				eq(movieNights.organizerId, userId),
+				isNotNull(movieNights.location)
+			)
+		)
+		.orderBy(desc(movieNights.scheduledAt))
+		.get();
+	return row?.location ?? '';
+}
+
 export function listNights(db: DB, groupId: string): NightSummary[] {
 	return db
 		.select({
@@ -173,6 +203,7 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 			drawnBy: users.displayName,
 			drawnByUsername: users.username,
 			drawLog: movieNights.drawLog,
+			organizerId: movieNights.organizerId,
 			yes: responseCount('yes'),
 			no: responseCount('no'),
 			maybe: responseCount('maybe')
@@ -201,6 +232,22 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 		.where(eq(attendance.movieNightId, nightId))
 		.all();
 
+	// Only a current member's name: someone who left is no longer the one to ask.
+	const organizer = night.organizerId
+		? db
+				.select({ displayName: users.displayName })
+				.from(memberships)
+				.innerJoin(users, eq(users.id, memberships.userId))
+				.where(
+					and(
+						eq(memberships.groupId, night.groupId),
+						eq(memberships.userId, night.organizerId),
+						isNull(memberships.leftAt)
+					)
+				)
+				.get()
+		: undefined;
+
 	const myResponseRow = db
 		.select({ response: attendance.response })
 		.from(attendance)
@@ -222,6 +269,7 @@ export function nightDetail(db: DB, nightId: string, viewerId: string): NightDet
 			latest.candidates[0].suggestions === 1,
 		redrawUsed: log.length >= 2,
 		drawnAutomatically: latest !== undefined && latest.by === null,
+		organizerName: organizer?.displayName ?? null,
 		myResponse: myResponseRow?.response ?? null,
 		responses
 	};
@@ -297,7 +345,7 @@ export function candidatesFor(db: DB, groupId: string): Candidate[] {
  * transaction; only the claim-and-write is inside it. That is safe because
  * nothing here awaits and better-sqlite3 is one connection: no other request
  * can run between the reads and the claim, and the claim's own WHERE refuses a
- * night that is no longer 'scheduled', so two owners pressing Draw at the same
+ * night that is no longer 'scheduled', so the organizer and the owner pressing Draw at the same
  * moment produce one result. This project has fixed read-yield-write on a stale
  * read four times; if a future change wants to await in here, that is the
  * signal to stop rather than to make this async.
@@ -306,7 +354,7 @@ export function candidatesFor(db: DB, groupId: string): Candidate[] {
  * to the pool for later nights, but not into this night's second draw.
  *
  * No authorization: `by` is recorded as given, `null` meaning the automatic
- * scheduler rather than an owner. `drawForNight` below is the owner-checked
+ * scheduler rather than a person. `drawForNight` below is the checked
  * entry point the route and `redraw` use; this one is for the scheduler.
  */
 export function drawNight(
@@ -400,21 +448,21 @@ export function drawNight(
 	});
 }
 
-/** Owner-checked entry point: looks the night up, then delegates to `drawNight`. */
+/** Checked entry point (organizer or owner): looks the night up, then delegates to `drawNight`. */
 export function drawForNight(
 	db: DB,
 	nightId: string,
-	ownerId: string,
+	userId: string,
 	excludeSuggestionId?: string | null
 ): DrawOutcome {
 	const night = db
-		.select({ groupId: movieNights.groupId })
+		.select({ groupId: movieNights.groupId, organizerId: movieNights.organizerId })
 		.from(movieNights)
 		.where(eq(movieNights.id, nightId))
 		.get();
 	if (!night) return { ok: false, reason: 'not_found' };
-	requireOwner(db, ownerId, night.groupId);
-	return drawNight(db, nightId, ownerId, excludeSuggestionId);
+	requireOrganizerOrOwner(db, userId, night.groupId, night.organizerId);
+	return drawNight(db, nightId, userId, excludeSuggestionId);
 }
 
 /**
@@ -423,14 +471,18 @@ export function drawForNight(
  * must never re-enter the pool, or its author would wrongly get the turn
  * back that the fairness window already credited them for.
  */
-export function cancelNight(db: DB, nightId: string, ownerId: string): boolean {
+export function cancelNight(db: DB, nightId: string, userId: string): boolean {
 	const night = db
-		.select({ groupId: movieNights.groupId, suggestionId: movieNights.suggestionId })
+		.select({
+			groupId: movieNights.groupId,
+			organizerId: movieNights.organizerId,
+			suggestionId: movieNights.suggestionId
+		})
 		.from(movieNights)
 		.where(eq(movieNights.id, nightId))
 		.get();
 	if (!night) return false;
-	requireOwner(db, ownerId, night.groupId);
+	requireOrganizerOrOwner(db, userId, night.groupId, night.organizerId);
 
 	return db.transaction(() => {
 		// Test-and-set: only a night still in 'scheduled' or 'drawn' claims this.
@@ -452,14 +504,14 @@ export function cancelNight(db: DB, nightId: string, ownerId: string): boolean {
 }
 
 /** Only from 'drawn'. Manual on purpose; there is no automatic move yet. */
-export function markWatched(db: DB, nightId: string, ownerId: string): boolean {
+export function markWatched(db: DB, nightId: string, userId: string): boolean {
 	const night = db
-		.select({ groupId: movieNights.groupId })
+		.select({ groupId: movieNights.groupId, organizerId: movieNights.organizerId })
 		.from(movieNights)
 		.where(eq(movieNights.id, nightId))
 		.get();
 	if (!night) return false;
-	requireOwner(db, ownerId, night.groupId);
+	requireOrganizerOrOwner(db, userId, night.groupId, night.organizerId);
 
 	return db.transaction(() => {
 		const claimed = db
@@ -490,12 +542,13 @@ class RedrawAbort extends Error {
  * any throw) so a failed re-draw leaves the night exactly as it was: 'drawn',
  * same film, log untouched.
  */
-export function redraw(db: DB, nightId: string, ownerId: string): DrawOutcome {
+export function redraw(db: DB, nightId: string, userId: string): DrawOutcome {
 	try {
 		return db.transaction(() => {
 			const night = db
 				.select({
 					groupId: movieNights.groupId,
+					organizerId: movieNights.organizerId,
 					status: movieNights.status,
 					suggestionId: movieNights.suggestionId,
 					drawLog: movieNights.drawLog
@@ -505,7 +558,7 @@ export function redraw(db: DB, nightId: string, ownerId: string): DrawOutcome {
 				.get();
 			if (!night) throw new RedrawAbort({ ok: false, reason: 'not_found' });
 
-			requireOwner(db, ownerId, night.groupId);
+			requireOrganizerOrOwner(db, userId, night.groupId, night.organizerId);
 
 			// Only a night with a drawn film can be re-drawn. Reusing 'not_scheduled'
 			// rather than adding a reason: it already means "not in the state this
@@ -546,7 +599,7 @@ export function redraw(db: DB, nightId: string, ownerId: string): DrawOutcome {
 				throw new RedrawAbort({ ok: false, reason: 'sole_suggestion' });
 			}
 
-			const outcome = drawForNight(db, nightId, ownerId, night.suggestionId);
+			const outcome = drawForNight(db, nightId, userId, night.suggestionId);
 			if (!outcome.ok) throw new RedrawAbort(outcome);
 			return outcome;
 		});

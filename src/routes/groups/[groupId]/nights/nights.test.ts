@@ -78,11 +78,11 @@ describe('scheduling from the form', () => {
 		});
 	});
 
-	it('refuses a member who does not own the group', async () => {
+	it('lets a member who does not own the group schedule too', async () => {
 		expect(await schedule(grace, { day: '2030-07-01', time: '20:00' })).toMatchObject({
-			status: 403
+			status: 303
 		});
-		expect(listNights(db, groupId)).toHaveLength(0);
+		expect(listNights(db, groupId)).toHaveLength(1);
 	});
 });
 
@@ -118,11 +118,30 @@ describe('the list', () => {
 		expect(data.upcoming[0].when).toContain('20:00');
 		expect(data.isOwner).toBe(false);
 		// The last night was 1 July 2030, a Monday at 20:00: the form suggests
-		// the same time and place next time.
+		// the same time next time.
 		expect(data.defaults).toMatchObject({ time: '20:00' });
 		// The calendar opens on the suggested day's month.
 		expect(data.month).toBe(data.defaults.day?.slice(0, 7));
 		expect(data.timezone).toBe('Europe/Berlin');
+	});
+
+	it('suggests the group’s usual time, but only the viewer’s own place', async () => {
+		const defaults = async (userId: string) =>
+			(
+				(await load({
+					params: { groupId },
+					locals: locals(userId),
+					url: new URL('http://x/')
+				} as never)) as Exclude<Awaited<ReturnType<typeof load>>, void>
+			).defaults;
+		await schedule(ada, { day: '2030-07-01', time: '20:00', location: "Ada's sofa" });
+		expect(await defaults(ada)).toMatchObject({ time: '20:00', location: "Ada's sofa" });
+		expect(await defaults(grace)).toMatchObject({ time: '20:00', location: '' });
+		await schedule(grace, { day: '2030-07-08', time: '21:00', location: "Grace's garden" });
+		expect(await defaults(ada)).toMatchObject({ time: '21:00', location: "Ada's sofa" });
+		// A later night of Ada's without a place keeps her sofa as the suggestion.
+		await schedule(ada, { day: '2030-07-15', time: '21:00' });
+		expect(await defaults(ada)).toMatchObject({ location: "Ada's sofa" });
 	});
 
 	it('gives somebody outside the group a 404', async () => {

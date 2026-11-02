@@ -61,10 +61,9 @@ describe('scheduleNight', () => {
 		expect(nights[0].location).toBe("Ada's flat");
 	});
 
-	it('refuses a member who does not own the group', () => {
-		expect(() =>
-			scheduleNight(db, { groupId, userId: grace, scheduledAt: LATER, location: null })
-		).toThrow();
+	it('lets any member schedule, and makes them its organizer', () => {
+		const id = scheduleNight(db, { groupId, userId: grace, scheduledAt: LATER, location: null });
+		expect(nightDetail(db, id, ada)).toMatchObject({ organizerId: grace, organizerName: 'Grace' });
 	});
 
 	it('refuses somebody who is not in the group at all', () => {
@@ -178,7 +177,7 @@ describe('drawForNight', () => {
 		expect(drawForNight(db, id, ada)).toEqual({ ok: false, reason: 'no_candidates' });
 	});
 
-	it('refuses a member who does not own the group', () => {
+	it('refuses a member who neither organized the night nor owns the group', () => {
 		openFilm(ada, 'Dune');
 		const id = scheduleNight(db, { groupId, userId: ada, scheduledAt: LATER, location: null });
 		expect(() => drawForNight(db, id, grace)).toThrow();
@@ -746,5 +745,50 @@ describe('drawing from the people coming', () => {
 		respond(db, id, grace, 'yes');
 		expect(redraw(db, id, ada)).toMatchObject({ ok: true });
 		expect(lastLog(id)).toMatchObject({ pickedUserId: grace, from: 'coming' });
+	});
+});
+
+describe('a night run by its organizer', () => {
+	let lin: string;
+	let id: string;
+
+	beforeEach(() => {
+		lin = createUser(db, {
+			username: 'lin',
+			displayName: 'Lin',
+			passwordHash: 'scrypt$placeholder$placeholder'
+		}).id;
+		addMember(db, lin, groupId);
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		id = scheduleNight(db, { groupId, userId: grace, scheduledAt: LATER, location: null });
+	});
+
+	it('lets the organizer draw and mark it watched', () => {
+		expect(drawForNight(db, id, grace).ok).toBe(true);
+		expect(markWatched(db, id, grace)).toBe(true);
+	});
+
+	it('refuses every other member', () => {
+		expect(() => drawForNight(db, id, lin)).toThrow();
+		expect(() => cancelNight(db, id, lin)).toThrow();
+		expect(nightDetail(db, id, lin)?.status).toBe('scheduled');
+	});
+
+	it('lets the owner step in', () => {
+		expect(drawForNight(db, id, ada).ok).toBe(true);
+		expect(redraw(db, id, ada)).toEqual({ ok: false, reason: 'sole_suggestion' }); // permitted, nothing else to draw
+		expect(cancelNight(db, id, ada)).toBe(true);
+	});
+
+	it('falls to the owner once the organizer leaves', () => {
+		leaveGroup(db, grace, groupId);
+		expect(() => cancelNight(db, id, grace)).toThrow();
+		expect(nightDetail(db, id, ada)?.organizerName).toBeNull();
+		expect(cancelNight(db, id, ada)).toBe(true);
 	});
 });

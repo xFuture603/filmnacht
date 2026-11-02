@@ -226,6 +226,12 @@ export const movieNights = sqliteTable('movie_nights', {
 		.references(() => groups.id, { onDelete: 'cascade' }),
 	scheduledAt: integer('scheduled_at', { mode: 'timestamp' }).notNull(),
 	location: text('location'),
+	/**
+	 * The member who scheduled the night: they run it (draw, cancel, mark
+	 * watched, reveal), and so does the group's owner. NULL once their account
+	 * is gone; a night whose organizer left or was deleted is the owner's to run.
+	 */
+	organizerId: text('organizer_id').references(() => users.id, { onDelete: 'set null' }),
 	suggestionId: text('suggestion_id').references(() => suggestions.id),
 	drawnAt: integer('drawn_at', { mode: 'timestamp' }),
 	drawSeed: text('draw_seed'),
@@ -233,12 +239,12 @@ export const movieNights = sqliteTable('movie_nights', {
 	drawLog: text('draw_log', { mode: 'json' }).$type<unknown[]>(),
 	/**
 	 * When the scores were revealed: by the last "I'm in" member's
-	 * rating or by the owner. Set once, never cleared — a reveal cannot
+	 * rating or by the organizer or owner. Set once, never cleared — a reveal cannot
 	 * un-happen. A closed rating window also counts as revealed, derived on read.
 	 */
 	revealedAt: integer('revealed_at', { mode: 'timestamp' }),
 	/**
-	 * When the owner pressed "We watched it". NULL for nights marked before this
+	 * When the organizer or owner pressed "We watched it". NULL for nights marked before this
 	 * column existed, and for nights moved to watched by their first rating. An
 	 * early one opens the rating window and lifts the surprise at once:
 	 * watched means the night happened.

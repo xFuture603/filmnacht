@@ -82,32 +82,30 @@
 	</ul>
 {/snippet}
 
-{#if data.isOwner}
-	<section class="card mb-6 bg-base-100">
-		<div class="card-body">
-			<h2 class="card-title text-lg">{t(data.locale, 'nights.schedule')}</h2>
-			{#if form?.error}
-				<div class="alert alert-error alert-soft" role="alert">{t(data.locale, form.error)}</div>
-			{/if}
-			<form method="POST" action="?/schedule" class="flex flex-col gap-4">
-				<Scheduler
-					locale={data.locale}
-					timezone={data.timezone}
-					today={data.today}
-					initialMonth={data.month}
-					defaults={data.defaults}
-					usualTime={data.usualTime}
-					locationMax={data.locationMax}
-					echo={form ?? undefined}
-				/>
+<section class="card mb-6 bg-base-100">
+	<div class="card-body">
+		<h2 class="card-title text-lg">{t(data.locale, 'nights.schedule')}</h2>
+		{#if form?.error}
+			<div class="alert alert-error alert-soft" role="alert">{t(data.locale, form.error)}</div>
+		{/if}
+		<form method="POST" action="?/schedule" class="flex flex-col gap-4">
+			<Scheduler
+				locale={data.locale}
+				timezone={data.timezone}
+				today={data.today}
+				initialMonth={data.month}
+				defaults={data.defaults}
+				usualTime={data.usualTime}
+				locationMax={data.locationMax}
+				echo={form ?? undefined}
+			/>
 
-				<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start"
-					>{t(data.locale, 'nights.schedule')}</button
-				>
-			</form>
-		</div>
-	</section>
-{/if}
+			<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start"
+				>{t(data.locale, 'nights.schedule')}</button
+			>
+		</form>
+	</div>
+</section>
 
 {#if data.upcoming.length === 0 && data.past.length === 0}
 	<EmptyState icon={CalendarDays} text={t(data.locale, 'nights.none')} />

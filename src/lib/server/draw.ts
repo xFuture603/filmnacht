@@ -19,7 +19,7 @@ export type Candidate = {
 export type DrawLogEntry = {
 	at: string;
 	seed: number;
-	/** The owner who pressed Draw (R13), or `null` for the automatic scheduler. */
+	/** The organizer or owner who pressed Draw (R13), or `null` for the automatic scheduler. */
 	by: string | null;
 	mode: 'fairness' | 'uniform';
 	candidates: Array<{ userId: string; weight: number; suggestions: number }>;

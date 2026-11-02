@@ -49,6 +49,9 @@
 	title={data.night.when}
 	subtitle={data.night.location ?? undefined}
 	subtitleIcon={MapPin}
+	byline={data.night.organizerName
+		? t(data.locale, 'night.organized_by', { name: data.night.organizerName })
+		: t(data.locale, 'night.organized_by_former')}
 >
 	{#snippet action()}
 		<NightStatus status={data.night.status} locale={data.locale} />
@@ -205,7 +208,7 @@
 					{/if}
 				{/if}
 
-				{#if rateOpen && !rv.revealed && data.isOwner && rv.count > 0}
+				{#if rateOpen && !rv.revealed && data.canRun && rv.count > 0}
 					<form method="POST" action="?/reveal" class="mt-1 flex flex-col">
 						<ConfirmButton
 							armed={form?.confirm === 'reveal'}
@@ -292,10 +295,10 @@
 	</section>
 {/if}
 
-{#if data.isOwner && (data.night.status === 'scheduled' || data.night.status === 'drawn')}
+{#if data.canRun && (data.night.status === 'scheduled' || data.night.status === 'drawn')}
 	<section class={card}>
 		<div class="card-body">
-			<h2 class="card-title text-lg">{t(data.locale, 'night.owner')}</h2>
+			<h2 class="card-title text-lg">{t(data.locale, 'night.organizer')}</h2>
 
 			{#if data.night.status === 'scheduled'}
 				<!-- Hints above their buttons: read before pressing. -->

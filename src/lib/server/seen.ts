@@ -14,7 +14,6 @@ export type NewCounts = { pool: number; nights: number };
 function membership(db: DB, userId: string, groupId: string) {
 	const row = db
 		.select({
-			role: memberships.role,
 			joinedAt: memberships.joinedAt,
 			poolSeenAt: memberships.poolSeenAt,
 			nightsSeenAt: memberships.nightsSeenAt
@@ -53,8 +52,6 @@ function newIdsFor(db: DB, userId: string, groupId: string, m: Membership, tab: 
 			.all()
 			.map((row) => row.id);
 	}
-	// Only the owner schedules nights, so none of them is news to the owner.
-	if (m.role === 'owner') return [];
 	return db
 		.select({ id: movieNights.id })
 		.from(movieNights)
@@ -62,7 +59,10 @@ function newIdsFor(db: DB, userId: string, groupId: string, m: Membership, tab: 
 			and(
 				eq(movieNights.groupId, groupId),
 				ne(movieNights.status, 'cancelled'),
-				gt(movieNights.createdAt, m.nightsSeenAt ?? m.joinedAt)
+				gt(movieNights.createdAt, m.nightsSeenAt ?? m.joinedAt),
+				// A night is no news to whoever organized it. `!=` alone is NULL
+				// once the organizer's account is gone, which would drop it.
+				or(isNull(movieNights.organizerId), ne(movieNights.organizerId, userId))
 			)
 		)
 		.all()

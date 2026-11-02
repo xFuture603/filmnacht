@@ -4,11 +4,14 @@
 		title,
 		subtitle,
 		subtitleIcon: SubtitleIcon,
+		byline,
 		action
 	}: {
 		title: string;
 		subtitle?: string;
 		subtitleIcon?: Component;
+		/** A second quiet line under the subtitle, such as who organized a night. */
+		byline?: string;
 		action?: Snippet;
 	} = $props();
 </script>
@@ -27,6 +30,9 @@
 				{#if SubtitleIcon}<SubtitleIcon class="size-4 shrink-0" />{/if}
 				<span class="min-w-0 break-words">{subtitle}</span>
 			</p>
+		{/if}
+		{#if byline}
+			<p class="mt-1 text-sm break-words text-base-content/70">{byline}</p>
 		{/if}
 	</div>
 	{#if action}{@render action()}{/if}

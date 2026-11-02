@@ -2,7 +2,7 @@ import { t } from '$lib/i18n';
 import { db } from '$lib/server/db';
 import { notifyDraw } from '$lib/server/draw-mail';
 import { notifyNightCancelled } from '$lib/server/night-mail';
-import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
+import { requireMember, requireOrganizerOrOwner, requireUser } from '$lib/server/groups';
 import {
 	candidatesFor,
 	cancelNight,
@@ -34,11 +34,11 @@ function nightIn(groupId: string, nightId: string, viewerId: string) {
 	return night;
 }
 
-/** Owner of the URL's group, and the night is in it — in that order (auth first). */
-function ownerOf(locals: App.Locals, params: { groupId: string; nightId: string }) {
+/** The night is in the URL's group, and the viewer organized it or owns the group. */
+function runnerOf(locals: App.Locals, params: { groupId: string; nightId: string }) {
 	const user = requireUser(locals);
-	requireOwner(db, user.id, params.groupId);
-	nightIn(params.groupId, params.nightId, user.id);
+	const night = nightIn(params.groupId, params.nightId, user.id);
+	requireOrganizerOrOwner(db, user.id, params.groupId, night.organizerId);
 	return user;
 }
 
@@ -77,6 +77,8 @@ export const load: PageServerLoad = ({ locals, params }) => {
 		drawnBy,
 		drawnByFormer,
 		onlyCandidate,
+		// Who may run the night is decided here, not in the browser: no user ids in `data`.
+		organizerId,
 		...rest
 	} = night;
 	// A cancelled night keeps its suggestionId, but its film was released: show none.
@@ -90,7 +92,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 
 	return {
 		group,
-		isOwner: group.role === 'owner',
+		canRun: group.role === 'owner' || organizerId === user.id,
 		night: { ...rest, when: formatWhen(night.scheduledAt, timezone, locals.locale) },
 		film:
 			visible && hasFilm
@@ -128,7 +130,7 @@ export const actions: Actions = {
 	},
 
 	draw: ({ locals, params }) => {
-		const user = ownerOf(locals, params);
+		const user = runnerOf(locals, params);
 		const outcome = drawForNight(db, params.nightId, user.id);
 		if (!outcome.ok) return refused(outcome, 'night.error.not_scheduled');
 		notifyDraw(db, params.nightId);
@@ -136,7 +138,7 @@ export const actions: Actions = {
 	},
 
 	redraw: async ({ request, locals, params }) => {
-		const user = ownerOf(locals, params);
+		const user = runnerOf(locals, params);
 		// One re-draw per night, and it cannot be undone: a tick, not a reason.
 		if (!(await confirmed(request))) return fail(400, { confirm: 'redraw' });
 		const outcome = redraw(db, params.nightId, user.id);
@@ -146,7 +148,7 @@ export const actions: Actions = {
 	},
 
 	cancel: async ({ request, locals, params }) => {
-		const user = ownerOf(locals, params);
+		const user = runnerOf(locals, params);
 		if (!(await confirmed(request))) return fail(400, { confirm: 'cancel' });
 		// Nothing awaits after this line.
 		if (!cancelNight(db, params.nightId, user.id)) {
@@ -157,7 +159,7 @@ export const actions: Actions = {
 	},
 
 	markWatched: async ({ request, locals, params }) => {
-		const user = ownerOf(locals, params);
+		const user = runnerOf(locals, params);
 		if (!(await confirmed(request))) return fail(400, { confirm: 'markWatched' });
 		// Nothing awaits after this line.
 		if (!markWatched(db, params.nightId, user.id)) {
@@ -201,9 +203,9 @@ export const actions: Actions = {
 	},
 
 	reveal: async ({ request, locals, params }) => {
-		const user = ownerOf(locals, params);
+		const user = runnerOf(locals, params);
 		if (!(await confirmed(request))) return fail(400, { confirm: 'reveal' });
-		const outcome = revealNow(db, { nightId: params.nightId, ownerId: user.id, now: new Date() });
+		const outcome = revealNow(db, { nightId: params.nightId, userId: user.id, now: new Date() });
 		if (outcome === 'not_found') error(404, 'Not found');
 		if (outcome !== 'ok') return fail(400, { error: `ratings.error.${outcome}` });
 		return { revealed: true };

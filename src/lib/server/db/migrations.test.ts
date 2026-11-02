@@ -181,3 +181,37 @@ describe('migration 0003 (ratings), against a populated database', () => {
 		expect(() => sqlite.prepare("DELETE FROM users WHERE id = 'u1'").run()).toThrow(/FOREIGN KEY/);
 	});
 });
+
+describe('migration 0010 (night organizers), against a populated database', () => {
+	it("makes each group's owner the organizer of its existing nights, and clears it when that account goes", () => {
+		const file = tempDbFile();
+		const { sqlite, db } = createDb(file);
+		applyMigrations(db, migrationsFolderThrough(9));
+		sqlite.exec(`
+			INSERT INTO users (id, username, display_name, password_hash, login_token_hash, is_admin, created_at)
+				VALUES ('u1', 'ada', 'Ada', 'x', 'h1', 0, 0),
+				       ('u2', 'grace', 'Grace', 'x', 'h2', 0, 0);
+			INSERT INTO groups (id, name, owner_id, settings, created_at)
+				VALUES ('g1', 'A', 'u1', '{}', 0),
+				       ('g2', 'B', 'u2', '{}', 0);
+			INSERT INTO movie_nights (id, group_id, scheduled_at, status, created_at)
+				VALUES ('n1', 'g1', 0, 'watched', 0),
+				       ('n2', 'g2', 0, 'scheduled', 0);
+		`);
+
+		applyMigrations(db);
+
+		expect(sqlite.prepare('SELECT id, organizer_id FROM movie_nights ORDER BY id').all()).toEqual([
+			{ id: 'n1', organizer_id: 'u1' },
+			{ id: 'n2', organizer_id: 'u2' }
+		]);
+		// ON DELETE SET NULL, written by hand: drizzle-kit leaves it off an ADD COLUMN.
+		sqlite.exec(
+			"DELETE FROM groups WHERE id = 'g2'; INSERT INTO movie_nights (id, group_id, organizer_id, scheduled_at, status, created_at) VALUES ('n3', 'g1', 'u2', 0, 'scheduled', 0);"
+		);
+		sqlite.prepare("DELETE FROM users WHERE id = 'u2'").run();
+		expect(sqlite.prepare("SELECT organizer_id FROM movie_nights WHERE id = 'n3'").get()).toEqual({
+			organizer_id: null
+		});
+	});
+});

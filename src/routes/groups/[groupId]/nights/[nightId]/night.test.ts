@@ -152,7 +152,24 @@ describe('who may see a night', () => {
 });
 
 describe('who may act on a night', () => {
-	it('refuses every owner action to a member, with 403', async () => {
+	it('lets a member run the night they organized, and shows them its controls', async () => {
+		const own = scheduleNight(db, { groupId, userId: grace, scheduledAt: LATER, location: null });
+		const data = await view(grace, { groupId, nightId: own });
+		expect(data.canRun).toBe(true);
+		expect(data.night.organizerName).toBe('Grace');
+		// Who may act is decided on the server: no user ids in the payload.
+		expect(JSON.stringify(data)).not.toContain(grace);
+		const html = render(Page, {
+			props: { data: { ...data, locale: 'en' } as never, form: null }
+		}).body;
+		expect(html).toContain('Organized by Grace');
+		expect(html).toContain('Run this night');
+		expect(await post('cancel', grace, { confirm: 'on' }, { groupId, nightId: own })).toEqual({
+			cancelled: true
+		});
+	});
+
+	it('refuses every organizer action to another member, with 403', async () => {
 		for (const action of ['draw', 'redraw', 'cancel', 'markWatched'] as const) {
 			expect(await statusOf(() => post(action, grace, { reason: 'x' }))).toBe(403);
 		}

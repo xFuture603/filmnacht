@@ -11,7 +11,7 @@ import {
 	users,
 	type GroupSettings
 } from './db/schema';
-import { requireMember, requireOwner } from './groups';
+import { requireMember, requireOrganizerOrOwner } from './groups';
 import { groupSettings } from './group-settings';
 import { FORMER_MEMBER_USERNAME } from './members';
 
@@ -62,10 +62,14 @@ type NightRow = {
 	revealedAt: Date | null;
 };
 
-function nightRow(db: DB, nightId: string): NightRow | undefined {
+function nightRow(
+	db: DB,
+	nightId: string
+): (NightRow & { organizerId: string | null }) | undefined {
 	return db
 		.select({
 			groupId: movieNights.groupId,
+			organizerId: movieNights.organizerId,
 			status: movieNights.status,
 			scheduledAt: movieNights.scheduledAt,
 			watchedAt: movieNights.watchedAt,
@@ -231,11 +235,11 @@ export function withdrawRating(
 
 export function revealNow(
 	db: DB,
-	input: { nightId: string; ownerId: string; now: Date }
+	input: { nightId: string; userId: string; now: Date }
 ): 'ok' | 'not_found' | 'window' | 'no_ratings' | 'already' {
 	const night = nightRow(db, input.nightId);
 	if (!night) return 'not_found';
-	const { settings } = requireOwner(db, input.ownerId, night.groupId);
+	const { settings } = requireOrganizerOrOwner(db, input.userId, night.groupId, night.organizerId);
 	const window = ratingWindow(night, settings, input.now).state;
 	if (window !== 'open' && window !== 'closed') return 'window';
 	return db.transaction(() => {

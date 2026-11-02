@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
-import { requireMember, requireOwner, requireUser } from '$lib/server/groups';
+import { requireMember, requireUser } from '$lib/server/groups';
 import { notifyNightScheduled } from '$lib/server/night-mail';
-import { LOCATION_MAX, listNights, scheduleNight } from '$lib/server/nights';
+import { LOCATION_MAX, lastLocationOf, listNights, scheduleNight } from '$lib/server/nights';
 import { averagesFor } from '$lib/server/ratings';
 import { visit } from '$lib/server/seen';
 import { scheduleDefaults, todayIn } from '$lib/schedule';
@@ -20,8 +20,12 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 	const averages = averagesFor(db, params.groupId, group.settings, new Date());
 	// listNights is latest-first; what is coming reads better soonest-first.
 	const all = listNights(db, params.groupId);
-	// The latest night is the best guess for the next one: same weekday, time, place.
-	const defaults = scheduleDefaults(all[0] ?? null, timezone, new Date(now));
+	// The latest night is the best guess for the next one's weekday and time.
+	// The place is the viewer's own last one: whoever plans it may host it elsewhere.
+	const defaults = {
+		...scheduleDefaults(all[0] ?? null, timezone, new Date(now)),
+		location: lastLocationOf(db, params.groupId, user.id)
+	};
 	const today = todayIn(new Date(now), timezone);
 	const requested = /^\d{4}-(0[1-9]|1[0-2])$/.test(url.searchParams.get('month') ?? '')
 		? url.searchParams.get('month')
@@ -54,7 +58,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 export const actions: Actions = {
 	schedule: async ({ request, locals, params }) => {
 		const user = requireUser(locals);
-		requireOwner(db, user.id, params.groupId);
+		requireMember(db, user.id, params.groupId);
 		const form = await request.formData();
 		// Nothing below awaits: the checks and the insert run as one step.
 		const field = (name: string) => String(form.get(name) ?? '').trim();

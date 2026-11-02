@@ -137,7 +137,7 @@ function drawMailInfo(db: DB, nightId: string, now: Date) {
 }
 
 /**
- * Fires after a draw commits (owner or automatic). Scheduled with
+ * Fires after a draw commits (by a person or automatic). Scheduled with
  * `setTimeout(…, 0)`, exactly like the reset email, so no draw ever waits on
  * SMTP. Never throws: a bad row, a query error or `sendMail` breaking its own
  * "never throws" contract all end up as one logged count, never an address or
