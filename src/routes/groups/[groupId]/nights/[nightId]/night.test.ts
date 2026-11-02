@@ -278,6 +278,55 @@ describe('the draw hint', () => {
 	});
 });
 
+describe('the "Add to calendar" button', () => {
+	it('shows only for a night that is still ahead', async () => {
+		expect((await view(grace)).canAddToCalendar).toBe(true);
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() - 60_000) })
+			.where(eq(movieNights.id, nightId))
+			.run();
+		expect((await view(grace)).canAddToCalendar).toBe(false);
+	});
+
+	it('does not show for a cancelled night', async () => {
+		cancelNight(db, nightId, ada);
+		expect((await view(grace)).canAddToCalendar).toBe(false);
+	});
+});
+
+describe('the answer buttons', () => {
+	it('show until the night ends, and then only the answers stay', async () => {
+		await post('respond', grace, { response: 'yes' });
+		expect((await view(grace)).canAnswer).toBe(true);
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() - 4 * 60 * 60 * 1000) })
+			.where(eq(movieNights.id, nightId))
+			.run();
+		const data = await view(grace);
+		expect(data.canAnswer).toBe(false);
+		const html = render(Page, {
+			props: { data: { ...data, locale: 'en' } as never, form: null }
+		}).body;
+		expect(html).not.toContain('Are you coming?');
+		expect(html).toContain('Who was coming');
+	});
+
+	it('keeps the answers on a watched night, and no empty card without any', async () => {
+		db.update(movieNights)
+			.set({ scheduledAt: new Date(Date.now() - 4 * 60 * 60 * 1000) })
+			.where(eq(movieNights.id, nightId))
+			.run();
+		await post('markWatched', ada, { confirm: 'on' });
+		const html = async () =>
+			render(Page, {
+				props: { data: { ...(await view(grace)), locale: 'en' } as never, form: null }
+			}).body;
+		expect(await html()).not.toContain('Who was coming');
+		await post('respond', grace, { response: 'yes' });
+		expect(await html()).toContain('Who was coming');
+	});
+});
+
 describe('the answer buttons on narrow phones', () => {
 	// At 320px in German, "Ich bin dabei" wrapped to three lines and spilled out
 	// of a fixed-height button. They grow with their text.

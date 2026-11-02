@@ -106,6 +106,14 @@ export const load: PageServerLoad = ({ locals, params }) => {
 					}
 				: null,
 		filmHidden: !visible && hasFilm,
+		// "Are you coming?" is a question for before the night. Afterwards the
+		// answers stay listed, and a No changes through "I was there after all".
+		canAnswer:
+			(night.status === 'scheduled' || night.status === 'drawn') &&
+			now.getTime() < night.scheduledAt.getTime() + group.settings.nightEndsAfterMinutes * 60_000,
+		// Only a night still ahead belongs in a calendar.
+		canAddToCalendar:
+			(night.status === 'scheduled' || night.status === 'drawn') && night.scheduledAt > now,
 		// Draw is disabled, with the reason, when nothing can be drawn.
 		canDraw: candidatesFor(db, params.groupId).length > 0,
 		ratings,

@@ -30,18 +30,25 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 	const requested = /^\d{4}-(0[1-9]|1[0-2])$/.test(url.searchParams.get('month') ?? '')
 		? url.searchParams.get('month')
 		: null;
-	const nights = all.map((night) => ({
-		...night,
-		when: formatWhen(night.scheduledAt, timezone, locals.locale),
-		average: averages.get(night.id) ?? null,
-		isNew: newIds.has(night.id)
-	}));
+	// A cancelled night never happened: it is not part of the group's list.
+	// Its own page stays reachable for the cancellation email.
+	const nights = all
+		.filter((night) => night.status !== 'cancelled')
+		.map((night) => ({
+			...night,
+			when: formatWhen(night.scheduledAt, timezone, locals.locale),
+			average: averages.get(night.id) ?? null,
+			isNew: newIds.has(night.id)
+		}));
+	// A night marked watched early has happened, even if its date is still ahead.
+	const isPast = (n: (typeof nights)[number]) =>
+		n.status === 'watched' || n.scheduledAt.getTime() < now;
 	return {
 		group,
 		isOwner: group.role === 'owner',
 		newCounts: counts,
-		upcoming: nights.filter((n) => n.scheduledAt.getTime() >= now).reverse(),
-		past: nights.filter((n) => n.scheduledAt.getTime() < now),
+		upcoming: nights.filter((n) => !isPast(n)).reverse(),
+		past: nights.filter(isPast),
 		locationMax: LOCATION_MAX,
 		timezone,
 		defaults,

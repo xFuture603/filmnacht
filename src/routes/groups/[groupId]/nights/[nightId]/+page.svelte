@@ -58,7 +58,7 @@
 	{/snippet}
 </PageHeader>
 
-{#if data.night.status !== 'cancelled'}
+{#if data.canAddToCalendar}
 	<a
 		class="btn btn-outline mb-4 min-h-12 gap-1"
 		href="/groups/{data.group.groupId}/nights/{data.night.id}/calendar.ics"
@@ -269,14 +269,20 @@
 	</section>
 {/if}
 
-{#if data.night.status === 'scheduled' || data.night.status === 'drawn'}
+<!-- Before the night: the question and the answers so far. After it, watched
+     or not, just the answers, and only if there are any. -->
+{#if data.canAnswer || (data.night.status !== 'cancelled' && data.night.responses.length > 0)}
 	<section class={card}>
 		<div class="card-body">
-			<h2 class="card-title text-lg">{t(data.locale, 'night.responses')}</h2>
-			<p class="text-sm text-base-content/70">{t(data.locale, 'next.ask')}</p>
-			<form method="POST" action="?/respond">
-				<AnswerPicker current={data.night.myResponse} locale={data.locale} />
-			</form>
+			<h2 class="card-title text-lg">
+				{t(data.locale, data.canAnswer ? 'night.responses' : 'night.responses_after')}
+			</h2>
+			{#if data.canAnswer}
+				<p class="text-sm text-base-content/70">{t(data.locale, 'next.ask')}</p>
+				<form method="POST" action="?/respond">
+					<AnswerPicker current={data.night.myResponse} locale={data.locale} />
+				</form>
+			{/if}
 			{#if data.night.responses.length === 0}
 				<p class="text-sm text-base-content/70">{t(data.locale, 'night.no_responses')}</p>
 			{:else}

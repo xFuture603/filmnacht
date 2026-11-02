@@ -1,7 +1,8 @@
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { addMember, createGroup } from '$lib/server/groups';
-import { memberships } from '$lib/server/db/schema';
+import { memberships, movieNights } from '$lib/server/db/schema';
 import { listNights, scheduleNight } from '$lib/server/nights';
 import { setSetting } from '$lib/server/settings';
 import { createUser } from '$lib/server/users';
@@ -142,6 +143,23 @@ describe('the list', () => {
 		// A later night of Ada's without a place keeps her sofa as the suggestion.
 		await schedule(ada, { day: '2030-07-15', time: '21:00' });
 		expect(await defaults(ada)).toMatchObject({ location: "Ada's sofa" });
+	});
+
+	it('lists a night watched early under past, and a cancelled one nowhere', async () => {
+		await schedule(ada, { day: '2030-07-01', time: '20:00' });
+		await schedule(ada, { day: '2030-07-08', time: '20:00' });
+		await schedule(ada, { day: '2030-07-15', time: '20:00' });
+		const [off, later, early] = listNights(db, groupId);
+		db.update(movieNights).set({ status: 'watched' }).where(eq(movieNights.id, early.id)).run();
+		db.update(movieNights).set({ status: 'cancelled' }).where(eq(movieNights.id, off.id)).run();
+		const data = (await load({
+			params: { groupId },
+			locals: locals(grace),
+			url: new URL('http://x/')
+		} as never)) as Exclude<Awaited<ReturnType<typeof load>>, void>;
+		expect(data.upcoming.map((n: { id: string }) => n.id)).toEqual([later.id]);
+		expect(data.past.map((n: { id: string }) => n.id)).toEqual([early.id]);
+		expect(JSON.stringify(data)).not.toContain(off.id);
 	});
 
 	it('gives somebody outside the group a 404', async () => {

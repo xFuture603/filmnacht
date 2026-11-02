@@ -247,6 +247,7 @@
 	"night.film": "Der Film",
 	"night.hidden": "Der Film bleibt eine Überraschung, bis die Filmnacht beginnt.",
 	"night.responses": "Wer kommt",
+	"night.responses_after": "Wer kommen wollte",
 	"night.no_responses": "Noch hat niemand geantwortet",
 	"night.organizer": "Filmnacht leiten",
 	"night.organized_by": "Organisiert von {name}",

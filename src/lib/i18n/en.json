@@ -249,6 +249,7 @@
 	"night.film": "The film",
 	"night.hidden": "The film stays a surprise until the night starts.",
 	"night.responses": "Who's coming",
+	"night.responses_after": "Who was coming",
 	"night.no_responses": "Nobody has answered yet",
 	"night.organizer": "Run this night",
 	"night.organized_by": "Organized by {name}",
