@@ -86,7 +86,7 @@
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
 {/if}
 
-{#each data.toRate as night, i (night.id)}
+{#each data.toRate as night (night.id)}
 	<section class="card mb-4 bg-base-100">
 		<div class="card-body flex-row flex-wrap items-center gap-4">
 			<span
@@ -102,8 +102,12 @@
 					{t(data.locale, 'rate.before', { day: night.closes })}
 				</p>
 			</div>
+			<!-- Several due ratings weigh the same: none of them is the primary action. -->
 			<a
-				class={['btn min-h-12 w-full sm:w-auto', i === 0 ? 'btn-primary' : 'btn-outline']}
+				class={[
+					'btn min-h-12 w-full sm:w-auto',
+					data.toRate.length === 1 ? 'btn-primary' : 'btn-outline'
+				]}
 				href="/groups/{data.group.groupId}/nights/{night.id}">{t(data.locale, 'rate.now')}</a
 			>
 		</div>
