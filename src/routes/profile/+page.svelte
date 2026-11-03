@@ -1,20 +1,31 @@
 <script lang="ts">
-	import CopyField from '$lib/components/CopyField.svelte';
-	import RequiredNote from '$lib/components/RequiredNote.svelte';
+	import { enhance } from '$app/forms';
 	import { t } from '$lib/i18n';
 	import Toast from '$lib/components/Toast.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import Field from '$lib/components/Field.svelte';
 	import LocaleSelect from '$lib/components/LocaleSelect.svelte';
+	import { ChevronRight } from '@lucide/svelte';
+	import { footer, group, header, link, row } from '$lib/grouped-list';
 	let { data, form } = $props();
 
-	const card = 'card mb-4 bg-base-100';
-	// Several equal forms on one page: secondary buttons, no single primary.
-	const submit = 'btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start';
+	// Each row that edits something opens its own page with one button.
+	const rows = $derived([
+		{
+			href: '/profile/name',
+			label: t(data.locale, 'profile.display_name_heading'),
+			value: data.displayName
+		},
+		{
+			href: '/profile/email',
+			label: t(data.locale, 'profile.email'),
+			value: data.email ?? t(data.locale, 'profile.email_none')
+		},
+		{ href: '/profile/password', label: t(data.locale, 'auth.password') },
+		{ href: '/profile/login-link', label: t(data.locale, 'profile.login_link') }
+	]);
 </script>
 
 <PageHeader title={t(data.locale, 'profile.title')} />
-<div class="mb-4"><RequiredNote locale={data.locale} /></div>
 
 {#if form?.error}
 	<div class="alert alert-error alert-soft mb-4" role="alert">{t(data.locale, form.error)}</div>
@@ -23,170 +34,87 @@
 	{#if form?.success}<Toast message={t(data.locale, form.success)} locale={data.locale} />{/if}
 {/key}
 
-<section class={card}>
-	<div class="card-body gap-1">
-		<h2 class="card-title text-lg">{t(data.locale, 'auth.username')}</h2>
-		<p class="font-mono">{data.username}</p>
-		<p class="text-sm text-base-content/70">{t(data.locale, 'profile.username_fixed')}</p>
+<!-- Who you are, before what you can change. -->
+<div class="mb-8 flex items-center gap-4 px-4">
+	<span
+		class="grid size-16 shrink-0 place-items-center rounded-full bg-neutral text-2xl font-bold text-neutral-content"
+		aria-hidden="true">{data.displayName.slice(0, 1).toUpperCase()}</span
+	>
+	<div class="min-w-0">
+		<p class="text-xl font-bold break-words">{data.displayName}</p>
+		<p class="text-sm break-words text-base-content/70">
+			{t(data.locale, 'profile.signs_in_as', { username: data.username })}
+		</p>
 	</div>
+</div>
+
+<section class="mb-8" aria-labelledby="profile-account">
+	<h2 id="profile-account" class={header}>{t(data.locale, 'profile.account')}</h2>
+	<ul class={group}>
+		{#each rows as r (r.href)}
+			<li>
+				<a href={r.href} class={link}>
+					<span class="shrink-0">{r.label}</span>
+					<span class="ms-auto min-w-0 truncate text-base-content/70">{r.value ?? ''}</span>
+					<ChevronRight class="size-4 shrink-0 text-base-content/50" strokeWidth={2.5} />
+				</a>
+			</li>
+		{/each}
+	</ul>
 </section>
 
-<section class={card}>
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'profile.display_name_heading')}</h2>
-		<form method="POST" action="?/changeDisplayName" class="flex flex-col gap-2">
-			<Field
-				label={t(data.locale, 'auth.display_name')}
-				hint={t(data.locale, 'auth.display_name_hint')}
-			>
+<section class="mb-8" aria-labelledby="profile-emails">
+	<h2 id="profile-emails" class={header}>{t(data.locale, 'profile.emails')}</h2>
+	<!-- A switch applies when flipped, as in iOS; the button is only there
+	     without JavaScript. reset: false keeps the switches as they were set. -->
+	<form
+		method="POST"
+		action="?/setMailPrefs"
+		use:enhance={() =>
+			({ update }) =>
+				update({ reset: false })}
+	>
+		<div class={group}>
+			<label class="{row} cursor-pointer">
+				<span class="min-w-0 flex-1">{t(data.locale, 'profile.rating_mails')}</span>
 				<input
-					name="displayName"
-					required
-					maxlength="60"
-					autocomplete="nickname"
-					value={data.displayName}
-					class="input min-h-12 w-full"
+					type="checkbox"
+					name="ratingMails"
+					checked={data.ratingMails}
+					onchange={(e) => e.currentTarget.form?.requestSubmit()}
+					class="toggle shrink-0"
 				/>
-			</Field>
-			<button class={submit}>{t(data.locale, 'profile.save_display_name')}</button>
-		</form>
-	</div>
-</section>
-
-<section class={card}>
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'profile.email')}</h2>
-		<form method="POST" action="?/setEmail" class="flex flex-col gap-2">
-			<Field
-				label={t(data.locale, 'profile.email_label')}
-				hint={t(data.locale, 'profile.email_hint')}
-			>
-				<!-- Not required: leaving it empty is how you clear it. -->
-				<input
-					name="email"
-					type="email"
-					maxlength="254"
-					autocomplete="email"
-					value={data.email ?? ''}
-					class="input min-h-12 w-full"
-				/>
-			</Field>
-			<button class={submit}>{t(data.locale, 'profile.save_email')}</button>
-		</form>
-		<form method="POST" action="?/setMailPrefs" class="mt-4 flex flex-col gap-1">
-			<label class="flex min-h-12 cursor-pointer items-center gap-3">
-				<input type="checkbox" name="ratingMails" checked={data.ratingMails} class="toggle" />
-				<span>{t(data.locale, 'profile.rating_mails')}</span>
 			</label>
-			<label class="flex min-h-12 cursor-pointer items-center gap-3">
-				<input type="checkbox" name="nightMails" checked={data.nightMails} class="toggle" />
-				<span>{t(data.locale, 'profile.night_mails')}</span>
+			<label class="{row} cursor-pointer">
+				<span class="min-w-0 flex-1">{t(data.locale, 'profile.night_mails')}</span>
+				<input
+					type="checkbox"
+					name="nightMails"
+					checked={data.nightMails}
+					onchange={(e) => e.currentTarget.form?.requestSubmit()}
+					class="toggle shrink-0"
+				/>
 			</label>
-			<p class="text-sm text-base-content/70">{t(data.locale, 'profile.mail_prefs_hint')}</p>
-			<button class={submit}>{t(data.locale, 'profile.save_mail_prefs')}</button>
-		</form>
-	</div>
-</section>
-
-<section class={card}>
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'profile.change_password')}</h2>
-		<form method="POST" action="?/changePassword" class="flex flex-col gap-2">
-			<Field label={t(data.locale, 'profile.current_password')}>
-				<!-- No minlength: an account may predate a bound change, and a client-side
-				     rule that disagrees with the server only ever locks someone out. -->
-				<input
-					name="currentPassword"
-					type="password"
-					required
-					autocomplete="current-password"
-					class="input min-h-12 w-full"
-				/>
-			</Field>
-			<Field
-				label={t(data.locale, 'profile.new_password')}
-				hint={t(data.locale, 'auth.password_hint')}
+		</div>
+		<p class={footer}>{t(data.locale, 'profile.mail_prefs_hint')}</p>
+		<noscript>
+			<button class="btn btn-outline mt-2 min-h-12"
+				>{t(data.locale, 'profile.save_mail_prefs')}</button
 			>
-				<input
-					name="newPassword"
-					type="password"
-					required
-					minlength="8"
-					maxlength="200"
-					autocomplete="new-password"
-					class="input min-h-12 w-full"
-				/>
-			</Field>
-			<Field label={t(data.locale, 'auth.password_repeat')}>
-				<input
-					name="passwordRepeat"
-					type="password"
-					required
-					minlength="8"
-					maxlength="200"
-					autocomplete="new-password"
-					class="input min-h-12 w-full"
-				/>
-			</Field>
-			<button class={submit}>{t(data.locale, 'profile.change_password')}</button>
-		</form>
-	</div>
-</section>
-
-<section class={card}>
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'profile.login_link')}</h2>
-		<p class="text-sm">{t(data.locale, 'profile.login_link_hint')}</p>
-		<p class="text-sm text-base-content/70">{t(data.locale, 'profile.reveal_warning')}</p>
-
-		<form method="POST" action="?/reveal" class="flex flex-col gap-2">
-			<Field label={t(data.locale, 'profile.current_password')}>
-				<!-- Same proof changePassword demands, and for a stronger credential: the
-				     link is permanent, reusable, and outlives logout and session expiry.
-				     aria-label rather than the bare visible text, because this page now has
-				     two "Current password" inputs and repeated controls need distinct
-				     accessible names. No minlength, for the same reason as changePassword. -->
-				<input
-					name="currentPassword"
-					type="password"
-					required
-					autocomplete="current-password"
-					aria-label={t(data.locale, 'profile.reveal_password')}
-					class="input min-h-12 w-full"
-				/>
-			</Field>
-			<button class="btn btn-outline mt-2 min-h-12 w-full sm:w-auto sm:self-start"
-				>{t(data.locale, 'profile.reveal')}</button
-			>
-		</form>
-
-		{#if form?.loginUrl}
-			<p class="mt-4 text-sm font-bold">{t(data.locale, 'profile.login_link')}</p>
-			<CopyField
-				value={form.loginUrl}
-				label={t(data.locale, 'profile.login_link')}
-				copyLabel={t(data.locale, 'common.copy')}
-				copiedLabel={t(data.locale, 'common.copied')}
-			/>
-		{/if}
-	</div>
+		</noscript>
+	</form>
 </section>
 
 <!-- Phones only: the top bar carries the language select from md upwards. -->
-<section class="{card} md:hidden">
-	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'nav.language')}</h2>
-		<LocaleSelect locale={data.locale} pathname="/profile" />
+<section class="mb-8 md:hidden" aria-label={t(data.locale, 'nav.language')}>
+	<div class="{row} rounded-box bg-base-100 py-1">
+		<span>{t(data.locale, 'nav.language')}</span>
+		<LocaleSelect locale={data.locale} pathname="/profile" class="ms-auto" />
 	</div>
 </section>
 
-<!-- In a card like everything above, so its button lines up with theirs. -->
-<section class={card}>
-	<div class="card-body">
-		<form method="POST" action="/logout">
-			<button class="btn btn-outline min-h-12 w-full sm:w-auto"
-				>{t(data.locale, 'profile.logout')}</button
-			>
-		</form>
-	</div>
-</section>
+<form method="POST" action="/logout" class="mb-8">
+	<button class="{link} justify-center rounded-box bg-base-100 font-bold text-error"
+		>{t(data.locale, 'profile.logout')}</button
+	>
+</form>
