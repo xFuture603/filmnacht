@@ -45,7 +45,8 @@
 
 <section class="card bg-base-100">
 	<div class="card-body">
-		<h2 class="card-title text-lg">{t(data.locale, 'settings.title')}</h2>
+		<!-- The tab above already says Settings: the heading stays for screen readers only. -->
+		<h2 class="sr-only">{t(data.locale, 'settings.title')}</h2>
 		<form method="POST" action="?/save" class="flex flex-col gap-4">
 			<div class="flex flex-col gap-1">
 				<!-- Not wrapped in Field: Field's own label would sit around this one,
