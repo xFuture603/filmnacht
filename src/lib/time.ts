@@ -82,6 +82,17 @@ export function formatDay(at: Date, timeZone: string, locale: Locale): string {
 	}).format(at);
 }
 
+/** A day in the group's history ("Mon 2 Nov 2026"): the year, but no time. */
+export function formatHistoryDay(at: Date, timeZone: string, locale: Locale): string {
+	return new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'en-GB', {
+		timeZone,
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric'
+	}).format(at);
+}
+
 /** The instance's wall clock at `at`: calendar date "YYYY-MM-DD" and time "HH:MM". */
 export function wallParts(at: Date, timeZone: string): { date: string; time: string } {
 	const p = Object.fromEntries(

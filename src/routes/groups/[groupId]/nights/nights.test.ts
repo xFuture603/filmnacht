@@ -2,8 +2,9 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { addMember, createGroup } from '$lib/server/groups';
-import { memberships, movieNights } from '$lib/server/db/schema';
-import { listNights, scheduleNight } from '$lib/server/nights';
+import { DEFAULT_GROUP_SETTINGS, groups, memberships, movieNights } from '$lib/server/db/schema';
+import { drawForNight, listNights, scheduleNight } from '$lib/server/nights';
+import { addSuggestion } from '$lib/server/suggestions';
 import { setSetting } from '$lib/server/settings';
 import { createUser } from '$lib/server/users';
 
@@ -18,7 +19,9 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-const { load, actions } = await import('./+page.server');
+const { load } = await import('./+page.server');
+// Scheduling has its own page, like adding a film.
+const { load: planLoad, actions } = await import('./new/+page.server');
 
 function locals(userId: string) {
 	return { user: { id: userId, displayName: 'x', isAdmin: false }, locale: 'en' as const };
@@ -72,6 +75,21 @@ describe('scheduling from the form', () => {
 		expect(listNights(db, groupId)).toHaveLength(0);
 	});
 
+	it('takes a time typed with a dot or without one, and refuses one that is not', async () => {
+		expect(await schedule(ada, { day: '2030-07-01', time: '19.45' })).toMatchObject({
+			status: 303
+		});
+		expect(await schedule(ada, { day: '2030-07-02', time: '1945' })).toMatchObject({ status: 303 });
+		expect(listNights(db, groupId).map((n) => n.scheduledAt.toISOString())).toEqual([
+			'2030-07-02T17:45:00.000Z',
+			'2030-07-01T17:45:00.000Z'
+		]);
+		expect(await schedule(ada, { day: '2030-07-03', time: '25:00' })).toMatchObject({
+			status: 400,
+			data: { error: 'nights.error.time', time: '25:00' }
+		});
+	});
+
 	it('asks for a day when none was picked', async () => {
 		expect(await schedule(ada, { time: '20:00' })).toMatchObject({
 			status: 400,
@@ -87,26 +105,6 @@ describe('scheduling from the form', () => {
 	});
 });
 
-describe('the calendar month', () => {
-	function month(value: string) {
-		return load({
-			params: { groupId },
-			locals: locals(ada),
-			url: new URL(`http://x/?month=${value}`)
-		} as never) as Promise<{ month: string; today: string }>;
-	}
-
-	it('opens the month asked for', async () => {
-		expect((await month('2031-03')).month).toBe('2031-03');
-	});
-
-	it('never opens a month before this one, nor a malformed one', async () => {
-		const { today } = await month('2001-01');
-		expect((await month('2001-01')).month).toBe(today.slice(0, 7));
-		expect((await month('garbage')).month).toBe(today.slice(0, 7));
-	});
-});
-
 describe('the list', () => {
 	it('shows members the group’s nights, formatted in the instance timezone', async () => {
 		await schedule(ada, { day: '2030-07-01', time: '20:00' });
@@ -118,22 +116,31 @@ describe('the list', () => {
 		expect(data.upcoming).toHaveLength(1);
 		expect(data.upcoming[0].when).toContain('20:00');
 		expect(data.isOwner).toBe(false);
+	});
+
+	it('suggests the last night’s time on the schedule page, never a day before today', async () => {
+		await schedule(ada, { day: '2030-07-01', time: '20:00' });
+		const data = (await planLoad({
+			params: { groupId },
+			locals: locals(grace),
+			url: new URL('http://x/')
+		} as never)) as Exclude<Awaited<ReturnType<typeof planLoad>>, void>;
 		// The last night was 1 July 2030, a Monday at 20:00: the form suggests
 		// the same time next time.
 		expect(data.defaults).toMatchObject({ time: '20:00' });
-		// The calendar opens on the suggested day's month.
-		expect(data.month).toBe(data.defaults.day?.slice(0, 7));
-		expect(data.timezone).toBe('Europe/Berlin');
+		// The date field's lower bound is the instance's today.
+		expect(data.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(data.defaults.day! >= data.today).toBe(true);
 	});
 
 	it('suggests the group’s usual time, but only the viewer’s own place', async () => {
 		const defaults = async (userId: string) =>
 			(
-				(await load({
+				(await planLoad({
 					params: { groupId },
 					locals: locals(userId),
 					url: new URL('http://x/')
-				} as never)) as Exclude<Awaited<ReturnType<typeof load>>, void>
+				} as never)) as Exclude<Awaited<ReturnType<typeof planLoad>>, void>
 			).defaults;
 		await schedule(ada, { day: '2030-07-01', time: '20:00', location: "Ada's sofa" });
 		expect(await defaults(ada)).toMatchObject({ time: '20:00', location: "Ada's sofa" });
@@ -160,6 +167,40 @@ describe('the list', () => {
 		expect(data.upcoming.map((n: { id: string }) => n.id)).toEqual([later.id]);
 		expect(data.past.map((n: { id: string }) => n.id)).toEqual([early.id]);
 		expect(JSON.stringify(data)).not.toContain(off.id);
+	});
+
+	it('names the drawn film, unless the group keeps it a surprise', async () => {
+		addSuggestion(db, {
+			groupId,
+			userId: ada,
+			movie: { title: 'Dune' },
+			settings: DEFAULT_GROUP_SETTINGS
+		});
+		const id = scheduleNight(db, {
+			groupId,
+			userId: ada,
+			scheduledAt: new Date(Date.now() + 86_400_000),
+			location: null
+		});
+		drawForNight(db, id, ada);
+		const list = async () =>
+			(await load({
+				params: { groupId },
+				locals: locals(grace),
+				url: new URL('http://x/')
+			} as never)) as Exclude<Awaited<ReturnType<typeof load>>, void>;
+		expect((await list()).upcoming[0]).toMatchObject({
+			film: { title: 'Dune' },
+			filmHidden: false
+		});
+		db.update(groups)
+			.set({ settings: { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' } })
+			.where(eq(groups.id, groupId))
+			.run();
+		const data = await list();
+		expect(data.upcoming[0]).toMatchObject({ film: null, filmHidden: true });
+		// Withheld from the payload, not just from the markup.
+		expect(JSON.stringify(data)).not.toContain('Dune');
 	});
 
 	it('gives somebody outside the group a 404', async () => {

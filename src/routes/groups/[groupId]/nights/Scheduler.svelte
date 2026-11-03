@@ -1,156 +1,102 @@
 <script lang="ts">
-	import { ChevronLeft, ChevronRight } from '@lucide/svelte';
-	import Field from '$lib/components/Field.svelte';
+	import { Clock } from '@lucide/svelte';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { t, type Locale } from '$lib/i18n';
-	import {
-		dayLabel,
-		monthGrid,
-		monthTitle,
-		shiftMonth,
-		timeSlots,
-		weekdayNames
-	} from '$lib/schedule';
 
 	let {
 		locale,
-		timezone,
 		today,
-		initialMonth,
 		defaults,
-		usualTime,
 		locationMax,
 		echo
 	}: {
 		locale: Locale;
-		timezone: string;
 		today: string;
-		initialMonth: string;
 		defaults: { day: string | null; time: string; location: string };
-		usualTime: string | null;
 		locationMax: number;
 		echo: { day?: string; time?: string; location?: string } | undefined;
 	} = $props();
 
-	// Overridable deriveds: they follow the server's data (a failed submit
-	// echoes the member's choice back) and their taps overwrite them.
-	let month = $derived(initialMonth);
-	let day = $derived(echo?.day ?? defaults.day ?? '');
-	let time = $derived(echo?.time ?? defaults.time);
+	// Laid out like a new event in Apple's Calendar: label left, value right,
+	// the suggestions already filled in. On a touch screen the fields are the
+	// device's own pickers (calendar sheet, time wheel), which explain
+	// themselves. With a mouse the same native fields are split into small
+	// segments that hide how to change them, so there the rows show outlined
+	// fields, the whole Day field opens the calendar, and the time is plain
+	// text that is selected on click and typed over.
+	// Rendered for touch first (false on the server), then switched.
+	const mouse = new MediaQuery('(pointer: fine)', false);
 
-	// The slot list drops times as they pass, so the clock has to tick.
-	let now = $state(new Date());
-	$effect(() => {
-		const id = setInterval(() => (now = new Date()), 60_000);
-		return () => clearInterval(id);
-	});
+	const row = 'flex min-h-12 items-center gap-3 px-4 py-2 sm:px-6';
+	const field = $derived([
+		'min-h-11 min-w-0 flex-1 rounded-field tabular-nums',
+		'placeholder:text-base-content/70 focus-visible:outline-2 focus-visible:outline-base-content',
+		mouse.current
+			? 'h-11 max-w-64 border border-base-content/20 bg-base-100 px-3 transition-colors hover:border-base-content/50'
+			: // Borderless, like a value in a grouped list. WebKit centres the
+				// date and time on their own; keep them with the other values.
+				'-me-2 bg-transparent px-2 text-end [&::-webkit-date-and-time-value]:text-end'
+	]);
 
-	const weeks = $derived(monthGrid(month, today));
-	const slots = $derived(day ? timeSlots(day, now, timezone, usualTime) : []);
-	// Keep the chosen time when it is still offered, else the next later one.
-	const chosen = $derived(
-		slots.includes(time) ? time : (slots.find((s) => s > time) ?? slots[0] ?? '')
-	);
-	const canGoBack = $derived(month > today.slice(0, 7));
-
-	function go(event: MouseEvent, delta: number) {
-		// Without JavaScript the links reload the page on ?month=; with it, the
-		// calendar just turns.
-		event.preventDefault();
-		month = shiftMonth(month, delta);
+	function openPicker(event: MouseEvent) {
+		// Anywhere on the field, not only on the browser's small icon.
+		try {
+			(event.currentTarget as HTMLInputElement).showPicker();
+		} catch {
+			// Older browsers: the field still takes typing.
+		}
 	}
 </script>
 
-<fieldset class="flex flex-col gap-2">
-	<legend class="mb-2 text-sm font-bold">{t(locale, 'nights.day')}</legend>
-
-	<div class="flex items-center justify-between sm:max-w-md">
-		{#if canGoBack}
-			<a
-				href="?month={shiftMonth(month, -1)}"
-				class="btn btn-ghost btn-square size-12 min-h-12"
-				aria-label={t(locale, 'nights.prev_month')}
-				onclick={(e) => go(e, -1)}><ChevronLeft class="size-5" /></a
-			>
-		{:else}
-			<span class="size-11" aria-hidden="true"></span>
-		{/if}
-		<p class="font-bold" aria-live="polite">{monthTitle(month, locale)}</p>
-		<a
-			href="?month={shiftMonth(month, 1)}"
-			class="btn btn-ghost btn-square size-12 min-h-12"
-			aria-label={t(locale, 'nights.next_month')}
-			onclick={(e) => go(e, 1)}><ChevronRight class="size-5" /></a
-		>
-	</div>
-
-	<div class="grid grid-cols-7 gap-1 text-center sm:max-w-md">
-		{#each weekdayNames(locale) as name (name)}
-			<span class="pb-1 text-sm text-base-content/60" aria-hidden="true">{name}</span>
-		{/each}
-		{#each weeks.flat() as cell, i (cell?.date ?? `blank-${i}`)}
-			{#if cell}
-				<label class="relative">
-					<input
-						type="radio"
-						name="day"
-						value={cell.date}
-						aria-label={dayLabel(cell.date, locale)}
-						checked={cell.date === day}
-						disabled={cell.past}
-						onchange={() => (day = cell.date)}
-						class="peer sr-only"
-					/>
-					<span
-						class={[
-							'btn btn-ghost min-h-12 w-full rounded-xl px-0 tabular-nums',
-							// A fill with dark ink, never amber text: btn-ghost would override
-							// btn-primary's background and leave amber text on white.
-							'peer-checked:bg-primary peer-checked:text-primary-content peer-checked:hover:bg-primary',
-							'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2',
-							'peer-disabled:pointer-events-none peer-disabled:text-base-content/25',
-							cell.today && 'ring-1 ring-base-content/30'
-						]}>{cell.day}</span
-					>
-				</label>
-			{:else}
-				<span aria-hidden="true"></span>
-			{/if}
-		{/each}
-	</div>
-	<!-- A day chosen in another month is not in this grid, so it rides along. -->
-	{#if day && !day.startsWith(month)}
-		<input type="hidden" name="day" value={day} />
-	{/if}
-</fieldset>
-
-<fieldset class="flex flex-col gap-2">
-	<legend class="mb-2 text-sm font-bold">{t(locale, 'nights.time')}</legend>
-	{#if day && slots.length === 0}
-		<p class="text-sm text-base-content/70">{t(locale, 'nights.no_times')}</p>
+<div class="divide-y divide-base-content/10 overflow-hidden rounded-box bg-base-100">
+	<label class={row}>
+		<span class="shrink-0 font-bold">{t(locale, 'nights.day')}</span>
+		<input
+			type="date"
+			name="day"
+			required
+			min={today}
+			value={echo?.day ?? defaults.day ?? ''}
+			onclick={mouse.current ? openPicker : undefined}
+			class={[field, mouse.current && 'ms-auto cursor-pointer']}
+		/>
+	</label>
+	{#if mouse.current}
+		<label class={row}>
+			<span class="shrink-0 font-bold">{t(locale, 'nights.time')}</span>
+			<span class="relative ms-auto flex min-w-0 flex-1 max-w-64">
+				<input
+					name="time"
+					required
+					inputmode="numeric"
+					autocomplete="off"
+					pattern="([01]?[0-9]|2[0-3])[:.]?[0-5][0-9]"
+					// The browser shows this when the pattern is not met.
+					title={t(locale, 'nights.time_hint')}
+					value={echo?.time ?? defaults.time}
+					onfocus={(e) => e.currentTarget.select()}
+					onmouseup={(e) => e.preventDefault()}
+					class={[field, 'w-full pe-10']}
+				/>
+				<Clock
+					class="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-base-content/70"
+				/>
+			</span>
+		</label>
 	{:else}
-		<!-- Conventional radios: the circle says "pick one". -->
-		<div class="grid grid-cols-3 gap-x-4 sm:grid-cols-5">
-			{#each slots as slot (slot)}
-				<label class="flex min-h-12 cursor-pointer items-center gap-2 tabular-nums">
-					<input
-						type="radio"
-						class="radio"
-						name="time"
-						value={slot}
-						checked={slot === chosen}
-						onchange={() => (time = slot)}
-					/>{slot}
-				</label>
-			{/each}
-		</div>
+		<label class={row}>
+			<span class="shrink-0 font-bold">{t(locale, 'nights.time')}</span>
+			<input type="time" name="time" required value={echo?.time ?? defaults.time} class={field} />
+		</label>
 	{/if}
-</fieldset>
-
-<Field label={t(locale, 'nights.where')}>
-	<input
-		name="location"
-		maxlength={locationMax}
-		value={echo?.location ?? defaults.location}
-		class="input min-h-12 w-full"
-	/>
-</Field>
+	<label class={row}>
+		<span class="shrink-0 font-bold">{t(locale, 'nights.location')}</span>
+		<input
+			name="location"
+			maxlength={locationMax}
+			value={echo?.location ?? defaults.location}
+			placeholder={t(locale, 'nights.optional')}
+			class={[field, mouse.current && 'ms-auto']}
+		/>
+	</label>
+</div>

@@ -167,7 +167,11 @@ export function lastLocationOf(db: DB, groupId: string, userId: string): string 
 	return row?.location ?? '';
 }
 
-export function listNights(db: DB, groupId: string): NightSummary[] {
+/** The drawn film comes along unchecked: callers ask `isResultVisible` before showing it. */
+export function listNights(
+	db: DB,
+	groupId: string
+): (NightSummary & { title: string | null; posterUrl: string | null })[] {
 	return db
 		.select({
 			id: movieNights.id,
@@ -176,9 +180,13 @@ export function listNights(db: DB, groupId: string): NightSummary[] {
 			status: movieNights.status,
 			yes: responseCount('yes'),
 			no: responseCount('no'),
-			maybe: responseCount('maybe')
+			maybe: responseCount('maybe'),
+			title: movies.title,
+			posterUrl: movies.posterUrl
 		})
 		.from(movieNights)
+		.leftJoin(suggestions, eq(suggestions.id, movieNights.suggestionId))
+		.leftJoin(movies, eq(movies.id, suggestions.movieId))
 		.where(eq(movieNights.groupId, groupId))
 		.orderBy(desc(movieNights.scheduledAt))
 		.all();
