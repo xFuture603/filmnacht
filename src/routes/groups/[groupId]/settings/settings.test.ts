@@ -1,3 +1,4 @@
+import { DEFAULT_GROUP_SETTINGS } from '$lib/server/db/schema';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, createDb, type DB } from '$lib/server/db/client';
 import { addMember, createGroup, listGroupsFor, requireMember } from '$lib/server/groups';
@@ -69,7 +70,7 @@ describe('POST /groups/:id/settings ?/save', () => {
 			autoDrawHoursBefore: '6',
 			surprise: 'on',
 			maxOpenSuggestions: '5',
-			nightEndsAfterMinutes: '240',
+			nightEndsAfterHours: '4',
 			ratingWindowDays: '14'
 			// fairDraw left unchecked
 		});
@@ -89,7 +90,7 @@ describe('POST /groups/:id/settings ?/save', () => {
 		await post(ada, {
 			autoDrawHoursBefore: '2',
 			maxOpenSuggestions: '1',
-			nightEndsAfterMinutes: '120',
+			nightEndsAfterHours: '2',
 			ratingWindowDays: '3'
 			// autoDraw, surprise, fairDraw all absent
 		});
@@ -100,16 +101,41 @@ describe('POST /groups/:id/settings ?/save', () => {
 		});
 	});
 
-	it('refuses a value outside the offered choices, and saves nothing', async () => {
+	it('takes any whole number inside a range, the night’s length kept in minutes', async () => {
 		expect(
 			await post(ada, {
-				autoDrawHoursBefore: '24',
-				maxOpenSuggestions: '99',
-				nightEndsAfterMinutes: '180',
-				ratingWindowDays: '7'
+				autoDrawHoursBefore: '36',
+				maxOpenSuggestions: '3',
+				nightEndsAfterHours: '5',
+				ratingWindowDays: '30'
 			})
-		).toMatchObject({ status: 400, data: { error: 'settings.error.invalid' } });
-		expect(requireMember(db, ada, groupId).settings).toMatchObject({ maxOpenSuggestions: 3 });
+		).toEqual({ saved: true });
+		expect(requireMember(db, ada, groupId).settings).toMatchObject({
+			autoDrawHoursBefore: 36,
+			nightEndsAfterMinutes: 300,
+			ratingWindowDays: 30
+		});
+	});
+
+	it('refuses a number outside its range, a fraction or an empty field, and saves nothing', async () => {
+		const fields = {
+			autoDrawHoursBefore: '24',
+			maxOpenSuggestions: '3',
+			nightEndsAfterHours: '3',
+			ratingWindowDays: '7'
+		};
+		for (const bad of [
+			{ maxOpenSuggestions: '99' },
+			{ autoDrawHoursBefore: '0' },
+			{ nightEndsAfterHours: '2.5' },
+			{ ratingWindowDays: '' }
+		]) {
+			expect(await post(ada, { ...fields, ...bad })).toMatchObject({
+				status: 400,
+				data: { error: 'settings.error.invalid' }
+			});
+		}
+		expect(requireMember(db, ada, groupId).settings).toEqual(DEFAULT_GROUP_SETTINGS);
 	});
 
 	it('refuses automatic draw when mail is not configured, and saves nothing', async () => {
@@ -119,7 +145,7 @@ describe('POST /groups/:id/settings ?/save', () => {
 				autoDraw: 'on',
 				autoDrawHoursBefore: '24',
 				maxOpenSuggestions: '3',
-				nightEndsAfterMinutes: '180',
+				nightEndsAfterHours: '3',
 				ratingWindowDays: '7'
 			})
 		).toMatchObject({ status: 400, data: { error: 'settings.error.no_mail' } });
@@ -132,7 +158,7 @@ describe('POST /groups/:id/settings ?/save', () => {
 			autoDraw: 'on',
 			autoDrawHoursBefore: '24',
 			maxOpenSuggestions: '3',
-			nightEndsAfterMinutes: '180',
+			nightEndsAfterHours: '3',
 			ratingWindowDays: '7'
 		});
 		mailConfigured = false;
@@ -143,7 +169,7 @@ describe('POST /groups/:id/settings ?/save', () => {
 			autoDraw: 'on',
 			autoDrawHoursBefore: '24',
 			maxOpenSuggestions: '5',
-			nightEndsAfterMinutes: '180',
+			nightEndsAfterHours: '3',
 			ratingWindowDays: '7'
 		});
 		expect(result).toEqual({ saved: true });
@@ -158,7 +184,7 @@ describe('POST /groups/:id/settings ?/save', () => {
 			await post(grace, {
 				autoDrawHoursBefore: '24',
 				maxOpenSuggestions: '5',
-				nightEndsAfterMinutes: '180',
+				nightEndsAfterHours: '3',
 				ratingWindowDays: '7'
 			})
 		).toMatchObject({ status: 403 });
@@ -175,7 +201,7 @@ describe('POST /groups/:id/settings ?/save', () => {
 			await post(mallory, {
 				autoDrawHoursBefore: '24',
 				maxOpenSuggestions: '5',
-				nightEndsAfterMinutes: '180',
+				nightEndsAfterHours: '3',
 				ratingWindowDays: '7'
 			})
 		).toMatchObject({ status: 404 });
@@ -183,18 +209,18 @@ describe('POST /groups/:id/settings ?/save', () => {
 });
 
 describe('GET /groups/:id/settings', () => {
-	it('returns the settings, the offered choices and whether mail works', async () => {
+	it('returns the settings, the allowed ranges and whether mail works', async () => {
 		const data = (await get(ada)) as {
 			settings: unknown;
-			choices: unknown;
+			ranges: unknown;
 			mailConfigured: boolean;
 		};
 		expect(data.settings).toMatchObject({ autoDraw: false, autoDrawHoursBefore: 24 });
-		expect(data.choices).toEqual({
-			autoDrawHoursBefore: [2, 6, 12, 24, 48],
-			maxOpenSuggestions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-			nightEndsAfterMinutes: [120, 180, 240],
-			ratingWindowDays: [3, 7, 14]
+		expect(data.ranges).toEqual({
+			autoDrawHoursBefore: { min: 1, max: 72 },
+			maxOpenSuggestions: { min: 1, max: 10 },
+			nightEndsAfterHours: { min: 1, max: 8 },
+			ratingWindowDays: { min: 1, max: 30 }
 		});
 		expect(data.mailConfigured).toBe(true);
 	});

@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { SETTING_CHOICES } from '$lib/server/group-settings';
+import { SETTING_RANGES, inRange } from '$lib/server/group-settings';
 import { deleteGroup, requireOwner, requireUser } from '$lib/server/groups';
 import { groups } from '$lib/server/db/schema';
 import { isMailConfigured } from '$lib/server/mail';
@@ -14,7 +14,7 @@ export const load: PageServerLoad = ({ locals, params }) => {
 	return {
 		group,
 		settings: group.settings,
-		choices: SETTING_CHOICES,
+		ranges: SETTING_RANGES,
 		mailConfigured: isMailConfigured(),
 		newCounts: newCounts(db, user.id, params.groupId)
 	};
@@ -26,22 +26,16 @@ export const actions: Actions = {
 		const group = requireOwner(db, user.id, params.groupId);
 		const form = await request.formData();
 		const checked = (name: string) => form.get(name) === 'on';
-		const number = (name: keyof typeof SETTING_CHOICES) => Number(form.get(name));
-
-		const maxOpenSuggestions = number('maxOpenSuggestions');
-		const nightEndsAfterMinutes = number('nightEndsAfterMinutes');
-		const ratingWindowDays = number('ratingWindowDays');
-		const autoDrawHoursBefore = number('autoDrawHoursBefore');
-		const numbers = {
-			maxOpenSuggestions,
-			nightEndsAfterMinutes,
-			ratingWindowDays,
-			autoDrawHoursBefore
-		};
+		// A missing field reads as NaN and an empty one as 0: both fail the range.
+		const numbers = Object.fromEntries(
+			Object.keys(SETTING_RANGES).map((key) => [key, Number(form.get(key) ?? NaN)])
+		) as Record<keyof typeof SETTING_RANGES, number>;
 		const valid = (Object.keys(numbers) as (keyof typeof numbers)[]).every((key) =>
-			(SETTING_CHOICES[key] as readonly number[]).includes(numbers[key])
+			inRange(numbers[key], SETTING_RANGES[key])
 		);
 		if (!valid) return fail(400, { error: 'settings.error.invalid' });
+		const { maxOpenSuggestions, ratingWindowDays, autoDrawHoursBefore } = numbers;
+		const nightEndsAfterMinutes = numbers.nightEndsAfterHours * 60;
 
 		const autoDraw = checked('autoDraw');
 		// Refuse only TURNING IT ON: a group that already has automatic draw on

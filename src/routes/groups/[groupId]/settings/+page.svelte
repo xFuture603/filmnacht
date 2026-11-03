@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
-	import RadioRow from '$lib/components/RadioRow.svelte';
 	import NumberStepper from '$lib/components/NumberStepper.svelte';
 	import RequiredNote from '$lib/components/RequiredNote.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -11,6 +10,13 @@
 	let { data, form } = $props();
 
 	const s = $derived(data.settings);
+	const r = $derived(data.ranges);
+	const hours = (n: number) => t(data.locale, n === 1 ? 'settings.hour' : 'settings.hours');
+	const days = (n: number) => t(data.locale, n === 1 ? 'settings.day' : 'settings.days');
+	const steps = $derived({
+		decreaseLabel: t(data.locale, 'common.decrease'),
+		increaseLabel: t(data.locale, 'common.increase')
+	});
 </script>
 
 <PageHeader title={data.group.name} />
@@ -58,7 +64,7 @@
 					<input
 						type="checkbox"
 						name="autoDraw"
-						class="toggle toggle-primary"
+						class="toggle"
 						checked={s.autoDraw}
 						aria-describedby="auto-draw-hint"
 					/>
@@ -79,14 +85,13 @@
 				</p>
 			</div>
 
-			<RadioRow
+			<NumberStepper
 				legend={t(data.locale, 'settings.draw_before')}
 				name="autoDrawHoursBefore"
 				value={s.autoDrawHoursBefore}
-				options={data.choices.autoDrawHoursBefore.map((n) => ({
-					value: n,
-					label: t(data.locale, 'settings.hours_before', { n })
-				}))}
+				{...r.autoDrawHoursBefore}
+				unit={hours}
+				{...steps}
 			/>
 
 			<div class="flex flex-col gap-1">
@@ -125,30 +130,26 @@
 				legend={t(data.locale, 'settings.films_per_member')}
 				name="maxOpenSuggestions"
 				value={s.maxOpenSuggestions}
-				min={data.choices.maxOpenSuggestions[0]}
-				max={data.choices.maxOpenSuggestions.at(-1) ?? 10}
-				decreaseLabel={t(data.locale, 'common.decrease')}
-				increaseLabel={t(data.locale, 'common.increase')}
+				{...r.maxOpenSuggestions}
+				{...steps}
 			/>
 
-			<RadioRow
+			<NumberStepper
 				legend={t(data.locale, 'settings.night_ends')}
-				name="nightEndsAfterMinutes"
-				value={s.nightEndsAfterMinutes}
-				options={data.choices.nightEndsAfterMinutes.map((n) => ({
-					value: n,
-					label: t(data.locale, 'settings.hours_after', { n: n / 60 })
-				}))}
+				name="nightEndsAfterHours"
+				value={s.nightEndsAfterMinutes / 60}
+				{...r.nightEndsAfterHours}
+				unit={hours}
+				{...steps}
 			/>
 
-			<RadioRow
+			<NumberStepper
 				legend={t(data.locale, 'settings.rating_window')}
 				name="ratingWindowDays"
 				value={s.ratingWindowDays}
-				options={data.choices.ratingWindowDays.map((n) => ({
-					value: n,
-					label: t(data.locale, 'settings.days', { n })
-				}))}
+				{...r.ratingWindowDays}
+				unit={days}
+				{...steps}
 			/>
 
 			<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start"
