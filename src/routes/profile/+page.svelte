@@ -9,6 +9,14 @@
 	let { data, form } = $props();
 
 	// Each row that edits something opens its own page with one button.
+	// The first character as a reader sees it: a whole emoji, flag or accented
+	// letter, never half of one.
+	const initial = $derived(
+		(
+			new Intl.Segmenter().segment(data.displayName)[Symbol.iterator]().next().value?.segment ?? ''
+		).toUpperCase()
+	);
+
 	const rows = $derived([
 		{
 			href: '/profile/name',
@@ -38,7 +46,7 @@
 <div class="mb-8 flex items-center gap-4 px-4">
 	<span
 		class="grid size-16 shrink-0 place-items-center rounded-full bg-neutral text-2xl font-bold text-neutral-content"
-		aria-hidden="true">{data.displayName.slice(0, 1).toUpperCase()}</span
+		aria-hidden="true">{initial}</span
 	>
 	<div class="min-w-0">
 		<p class="text-xl font-bold break-words">{data.displayName}</p>
