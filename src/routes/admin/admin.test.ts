@@ -50,6 +50,8 @@ const { actions, load } = await import('./+page.server');
 // The other half of the shared re-auth bucket, imported to prove the two
 // routes really do draw on one budget. See the last test in this file.
 const { actions: profileActions } = await import('../profile/+page.server');
+// Deleting happens on the group's own page, which wraps the action above.
+const groupPage = await import('./groups/[groupId]/+page.server');
 
 const ADMIN_PASSWORD = 'the admin password';
 const ADA_PASSWORD = 'adas own password';
@@ -419,5 +421,33 @@ describe('deleting a group from /admin', () => {
 	it('refuses anyone who is not the instance admin, the owner included', async () => {
 		expect(await statusOfThrow(() => remove(asAda(), { groupId, name: 'Filmnacht' }))).toBe(403);
 		expect(listGroupsFor(db, ada.id)).toHaveLength(1);
+	});
+
+	it('sends the group page back to the list, naming the group, and stays put on a wrong name', async () => {
+		const fromGroupPage = (name: string) =>
+			groupPage.actions.deleteGroup({
+				locals: { user: asAdmin(), locale: 'en' },
+				params: { groupId },
+				request: new Request('http://localhost/admin/groups/x', {
+					method: 'POST',
+					body: new URLSearchParams({ groupId, name })
+				})
+			} as never);
+		expect(await fromGroupPage('Nope')).toMatchObject({ status: 400 });
+		await expect(fromGroupPage('Filmnacht')).rejects.toMatchObject({
+			status: 303,
+			location: '/admin/groups?deleted=Filmnacht'
+		});
+		expect(listGroupsFor(db, ada.id)).toEqual([]);
+	});
+
+	it('gives the group page and the member page a 404 for an id that does not exist', async () => {
+		const members = await import('./members/[userId]/+page.server');
+		const event = {
+			locals: { user: asAdmin(), locale: 'en' },
+			params: { groupId: 'x', userId: 'x' }
+		};
+		expect(await statusOfThrow(async () => groupPage.load(event as never))).toBe(404);
+		expect(await statusOfThrow(async () => members.load(event as never))).toBe(404);
 	});
 });

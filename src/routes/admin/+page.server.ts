@@ -2,13 +2,13 @@ import { env } from '$env/dynamic/private';
 import { reauthenticate } from '$lib/server/auth/reauth';
 import { db } from '$lib/server/db';
 import { groups, memberships, users } from '$lib/server/db/schema';
-import { deleteGroup, requireUser } from '$lib/server/groups';
+import { deleteGroup, requireAdmin } from '$lib/server/groups';
 import { mailStatus, sendTestMail } from '$lib/server/mail';
 import { rateLimit } from '$lib/server/rate-limit';
 import { createReset } from '$lib/server/resets';
 import { getEmailLocale, getTimezone, setEmailLocale, setSetting } from '$lib/server/settings';
 import { userProfile } from '$lib/server/users';
-import { error, fail } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { and, count, eq, isNull } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -27,14 +27,6 @@ function mailHint(code: string): 'config' | 'auth' | 'connection' | 'tls' | 'add
 	if (code === 'ETLS') return 'tls';
 	if (['EENVELOPE', 'EMESSAGE'].includes(code)) return 'address';
 	return 'unknown';
-}
-
-/** Admin-only, checked before anything reads or reveals instance state. */
-function requireAdmin(locals: App.Locals) {
-	const user = requireUser(locals);
-	// A developer-facing label; +error.svelte renders the translated error.403.
-	if (!user.isAdmin) error(403, 'Only the instance admin can do this');
-	return user;
 }
 
 export const load: PageServerLoad = ({ locals }) => {

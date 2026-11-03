@@ -123,6 +123,14 @@ export function requireUser(locals: App.Locals): SessionUser {
 	return locals.user;
 }
 
+/** Admin-only, checked before anything reads or reveals instance state. */
+export function requireAdmin(locals: App.Locals): SessionUser {
+	const user = requireUser(locals);
+	// A developer-facing label; +error.svelte renders the translated error.403.
+	if (!user.isAdmin) error(403, 'Only the instance admin can do this');
+	return user;
+}
+
 /**
  * 404 for a non-member and 403 for a member who is not the owner. The asymmetry
  * is deliberate: 404 hides whether the group exists from someone who has no
