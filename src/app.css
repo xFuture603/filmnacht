@@ -264,3 +264,30 @@
 	background-color: currentColor;
 	transform: translateX(-50%);
 }
+
+/*
+ * Switches, as on iOS: a white knob on a filled track, the track dark when on
+ * and light when off, so the state shows in fill and position, not in colour
+ * alone. Graphite, not amber: amber stays for the one button to press.
+ * The off track keeps a 50% ink edge, 3:1 against the card (WCAG 1.4.11).
+ */
+.toggle {
+	color: #ffffff;
+	background-color: var(--color-secondary);
+	border-color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+.toggle::before {
+	box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+.toggle:checked {
+	--switch-on: var(--color-neutral);
+	color: #ffffff;
+	background-color: var(--switch-on);
+	border-color: var(--switch-on);
+}
+/* Dark graphite is too close to the dark card; Apple's system grey is 5:1 on it. */
+@media (prefers-color-scheme: dark) {
+	.toggle:checked {
+		--switch-on: #8e8e93;
+	}
+}
