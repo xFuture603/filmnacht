@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import { onMount } from 'svelte';
+	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import SubPage from '$lib/components/SubPage.svelte';
 	import Toast from '$lib/components/Toast.svelte';
@@ -8,8 +10,15 @@
 	let { data } = $props();
 
 	// Deleting happens on the group's own page, which is gone afterwards; it
-	// sends the name back here to confirm.
-	const deleted = $derived(page.url.searchParams.get('deleted'));
+	// sends the name back here to confirm. Read once and then dropped from the
+	// address, so a reload or Back does not announce it again.
+	const deleted = page.url.searchParams.get('deleted');
+	onMount(() => {
+		if (!deleted) return;
+		const url = new URL(page.url);
+		url.searchParams.delete('deleted');
+		replaceState(url, page.state);
+	});
 </script>
 
 <SubPage
