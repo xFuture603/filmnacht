@@ -365,6 +365,7 @@
 	"film.unavailable": "Details can't be loaded right now",
 	"film.share": "Share this film",
 	"film.share_text": "What do you think about this film?\n\n{film}\nFrom our group “{group}” on Filmnacht\n\n{url}",
+	"film.preview_question": "What do you think about this film?",
 	"film.share_copied": "Message copied. Paste it into your chat.",
 	"film.share_manual": "Copy this message:",
 	"film.invite_title": "You need an invitation",

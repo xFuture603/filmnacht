@@ -363,6 +363,7 @@
 	"film.unavailable": "Die Details lassen sich gerade nicht laden",
 	"film.share": "Diesen Film teilen",
 	"film.share_text": "Was hältst du von diesem Film?\n\n{film}\nAus unserer Gruppe „{group}“ auf Filmnacht\n\n{url}",
+	"film.preview_question": "Was hältst du von diesem Film?",
 	"film.share_copied": "Nachricht kopiert. Füge sie in deinen Chat ein.",
 	"film.share_manual": "Kopiere diese Nachricht:",
 	"film.invite_title": "Du brauchst eine Einladung",

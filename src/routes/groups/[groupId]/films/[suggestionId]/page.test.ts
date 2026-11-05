@@ -17,12 +17,13 @@ const page = (data: Record<string, unknown>) =>
 
 describe('signed out', () => {
 	const head = (preview: unknown) =>
-		render(Page, { props: { data: { locale: 'en', preview } as never } });
+		render(Page, { props: { data: { locale: 'en', preview, question: 'Why?' } as never } });
 
 	it('shows the invitation, with the film only in the link preview tags', () => {
 		const { head: tags, body } = head({ title: 'Dune (2021)', image: 'https://img/dune.jpg' });
 		expect(tags).toContain('property="og:title" content="Dune (2021)"');
 		expect(tags).toContain('property="og:image" content="https://img/dune.jpg"');
+		expect(tags).toContain('property="og:description" content="Why?"');
 		expect(tags).toContain('name="robots" content="noindex"');
 		expect(body).toContain('You need an invitation');
 		expect(body).not.toContain('Dune');

@@ -36,6 +36,7 @@
 		<meta name="robots" content="noindex" />
 		{#if data.preview}
 			<meta property="og:title" content={data.preview.title} />
+			<meta property="og:description" content={data.question} />
 			{#if data.preview.image}
 				<meta property="og:image" content={data.preview.image} />
 			{/if}

@@ -2,13 +2,21 @@ import { db } from '$lib/server/db';
 import { filmDetails } from '$lib/server/film-details';
 import { requireMember } from '$lib/server/groups';
 import { filmPreview, pooledFilm } from '$lib/server/pool';
+import { getEmailLocale } from '$lib/server/settings';
+import { t } from '$lib/i18n';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	// Signed out: the invitation page, sent as a normal page rather than an error
-	// so that a chat app reads the link preview on it.
-	if (!locals.user) return { preview: filmPreview(db, params.groupId, params.suggestionId) };
+	// so that a chat app reads the link preview on it. The app reading it has no
+	// language of its own, so the question is in the instance's.
+	if (!locals.user) {
+		return {
+			preview: filmPreview(db, params.groupId, params.suggestionId),
+			question: t(getEmailLocale(db), 'film.preview_question')
+		};
+	}
 	const user = locals.user;
 	const group = requireMember(db, user.id, params.groupId);
 	const film = pooledFilm(

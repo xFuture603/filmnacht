@@ -6,7 +6,9 @@ import { DEFAULT_GROUP_SETTINGS, groups } from '$lib/server/db/schema';
 import { addMember, createGroup } from '$lib/server/groups';
 import { drawForNight, scheduleNight } from '$lib/server/nights';
 import { addSuggestion, withdrawSuggestion } from '$lib/server/suggestions';
+import { getEmailLocale, setEmailLocale } from '$lib/server/settings';
 import { createUser } from '$lib/server/users';
+import { t } from '$lib/i18n';
 import type { MovieInput } from '$lib/server/movies';
 
 let db: DB;
@@ -148,22 +150,25 @@ describe('the film page', () => {
 		it('gives the film’s title and poster, and nothing else', async () => {
 			const id = suggest({ ...DUNE, posterUrl: 'https://img/dune.jpg' });
 			expect(await signedOut(id)).toEqual({
-				preview: { title: 'Dune (2021)', image: 'https://img/dune.jpg' }
+				preview: { title: 'Dune (2021)', image: 'https://img/dune.jpg' },
+				question: t(getEmailLocale(db), 'film.preview_question')
 			});
+			setEmailLocale(db, 'de');
+			expect(await signedOut(id)).toMatchObject({ question: 'Was hältst du von diesem Film?' });
 		});
 
 		it('gives nothing for an unknown film, or one from another group', async () => {
-			expect(await signedOut(crypto.randomUUID())).toEqual({ preview: null });
-			expect(await signedOut(suggest(DUNE), crypto.randomUUID())).toEqual({ preview: null });
+			expect(await signedOut(crypto.randomUUID())).toMatchObject({ preview: null });
+			expect(await signedOut(suggest(DUNE), crypto.randomUUID())).toMatchObject({ preview: null });
 			const other = createGroup(db, { name: 'Other', ownerId: outsider });
 			const foreign = suggest({ title: 'Arrival' }, outsider, other);
-			expect(await signedOut(foreign)).toEqual({ preview: null });
+			expect(await signedOut(foreign)).toMatchObject({ preview: null });
 		});
 
 		it('gives nothing for a withdrawn film', async () => {
 			const id = suggest(DUNE);
 			withdrawSuggestion(db, grace, id);
-			expect(await signedOut(id)).toEqual({ preview: null });
+			expect(await signedOut(id)).toMatchObject({ preview: null });
 		});
 
 		it('keeps a surprise: nothing for a film drawn for a night still to come', async () => {
@@ -179,7 +184,7 @@ describe('the film page', () => {
 				location: null
 			});
 			drawForNight(db, night, ada);
-			expect(await signedOut(id)).toEqual({ preview: null });
+			expect(await signedOut(id)).toMatchObject({ preview: null });
 		});
 	});
 
