@@ -1,12 +1,15 @@
 import { db } from '$lib/server/db';
 import { filmDetails } from '$lib/server/film-details';
-import { requireMember, requireUser } from '$lib/server/groups';
-import { pooledFilm } from '$lib/server/pool';
+import { requireMember } from '$lib/server/groups';
+import { filmPreview, pooledFilm } from '$lib/server/pool';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
-	const user = requireUser(locals);
+	// Signed out: the invitation page, sent as a normal page rather than an error
+	// so that a chat app reads the link preview on it.
+	if (!locals.user) return { preview: filmPreview(db, params.groupId, params.suggestionId) };
+	const user = locals.user;
 	const group = requireMember(db, user.id, params.groupId);
 	const film = pooledFilm(
 		db,

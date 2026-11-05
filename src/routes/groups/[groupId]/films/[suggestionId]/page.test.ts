@@ -15,6 +15,27 @@ const base = { locale: 'de', group: { groupId: 'g1' }, film, tmdbUrl: 'https://t
 const page = (data: Record<string, unknown>) =>
 	render(Page, { props: { data: { ...base, ...data } as never } }).body;
 
+describe('signed out', () => {
+	const head = (preview: unknown) =>
+		render(Page, { props: { data: { locale: 'en', preview } as never } });
+
+	it('shows the invitation, with the film only in the link preview tags', () => {
+		const { head: tags, body } = head({ title: 'Dune (2021)', image: 'https://img/dune.jpg' });
+		expect(tags).toContain('property="og:title" content="Dune (2021)"');
+		expect(tags).toContain('property="og:image" content="https://img/dune.jpg"');
+		expect(tags).toContain('name="robots" content="noindex"');
+		expect(body).toContain('You need an invitation');
+		expect(body).not.toContain('Dune');
+	});
+
+	it('has no preview tags without a film, and no image tag without a poster', () => {
+		expect(head(null).head).not.toContain('og:');
+		const noPoster = head({ title: 'Dune', image: null }).head;
+		expect(noPoster).toContain('og:title');
+		expect(noPoster).not.toContain('og:image');
+	});
+});
+
 describe('film page', () => {
 	it('shows the facts, summary, director, cast and the TMDB credit', () => {
 		const body = page({

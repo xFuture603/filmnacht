@@ -138,6 +138,51 @@ describe('the film page', () => {
 		expect(await message(open(ada, crypto.randomUUID()))).toBe('gone');
 	});
 
+	describe('signed out, as a link preview reads it', () => {
+		const signedOut = (suggestionId: string, inGroup = groupId) =>
+			load({
+				params: { groupId: inGroup, suggestionId },
+				locals: { user: null, locale: 'en' }
+			} as never);
+
+		it('gives the film’s title and poster, and nothing else', async () => {
+			const id = suggest({ ...DUNE, posterUrl: 'https://img/dune.jpg' });
+			expect(await signedOut(id)).toEqual({
+				preview: { title: 'Dune (2021)', image: 'https://img/dune.jpg' }
+			});
+		});
+
+		it('gives nothing for an unknown film, or one from another group', async () => {
+			expect(await signedOut(crypto.randomUUID())).toEqual({ preview: null });
+			expect(await signedOut(suggest(DUNE), crypto.randomUUID())).toEqual({ preview: null });
+			const other = createGroup(db, { name: 'Other', ownerId: outsider });
+			const foreign = suggest({ title: 'Arrival' }, outsider, other);
+			expect(await signedOut(foreign)).toEqual({ preview: null });
+		});
+
+		it('gives nothing for a withdrawn film', async () => {
+			const id = suggest(DUNE);
+			withdrawSuggestion(db, grace, id);
+			expect(await signedOut(id)).toEqual({ preview: null });
+		});
+
+		it('keeps a surprise: nothing for a film drawn for a night still to come', async () => {
+			const id = suggest(DUNE);
+			db.update(groups)
+				.set({ settings: { ...DEFAULT_GROUP_SETTINGS, resultVisible: 'on_night' } })
+				.where(eq(groups.id, groupId))
+				.run();
+			const night = scheduleNight(db, {
+				groupId,
+				userId: ada,
+				scheduledAt: new Date(Date.now() + 86_400_000),
+				location: null
+			});
+			drawForNight(db, night, ada);
+			expect(await signedOut(id)).toEqual({ preview: null });
+		});
+	});
+
 	it('renders a hand-entered film without asking TMDB', async () => {
 		const data = await open(ada, suggest({ title: 'Home video' }));
 		expect(data.film).toMatchObject({ title: 'Home video', tmdbId: null });

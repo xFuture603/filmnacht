@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { DB } from './db/client';
-import { movies, suggestions } from './db/schema';
+import { groups, movies, suggestions } from './db/schema';
+import { groupSettings } from './group-settings';
 import { unrevealedDrawnIds } from './nights';
 import { listPool } from './suggestions';
 
@@ -56,4 +57,30 @@ export function pooledFilm(
 		.where(and(eq(suggestions.id, suggestionId), eq(suggestions.groupId, groupId)))
 		.get();
 	return row ? { ...row, genres: row.genres ?? [] } : null;
+}
+
+/**
+ * All that a signed-out visitor's link preview gets: the film's title and poster,
+ * by the same rule as its page, so it can't give away a surprise either. Nothing
+ * about the group, its members or how they voted.
+ */
+export function filmPreview(db: DB, groupId: string, suggestionId: string) {
+	const group = db
+		.select({ settings: groups.settings })
+		.from(groups)
+		.where(eq(groups.id, groupId))
+		.get();
+	if (!group) return null;
+	const film = pooledFilm(
+		db,
+		groupId,
+		'',
+		suggestionId,
+		groupSettings(group.settings).resultVisible
+	);
+	if (!film) return null;
+	return {
+		title: film.year ? `${film.title} (${film.year})` : film.title,
+		image: film.posterUrl
+	};
 }
