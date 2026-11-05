@@ -123,6 +123,21 @@ describe('the film page', () => {
 		expect(await status(open(ada, id))).toBe(404);
 	});
 
+	it('tells a member whose film has gone apart from an outsider, who learns nothing', async () => {
+		const message = async (run: Promise<unknown>) => {
+			try {
+				await run;
+			} catch (e) {
+				return (e as { body: { message: string } }).body.message;
+			}
+		};
+		const id = suggest(DUNE);
+		const outsiderSees = await message(open(outsider, id));
+		expect(await message(open(outsider, crypto.randomUUID()))).toBe(outsiderSees);
+		expect(outsiderSees).not.toBe('gone');
+		expect(await message(open(ada, crypto.randomUUID()))).toBe('gone');
+	});
+
 	it('renders a hand-entered film without asking TMDB', async () => {
 		const data = await open(ada, suggest({ title: 'Home video' }));
 		expect(data.film).toMatchObject({ title: 'Home video', tmdbId: null });

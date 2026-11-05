@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Poster from '$lib/components/Poster.svelte';
+	import ShareButton from './ShareButton.svelte';
 	import { ChevronLeft, Star } from '@lucide/svelte';
 	let { data } = $props();
 
@@ -27,13 +28,16 @@
 	);
 </script>
 
-<a
-	class="btn btn-outline mb-2 min-h-12 gap-1"
-	href="/groups/{data.group.groupId}"
-	data-sveltekit-preload-data="off"
->
-	<ChevronLeft class="size-4" />{t(data.locale, 'film.back')}
-</a>
+<div class="mb-2 flex items-center justify-between gap-2">
+	<a
+		class="btn btn-outline min-h-12 gap-1"
+		href="/groups/{data.group.groupId}"
+		data-sveltekit-preload-data="off"
+	>
+		<ChevronLeft class="size-4" />{t(data.locale, 'film.back')}
+	</a>
+	<ShareButton locale={data.locale} {film} group={data.group.name} />
+</div>
 
 <PageHeader title={film.title} subtitle={facts || undefined} />
 

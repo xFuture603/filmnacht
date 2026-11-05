@@ -362,5 +362,12 @@
 	"film.no_details": "More details aren't available for this film",
 	"film.source": "Film details from TMDB",
 	"film.rating": "TMDB rating {rating} of 10",
-	"film.unavailable": "Details can't be loaded right now"
+	"film.unavailable": "Details can't be loaded right now",
+	"film.share": "Share this film",
+	"film.share_text": "What do you think about this film?\n\n{film}\nFrom our group “{group}” on Filmnacht\n\n{url}",
+	"film.share_copied": "Message copied. Paste it into your chat.",
+	"film.share_manual": "Copy this message:",
+	"film.invite_title": "You need an invitation",
+	"film.invite_text": "This page is for members of a group. Ask someone in the group to send you an invite link.",
+	"film.invite_member": "Already a member? Sign in to see it."
 }

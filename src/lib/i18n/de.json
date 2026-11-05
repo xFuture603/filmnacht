@@ -360,5 +360,12 @@
 	"film.no_details": "Für diesen Film gibt es keine weiteren Details",
 	"film.source": "Filmdetails von TMDB",
 	"film.rating": "TMDB-Bewertung {rating} von 10",
-	"film.unavailable": "Die Details lassen sich gerade nicht laden"
+	"film.unavailable": "Die Details lassen sich gerade nicht laden",
+	"film.share": "Diesen Film teilen",
+	"film.share_text": "Was hältst du von diesem Film?\n\n{film}\nAus unserer Gruppe „{group}“ auf Filmnacht\n\n{url}",
+	"film.share_copied": "Nachricht kopiert. Füge sie in deinen Chat ein.",
+	"film.share_manual": "Kopiere diese Nachricht:",
+	"film.invite_title": "Du brauchst eine Einladung",
+	"film.invite_text": "Diese Seite ist für Mitglieder einer Gruppe. Bitte jemanden aus der Gruppe, dir einen Einladungslink zu schicken.",
+	"film.invite_member": "Schon Mitglied? Melde dich an, um sie zu sehen."
 }
