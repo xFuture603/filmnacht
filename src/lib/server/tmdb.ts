@@ -86,10 +86,11 @@ export async function searchMovies(
 export async function fetchMovie(
 	apiKey: string,
 	tmdbId: number,
-	fetchImpl: typeof fetch = fetch
+	fetchImpl: typeof fetch = fetch,
+	signal?: AbortSignal
 ): Promise<TmdbMovieDetail | null> {
 	const url = `${API}/movie/${tmdbId}?api_key=${encodeURIComponent(apiKey)}`;
-	const response = await request(url, 'detail lookup', fetchImpl);
+	const response = await request(url, 'detail lookup', fetchImpl, signal);
 	if (response.status === 404) return null;
 	if (!response.ok) refuse('detail lookup', response.status);
 	const item = await parse(response, 'detail lookup');

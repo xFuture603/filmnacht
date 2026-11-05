@@ -14,7 +14,16 @@
 	let live = $state<TmdbSearchResult[] | null>(null);
 	let liveFailed = $state(false);
 	let busy = $state(false);
+	let query = $state('');
 	const results = $derived(live ?? form?.results);
+	// Back from a film's page, the search is still there.
+	export const snapshot = {
+		capture: () => ({ query, live }),
+		restore: (saved: { query: string; live: TmdbSearchResult[] | null }) => {
+			query = saved.query;
+			live = saved.live;
+		}
+	};
 	const search = liveSearch<TmdbSearchResult>({
 		url: (q) => `/groups/${data.group.groupId}/add/search?q=${encodeURIComponent(q)}`,
 		onResults: (r) => ((live = r), (liveFailed = false)),
@@ -82,6 +91,7 @@
 							placeholder={t(data.locale, 'add.search_placeholder')}
 							aria-label={t(data.locale, 'add.search_placeholder')}
 							autocomplete="off"
+							bind:value={query}
 							oninput={(e) => search.type(e.currentTarget.value)}
 						/>
 						{#if busy}<span class="loading loading-spinner loading-sm opacity-70"></span>{/if}
@@ -101,7 +111,14 @@
 							<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
 								{#each results as result (result.tmdbId)}
 									<li class="flex min-w-0 flex-col gap-2">
-										<Poster src={result.posterUrl} />
+										<a
+											href="/groups/{data.group.groupId}/add/film/{result.tmdbId}"
+											class="block rounded-box"
+											aria-label={t(data.locale, 'add.details_named', { title: result.title })}
+											data-sveltekit-preload-data="off"
+										>
+											<Poster src={result.posterUrl} />
+										</a>
 										<!-- flex-1 + mt-auto: a two-line title or a missing year must not
 										     shift this card's button out of line with its neighbours. -->
 										<div class="flex min-w-0 flex-1 flex-col">

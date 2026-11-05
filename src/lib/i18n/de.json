@@ -214,6 +214,8 @@
 	"add.adopt": "Film hinzufügen",
 	"add.taken": "Schon vorgeschlagen",
 	"add.adopt_named": "{title} zum Pool hinzufügen",
+	"add.details_named": "Details zu {title}",
+	"add.back_search": "Zurück zur Suche",
 	"add.manual_heading": "Selbst eintragen",
 	"add.film_title": "Titel",
 	"add.submit": "Film hinzufügen",

@@ -64,6 +64,10 @@ export function requireMember(db: DB, userId: string, groupId: string): GroupMem
 	return { ...row, settings: groupSettings(row.settings) };
 }
 
+export function groupExists(db: DB, groupId: string): boolean {
+	return !!db.select({ id: groups.id }).from(groups).where(eq(groups.id, groupId)).get();
+}
+
 export function addMember(db: DB, userId: string, groupId: string): void {
 	db.insert(memberships)
 		.values({ userId, groupId, role: 'member' })

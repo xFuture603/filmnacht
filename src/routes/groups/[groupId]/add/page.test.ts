@@ -33,6 +33,14 @@ function page(
 const status = (html: string) =>
 	html.match(/<p class="sr-only" role="status" aria-live="polite">([^<]*)<\/p>/)?.[1];
 
+describe('a search result', () => {
+	it('opens the film’s page from its poster', () => {
+		const body = page('en', [film(438631, 'Dune')]);
+		expect(body).toContain('href="/groups/g1/add/film/438631"');
+		expect(body).toContain('aria-label="Details for Dune"');
+	});
+});
+
 describe('the search results status', () => {
 	// Results now change while you type, which a screen reader does not notice
 	// on its own: a status region says how many there are.

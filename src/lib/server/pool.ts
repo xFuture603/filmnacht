@@ -78,7 +78,11 @@ export function filmPreview(db: DB, groupId: string, suggestionId: string) {
 		suggestionId,
 		groupSettings(group.settings).resultVisible
 	);
-	if (!film) return null;
+	return film && previewOf(film);
+}
+
+/** Exactly what a link preview may show of a film. */
+export function previewOf(film: { title: string; year: number | null; posterUrl: string | null }) {
 	return {
 		title: film.year ? `${film.title} (${film.year})` : film.title,
 		image: film.posterUrl

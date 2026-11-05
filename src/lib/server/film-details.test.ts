@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearFilmDetailsCache, filmDetails } from './film-details';
+import { clearFilmDetailsCache, filmDetails, tmdbFilm } from './film-details';
 
 function jsonResponse(body: unknown, status = 200) {
 	return new Response(JSON.stringify(body), { status });
@@ -91,5 +91,39 @@ describe('filmDetails', () => {
 		expect(settled).toBe(false);
 		await vi.advanceTimersByTimeAsync(1);
 		expect(await pending).toBeNull();
+	});
+});
+
+describe('tmdbFilm', () => {
+	const movie = { id: 7, title: 'Fargo', release_date: '1996-03-08', poster_path: '/f.jpg' };
+
+	it('asks TMDB once a day, and asks the limit only when it has to call', async () => {
+		const fetchImpl = vi.fn(async () => jsonResponse(movie));
+		const mayLookUp = vi.fn(() => true);
+		const opts = { apiKey: 'k', fetchImpl, now: NOW, mayLookUp };
+		expect((await tmdbFilm(7, opts))?.title).toBe('Fargo');
+		expect((await tmdbFilm(7, opts))?.title).toBe('Fargo');
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		expect(mayLookUp).toHaveBeenCalledTimes(1);
+	});
+
+	it('does not call TMDB over the limit, or without a key', async () => {
+		const fetchImpl = vi.fn(async () => jsonResponse(movie));
+		const over = { apiKey: 'k', fetchImpl, now: NOW, mayLookUp: () => false };
+		expect(await tmdbFilm(7, over)).toBeNull();
+		expect(await tmdbFilm(7, { apiKey: undefined, fetchImpl, now: NOW })).toBeNull();
+		expect(fetchImpl).not.toHaveBeenCalled();
+	});
+
+	it('remembers that TMDB has no such film, but not that it failed', async () => {
+		const missing = vi.fn(async () => jsonResponse({}, 404));
+		const opts = { apiKey: 'k', fetchImpl: missing, now: NOW };
+		await tmdbFilm(8, opts);
+		await tmdbFilm(8, opts);
+		expect(missing).toHaveBeenCalledTimes(1);
+		const down = vi.fn(async () => jsonResponse({}, 500));
+		await tmdbFilm(9, { apiKey: 'k', fetchImpl: down, now: NOW });
+		await tmdbFilm(9, { apiKey: 'k', fetchImpl: down, now: NOW });
+		expect(down).toHaveBeenCalledTimes(2);
 	});
 });

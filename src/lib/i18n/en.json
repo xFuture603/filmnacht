@@ -216,6 +216,8 @@
 	"add.adopt": "Add a film",
 	"add.taken": "Already suggested",
 	"add.adopt_named": "Add {title} to the pool",
+	"add.details_named": "Details for {title}",
+	"add.back_search": "Back to the search",
 	"add.manual_heading": "Type it in",
 	"add.film_title": "Title",
 	"add.submit": "Add a film",
