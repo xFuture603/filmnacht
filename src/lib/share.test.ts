@@ -6,9 +6,10 @@ const nav = (over: object = {}) =>
 	({
 		share: vi.fn(async () => {}),
 		canShare: vi.fn(() => true),
+		userAgent: 'Mozilla/5.0 (Macintosh)',
 		clipboard: { writeText: vi.fn(async () => {}) },
 		...over
-	}) as never as Pick<Navigator, 'share' | 'canShare' | 'clipboard'>;
+	}) as never as Pick<Navigator, 'share' | 'canShare' | 'clipboard' | 'userAgent'>;
 
 describe('shareText', () => {
 	it('names the film, its year, the group and the link, in the sharer’s language', () => {
@@ -40,6 +41,13 @@ describe('shareOrCopy', () => {
 		const none = nav();
 		await shareOrCopy('hi', null, none);
 		expect(none.share).toHaveBeenCalledWith({ text: 'hi' });
+	});
+
+	it('copies on an iPhone, where WhatsApp keeps only the link from a share', async () => {
+		const n = nav({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)' });
+		expect(await shareOrCopy('hi', poster, n)).toBe('copied');
+		expect(n.share).not.toHaveBeenCalled();
+		expect(n.clipboard.writeText).toHaveBeenCalledWith('hi');
 	});
 
 	it('copies when there is no share menu', async () => {
