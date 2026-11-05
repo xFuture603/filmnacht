@@ -116,6 +116,15 @@
 		color: var(--btn-color, var(--color-base-content));
 	}
 }
+/* Pressed or focused, it would otherwise fade into the page, and those states can
+   outlast the tap: a share sheet or dialog opens in the middle of one. */
+.btn-outline:active,
+.btn-outline:focus-visible {
+	--btn-bg: color-mix(in oklab, var(--btn-color, var(--color-base-content)) 10%, transparent);
+	--btn-border: var(--btn-color, var(--color-base-content));
+	--btn-shadow: 0 0 #0000;
+	color: var(--btn-color, var(--color-base-content));
+}
 
 /*
  * Mark required fields. Driven by the control's own `required`,
