@@ -6,6 +6,7 @@ import { parseTime, scheduleDefaults, todayIn } from '$lib/schedule';
 import { getTimezone } from '$lib/server/settings';
 import { wallTimeToUtc } from '$lib/time';
 import { fail, redirect } from '@sveltejs/kit';
+import { rateLimit } from '$lib/server/rate-limit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, params }) => {
@@ -53,6 +54,11 @@ export const actions: Actions = {
 		}
 		if (location.length > LOCATION_MAX) {
 			return fail(400, { error: 'nights.error.location', ...echo });
+		}
+
+		// Each night mails every member, so a member cannot flood their inboxes.
+		if (!rateLimit(`night-schedule:${user.id}`, 10, 3_600_000)) {
+			return fail(429, { error: 'nights.rate_limited', ...echo });
 		}
 
 		const id = scheduleNight(db, {

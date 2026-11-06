@@ -229,6 +229,7 @@
 	"nights.status.cancelled": "Abgesagt",
 	"nights.error.when": "Damit kann diese Instanz kein Datum und keine Uhrzeit bilden.",
 	"nights.error.past": "Dieser Zeitpunkt ist schon vorbei.",
+	"nights.rate_limited": "Du hast viele Abende geplant. Versuch es in einer Stunde wieder.",
 	"nights.error.day": "Wähl einen Tag für die Filmnacht.",
 	"nights.time_hint": "Beliebige Uhrzeit, etwa 19:45",
 	"nights.error.time": "Das ist keine Uhrzeit. Gib sie etwa als 19:45 ein.",

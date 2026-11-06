@@ -231,6 +231,7 @@
 	"nights.status.cancelled": "Cancelled",
 	"nights.error.when": "That is not a date and time this instance can use.",
 	"nights.error.past": "That moment has already passed.",
+	"nights.rate_limited": "You have scheduled a lot of nights. Try again in an hour.",
 	"nights.error.day": "Pick a day for the night.",
 	"nights.time_hint": "Type any time, like 19:45",
 	"nights.error.time": "That is not a time. Type it like 19:45.",
