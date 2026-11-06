@@ -104,6 +104,10 @@ export const actions: Actions = {
 	setEmail: async ({ locals, request }) => {
 		const user = requireUser(locals);
 		const form = await request.formData();
+		// The address is where /reset sends recovery links, so changing it is as
+		// strong as changing the password and needs the same proof.
+		const refused = await reauthenticate(user.id, form);
+		if (refused) return refused;
 		// A missing field is NOT an empty one. The form always sends `email`, and
 		// clearing an address is submitting it empty — so a request that omits it
 		// entirely is malformed, not a considered "remove my address", and must not

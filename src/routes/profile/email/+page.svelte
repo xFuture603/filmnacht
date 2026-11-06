@@ -27,6 +27,15 @@
 				class="input min-h-12 w-full"
 			/>
 		</Field>
+		<Field label={t(data.locale, 'profile.current_password')}>
+			<input
+				name="currentPassword"
+				type="password"
+				required
+				autocomplete="current-password"
+				class="input min-h-12 w-full"
+			/>
+		</Field>
 		<button class="btn btn-primary min-h-12 w-full sm:w-auto sm:self-start"
 			>{t(data.locale, 'profile.save_email')}</button
 		>

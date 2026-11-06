@@ -359,21 +359,35 @@ describe('changeDisplayName', () => {
 });
 
 describe('setEmail', () => {
+	it('refuses a wrong current password and keeps the address', async () => {
+		// The address is where reset links go: changing it from a borrowed session
+		// would hand over the account.
+		const result = await post('setEmail', {
+			email: 'mallory@example.com',
+			currentPassword: 'not her password'
+		});
+		expect(result?.data?.error).toBe('profile.error.current_password');
+		expect(userProfile(db, ada.id)?.email).toBeNull();
+	});
+
 	it('stores an address, lowercased', async () => {
-		const result = await post('setEmail', { email: 'Ada@Example.COM' });
+		const result = await post('setEmail', { email: 'Ada@Example.COM', currentPassword: PASSWORD });
 		expect(result).toEqual({ success: 'profile.email_saved' });
 		expect(userProfile(db, ada.id)?.email).toBe('ada@example.com');
 	});
 
 	it('treats an empty value as clearing it', async () => {
-		await post('setEmail', { email: 'ada@example.com' });
-		const result = await post('setEmail', { email: '' });
+		await post('setEmail', { email: 'ada@example.com', currentPassword: PASSWORD });
+		const result = await post('setEmail', { email: '', currentPassword: PASSWORD });
 		expect(result).toEqual({ success: 'profile.email_saved' });
 		expect(userProfile(db, ada.id)?.email).toBeNull();
 	});
 
 	it('rejects something that is not an address', async () => {
-		const result = await post('setEmail', { email: 'ada at example dot com' });
+		const result = await post('setEmail', {
+			email: 'ada at example dot com',
+			currentPassword: PASSWORD
+		});
 		expect(result?.status).toBe(400);
 		expect(result?.data?.error).toBe('profile.error.email');
 		expect(userProfile(db, ada.id)?.email).toBeNull();
@@ -384,7 +398,10 @@ describe('setEmail', () => {
 		// an address has no safe answer, so the collision is refused here with a
 		// translated message rather than surfacing as a 500.
 		setEmail(db, grace.id, 'shared@example.com');
-		const result = await post('setEmail', { email: 'SHARED@example.com' });
+		const result = await post('setEmail', {
+			email: 'SHARED@example.com',
+			currentPassword: PASSWORD
+		});
 		expect(result?.status).toBe(400);
 		expect(result?.data?.error).toBe('profile.error.email_taken');
 		expect(userProfile(db, ada.id)?.email).toBeNull();
@@ -396,8 +413,8 @@ describe('setEmail', () => {
 		// while answering "saved" collapses "not provided" with "explicitly
 		// cleared", which is exactly the distinction Plan 4 needs when it resolves
 		// an address back to an account.
-		await post('setEmail', { email: 'ada@example.com' });
-		const result = await post('setEmail', {});
+		await post('setEmail', { email: 'ada@example.com', currentPassword: PASSWORD });
+		const result = await post('setEmail', { currentPassword: PASSWORD });
 		expect(result?.status).toBe(400);
 		expect(result?.data?.error).toBe('profile.error.email');
 		expect(userProfile(db, ada.id)?.email).toBe('ada@example.com');
