@@ -81,7 +81,7 @@ describe('newCounts', () => {
 
 	it('leaves out withdrawn and drawn films and cancelled nights', () => {
 		const dune = suggest(grace, 'Dune');
-		withdrawSuggestion(db, grace, dune);
+		withdrawSuggestion(db, grace, groupId, dune);
 		suggest(grace, 'Arrival');
 		const drawn = night();
 		drawForNight(db, drawn, ada); // Arrival is the only open film, so it is drawn
@@ -105,7 +105,7 @@ describe('newCounts', () => {
 			.run();
 		visit(db, ada, groupId, 'pool', minutesAgo(30));
 		expect(newCounts(db, ada, groupId).pool).toBe(0);
-		withdrawSuggestion(db, grace, id);
+		withdrawSuggestion(db, grace, groupId, id);
 		suggest(grace, 'Dune'); // revives the row and resets created_at
 		expect(newCounts(db, ada, groupId).pool).toBe(1);
 	});

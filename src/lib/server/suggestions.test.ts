@@ -98,7 +98,7 @@ describe('addSuggestion', () => {
 	it('frees a slot when a suggestion is withdrawn', () => {
 		const capped = { ...settings, maxOpenSuggestions: 1 };
 		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings: capped });
-		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		withdrawSuggestion(db, ada, groupId, (first as { suggestionId: string }).suggestionId);
 		expect(addSuggestion(db, { groupId, userId: ada, movie: arrival, settings: capped }).ok).toBe(
 			true
 		);
@@ -126,7 +126,7 @@ describe('addSuggestion', () => {
 
 	it('revives a withdrawn suggestion rather than colliding on the group+dedupeKey unique index', () => {
 		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
-		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		withdrawSuggestion(db, ada, groupId, (first as { suggestionId: string }).suggestionId);
 		const second = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		expect(second.ok).toBe(true);
 		expect(listPool(db, groupId, ada).map((e) => e.title)).toEqual(['Dune']);
@@ -134,7 +134,7 @@ describe('addSuggestion', () => {
 
 	it('lets a different member claim a film the original suggester withdrew, attributing it to them', () => {
 		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
-		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		withdrawSuggestion(db, ada, groupId, (first as { suggestionId: string }).suggestionId);
 		const second = addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
 		expect(second.ok).toBe(true);
 		expect(listPool(db, groupId, grace).find((e) => e.title === 'Dune')?.mine).toBe(true);
@@ -144,7 +144,7 @@ describe('addSuggestion', () => {
 	it("counts a revived suggestion against the reviver's cap, not the original suggester's", () => {
 		const capped = { ...settings, maxOpenSuggestions: 1 };
 		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings: capped });
-		withdrawSuggestion(db, ada, (first as { suggestionId: string }).suggestionId);
+		withdrawSuggestion(db, ada, groupId, (first as { suggestionId: string }).suggestionId);
 		addSuggestion(db, { groupId, userId: grace, movie: dune, settings: capped });
 		expect(countOpenSuggestions(db, groupId, ada)).toBe(0);
 		expect(countOpenSuggestions(db, groupId, grace)).toBe(1);
@@ -153,7 +153,7 @@ describe('addSuggestion', () => {
 	it('refuses to revive a withdrawn suggestion a movie_nights row already references', () => {
 		const first = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (first as { suggestionId: string }).suggestionId;
-		withdrawSuggestion(db, ada, id);
+		withdrawSuggestion(db, ada, groupId, id);
 		db.insert(movieNights).values({ groupId, scheduledAt: new Date(), suggestionId: id }).run();
 		const second = addSuggestion(db, { groupId, userId: grace, movie: dune, settings });
 		expect(second).toEqual({ ok: false, reason: 'duplicate' });
@@ -165,7 +165,7 @@ describe('addSuggestion', () => {
 		// Three withdraw/re-add cycles of the same hand-typed film.
 		for (let i = 0; i < 3; i++) {
 			const added = addSuggestion(db, { groupId, userId: ada, movie: handTyped, settings });
-			withdrawSuggestion(db, ada, (added as { suggestionId: string }).suggestionId);
+			withdrawSuggestion(db, ada, groupId, (added as { suggestionId: string }).suggestionId);
 		}
 		addSuggestion(db, { groupId, userId: ada, movie: handTyped, settings });
 		const after = db.select({ id: movies.id }).from(movies).all().length;
@@ -193,14 +193,22 @@ describe('withdrawSuggestion', () => {
 	it('withdraws your own open suggestion', () => {
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (added as { suggestionId: string }).suggestionId;
-		expect(withdrawSuggestion(db, ada, id)).toBe('ok');
+		expect(withdrawSuggestion(db, ada, groupId, id)).toBe('ok');
 		expect(listPool(db, groupId, ada)).toHaveLength(0);
 	});
 
 	it("refuses to withdraw someone else's suggestion", () => {
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (added as { suggestionId: string }).suggestionId;
-		expect(withdrawSuggestion(db, grace, id)).toBe('not_found');
+		expect(withdrawSuggestion(db, grace, groupId, id)).toBe('not_found');
+		expect(listPool(db, groupId, ada)).toHaveLength(1);
+	});
+
+	it('refuses to withdraw through another group', () => {
+		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
+		const id = (added as { suggestionId: string }).suggestionId;
+		const other = createGroup(db, { name: 'Other', ownerId: ada });
+		expect(withdrawSuggestion(db, ada, other, id)).toBe('not_found');
 		expect(listPool(db, groupId, ada)).toHaveLength(1);
 	});
 
@@ -208,7 +216,7 @@ describe('withdrawSuggestion', () => {
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
 		const id = (added as { suggestionId: string }).suggestionId;
 		db.update(suggestions).set({ status: 'drawn' }).where(eq(suggestions.id, id)).run();
-		expect(withdrawSuggestion(db, ada, id)).toBe('already_drawn');
+		expect(withdrawSuggestion(db, ada, groupId, id)).toBe('already_drawn');
 	});
 });
 
@@ -229,7 +237,7 @@ describe('listPool', () => {
 
 	it('hides withdrawn suggestions from everyone', () => {
 		const added = addSuggestion(db, { groupId, userId: ada, movie: dune, settings });
-		withdrawSuggestion(db, ada, (added as { suggestionId: string }).suggestionId);
+		withdrawSuggestion(db, ada, groupId, (added as { suggestionId: string }).suggestionId);
 		expect(listPool(db, groupId, grace)).toHaveLength(0);
 	});
 
@@ -307,11 +315,11 @@ describe('takenTmdbIds', () => {
 		const withdrawnUsed = { tmdbId: 1, title: 'Heat', year: 1995 };
 		const wu = addSuggestion(db, { groupId, userId: grace, movie: withdrawnUsed, settings });
 		const wuId = (wu as { suggestionId: string }).suggestionId;
-		withdrawSuggestion(db, grace, wuId);
+		withdrawSuggestion(db, grace, groupId, wuId);
 		db.insert(movieNights).values({ groupId, scheduledAt: new Date(), suggestionId: wuId }).run();
 		const withdrawn = { tmdbId: 2, title: 'Alien', year: 1979 };
 		const w = addSuggestion(db, { groupId, userId: grace, movie: withdrawn, settings });
-		withdrawSuggestion(db, grace, (w as { suggestionId: string }).suggestionId);
+		withdrawSuggestion(db, grace, groupId, (w as { suggestionId: string }).suggestionId);
 		addSuggestion(db, { groupId, userId: ada, movie: { title: 'Home video' }, settings });
 		const other = createGroup(db, { name: 'Other', ownerId: ada });
 		addSuggestion(db, { groupId: other, userId: ada, movie: { tmdbId: 3, title: 'Up' }, settings });

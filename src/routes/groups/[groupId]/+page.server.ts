@@ -73,7 +73,12 @@ export const actions: Actions = {
 		// the group exists.
 		requireMember(db, user.id, params.groupId);
 		const form = await request.formData();
-		const outcome = withdrawSuggestion(db, user.id, String(form.get('suggestionId') ?? ''));
+		const outcome = withdrawSuggestion(
+			db,
+			user.id,
+			params.groupId,
+			String(form.get('suggestionId') ?? '')
+		);
 		if (outcome !== 'ok') return fail(400, { error: `pool.error.${outcome}` });
 		return { withdrawn: true };
 	},

@@ -136,13 +136,14 @@ export function addSuggestion(
 export function withdrawSuggestion(
 	db: DB,
 	userId: string,
+	groupId: string,
 	suggestionId: string
 ): 'ok' | 'not_found' | 'already_drawn' {
 	return db.transaction(() => {
 		const row = db
 			.select({ status: suggestions.status, suggestedBy: suggestions.suggestedBy })
 			.from(suggestions)
-			.where(eq(suggestions.id, suggestionId))
+			.where(and(eq(suggestions.id, suggestionId), eq(suggestions.groupId, groupId)))
 			.get();
 		// Someone else's suggestion is "not found", not "forbidden" — the pool is
 		// anonymous, so confirming it exists would say more than it should.

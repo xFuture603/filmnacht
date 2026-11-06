@@ -101,7 +101,7 @@ describe('the film page', () => {
 
 	it('404s for a withdrawn suggestion and for one from another group', async () => {
 		const id = suggest(DUNE);
-		withdrawSuggestion(db, grace, id);
+		withdrawSuggestion(db, grace, groupId, id);
 		expect(await status(open(ada, id))).toBe(404);
 
 		const other = createGroup(db, { name: 'Other', ownerId: outsider });
@@ -167,7 +167,7 @@ describe('the film page', () => {
 
 		it('gives nothing for a withdrawn film', async () => {
 			const id = suggest(DUNE);
-			withdrawSuggestion(db, grace, id);
+			withdrawSuggestion(db, grace, groupId, id);
 			expect(await signedOut(id)).toMatchObject({ preview: null });
 		});
 
