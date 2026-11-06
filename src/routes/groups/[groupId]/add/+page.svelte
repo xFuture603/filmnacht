@@ -113,7 +113,7 @@
 									<li class="flex min-w-0 flex-col gap-2">
 										<a
 											href="/groups/{data.group.groupId}/add/film/{result.tmdbId}"
-											class="block rounded-box"
+											class="block rounded-box transition-shadow duration-150 hover:shadow-md hover:ring-1 hover:ring-base-content/50 focus-visible:shadow-md focus-visible:ring-1 focus-visible:ring-base-content/50"
 											aria-label={t(data.locale, 'add.details_named', { title: result.title })}
 											data-sveltekit-preload-data="off"
 										>
