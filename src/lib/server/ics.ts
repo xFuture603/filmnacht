@@ -56,7 +56,11 @@ const utc = (at: Date) =>
 		.replace(/\.\d{3}/, '');
 
 const text = (value: string) =>
-	value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+	value
+		.replace(/\\/g, '\\\\')
+		.replace(/;/g, '\\;')
+		.replace(/,/g, '\\,')
+		.replace(/\r\n|\r|\n/g, '\\n');
 
 /** At most 75 octets per line; continuation lines start with a space (§3.1). */
 function fold(line: string): string {

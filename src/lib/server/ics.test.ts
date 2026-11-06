@@ -51,6 +51,11 @@ describe('nightIcs', () => {
 		expect(lines(ics)).toContain('LOCATION:Sofa\\; back room\\, up\\\\stairs\\nleft');
 	});
 
+	it('turns a bare carriage return into an escaped newline, so it cannot start a line', () => {
+		const ics = nightIcs({ ...base, method: 'PUBLISH', location: 'Sofa\rATTENDEE:x' });
+		expect(lines(ics)).toContain('LOCATION:Sofa\\nATTENDEE:x');
+	});
+
 	it('leaves out what is not set', () => {
 		const ics = nightIcs({ ...base, method: 'PUBLISH', location: null, url: null });
 		expect(ics).not.toContain('LOCATION');
