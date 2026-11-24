@@ -26,7 +26,13 @@
 
 	const card = 'card mb-4 bg-base-100';
 
-	let score = $derived(data.ratings.mine?.score ?? 5);
+	// The live refresh brings a new data object every 30s. Deriving the form from
+	// plain values keeps the slider and the opened comment as they are until the
+	// saved rating changes.
+	const savedScore = $derived(data.ratings.mine?.score ?? 5);
+	const hasComment = $derived(Boolean(data.ratings.mine?.comment));
+	let score = $derived(savedScore);
+	let commentOpen = $derived(hasComment);
 	const fmt = (n: number) =>
 		new Intl.NumberFormat(data.locale === 'de' ? 'de-DE' : 'en-GB', {
 			minimumFractionDigits: 1,
@@ -154,7 +160,7 @@
 							class="range flex-1 range-primary"
 						/>
 					</div>
-					<details open={Boolean(rv.mine?.comment)}>
+					<details bind:open={commentOpen}>
 						<summary class="link min-h-12 cursor-pointer text-sm link-hover"
 							>{t(data.locale, 'ratings.add_comment')}</summary
 						>

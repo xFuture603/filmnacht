@@ -33,8 +33,13 @@
 <!-- Pages with a heading replace this with "<heading> · Filmnacht". -->
 <svelte:head><title>Filmnacht</title></svelte:head>
 
-<div class="min-h-dvh bg-base-200">
-	<header class="navbar material sticky top-0 z-10 min-h-14 border-b border-base-content/10 px-4">
+<!-- Fixed, not sticky: on iOS a sticky header rides the page's bounce at the top
+     and bottom and leaves a gap above it. --header-h is the 48px link, the
+     navbar's 2 x 8px padding and the 1px border. -->
+<div class="min-h-dvh bg-base-200 pt-(--header-h) [--header-h:calc(4rem+1px)]">
+	<header
+		class="navbar material fixed inset-x-0 top-0 z-10 h-(--header-h) border-b border-base-content/10 px-4"
+	>
 		<a class="flex min-h-12 items-center gap-2 text-lg font-bold" href="/">
 			<!-- The one amber mark in the chrome: a fill with dark ink, never amber on white. -->
 			<span class="grid size-8 place-items-center rounded-field bg-primary text-primary-content">
